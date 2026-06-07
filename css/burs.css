@@ -1,0 +1,55 @@
+/* BURS & MENTORLUK CSS */
+.stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:1.25rem; }
+.stat-card { text-align:center; padding:2rem 1rem; }
+
+.steps-row {
+  display: flex; align-items: flex-start; gap: .5rem;
+  flex-wrap: wrap; justify-content: center;
+}
+.step-item {
+  flex: 1; min-width: 160px; max-width: 200px;
+  text-align: center; padding: 1.5rem 1rem;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+}
+.step-item h4 { margin: .5rem 0; }
+.step-item p { font-size: .82rem; }
+.step-num { font-family:'Outfit',sans-serif; font-size:.7rem; font-weight:700; color:var(--gold-500); letter-spacing:.1em; margin-bottom:.5rem; }
+.step-icon { font-size:2.5rem; margin-bottom:.5rem; }
+.step-arrow { font-size:1.5rem; color:var(--text-muted); margin-top:3.5rem; }
+
+/* Burs Cards */
+.burs-card {
+  padding: 2rem; position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.burs-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--gold-500),var(--gold-700)); }
+.burs-amount { font-family:'Outfit',sans-serif; font-size:1.8rem; font-weight:800; background:linear-gradient(135deg,var(--gold-400),var(--gold-600)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.burs-card h3 { font-size:1.05rem; margin-bottom:.25rem; }
+.burs-deadline { font-size:.8rem; color:var(--danger); font-weight:600; }
+.burs-sponsor { font-size:.78rem; color:var(--text-muted); }
+
+/* Mentor CTA Row */
+.mentor-cta-row { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+.mentor-cta-box { padding:2.5rem 2rem; text-align:center; }
+.mentor-cta-box h3 { margin:.5rem 0; }
+.mentor-cta-box p { font-size:.9rem; }
+
+/* Bagis */
+.bagis-card { display:grid; grid-template-columns:1fr auto; gap:3rem; align-items:start; padding:3rem; background:linear-gradient(135deg,rgba(31,53,88,.6),rgba(19,34,54,.8)); border-color:rgba(244,168,54,.2); }
+.bagis-content h2 { margin:.5rem 0 1rem; }
+.bagis-amounts { display:flex; gap:.75rem; flex-wrap:wrap; margin-top:1rem; }
+.bagis-btn { padding:.6rem 1.2rem; border-radius:var(--radius-full); border:1px solid var(--glass-border); background:var(--glass-bg); color:var(--text-secondary); cursor:pointer; font-family:'Inter',sans-serif; font-size:.88rem; font-weight:600; transition:all var(--ease-normal); }
+.bagis-btn:hover,.bagis-btn.active { background:linear-gradient(135deg,var(--gold-500),var(--gold-700)); border-color:transparent; color:var(--navy-950); }
+.bagis-info { min-width:220px; display:flex; flex-direction:column; gap:1.5rem; }
+.bagis-stat-item { text-align:center; }
+.impact-item { display:flex; align-items:center; gap:.75rem; font-size:.85rem; color:var(--text-secondary); padding:.5rem 0; }
+.impact-icon { font-size:1.2rem; flex-shrink:0; }
+
+@media (max-width:768px) {
+  .stats-row { grid-template-columns:repeat(2,1fr); }
+  .steps-row { flex-direction:column; align-items:center; }
+  .step-arrow { transform:rotate(90deg); margin:0; }
+  .mentor-cta-row { grid-template-columns:1fr; }
+  .bagis-card { grid-template-columns:1fr; }
+}

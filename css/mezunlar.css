@@ -1,0 +1,166 @@
+/* MEZUNLAR PAGE */
+
+.mezun-tabs-wrapper {
+  background: rgba(5,17,30,.5);
+  border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 65px;
+  z-index: 50;
+}
+
+.mezun-tabs {
+  display: flex;
+  gap: .5rem;
+  padding: .75rem 0;
+  overflow-x: auto;
+}
+
+.mezun-tab {
+  padding: .6rem 1.5rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: .88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--ease-normal);
+  white-space: nowrap;
+}
+
+.mezun-tab:hover { background: var(--glass-bg); color: var(--text-primary); }
+.mezun-tab.active { background: linear-gradient(135deg,var(--gold-500),var(--gold-700)); color: var(--navy-950); border-color: transparent; font-weight: 600; }
+
+/* Filters */
+.filters-bar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+}
+
+.alumni-count {
+  font-size: .85rem;
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+}
+
+/* Alumni Card */
+.alumni-card-full {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  position: relative;
+}
+
+.alumni-card-full .ac-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.alumni-card-full .ac-info strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: .95rem;
+  font-family: 'Outfit', sans-serif;
+}
+
+.alumni-card-full .ac-info span {
+  font-size: .78rem;
+  color: var(--gold-500);
+  font-weight: 600;
+}
+
+.alumni-card-full .ac-job {
+  font-size: .85rem;
+  color: var(--text-secondary);
+}
+
+.alumni-card-full .ac-tags {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
+.alumni-card-full .ac-actions {
+  display: flex;
+  gap: .5rem;
+  margin-top: .25rem;
+}
+
+/* Year Bazlı */
+.yillar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.yil-card {
+  cursor: pointer;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.yil-card:hover { border-color: var(--glass-border-hover); transform: translateY(-4px); }
+
+.yil-number {
+  font-family: 'Outfit', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 900;
+  background: linear-gradient(135deg,var(--gold-400),var(--gold-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+.yil-info strong { display: block; font-size: .92rem; color: var(--text-primary); }
+.yil-info span { font-size: .8rem; color: var(--text-muted); }
+.yil-arrow { font-size: 1.5rem; color: var(--text-muted); }
+
+/* Mentor Card */
+.mentor-card {
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.mentor-card .mc-avatar {
+  margin: 0 auto 1rem;
+  position: relative;
+  display: inline-block;
+}
+
+.mentor-card .mc-badge {
+  position: absolute;
+  bottom: 0;
+  right: -4px;
+  width: 22px;
+  height: 22px;
+  background: var(--gold-500);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .7rem;
+}
+
+.mentor-card h4 { font-size: 1rem; margin-bottom: .25rem; }
+.mentor-card .mc-year { font-size: .75rem; color: var(--gold-500); font-weight: 600; display: block; }
+.mentor-card .mc-job { font-size: .82rem; color: var(--text-secondary); margin: .4rem 0; }
+.mentor-card .mc-city { font-size: .78rem; color: var(--text-muted); }
+
+@media (max-width: 600px) {
+  .filters-bar { flex-direction: column; align-items: stretch; }
+}

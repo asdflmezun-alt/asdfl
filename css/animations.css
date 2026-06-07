@@ -1,0 +1,193 @@
+/* ========================================
+   ASDFL — ANIMATIONS & MICRO-INTERACTIONS
+   ======================================== */
+
+/* Keyframes */
+@keyframes fadeInUp {
+  from { opacity:0; transform:translateY(30px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+@keyframes fadeInLeft {
+  from { opacity:0; transform:translateX(-30px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+
+@keyframes fadeInRight {
+  from { opacity:0; transform:translateX(30px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity:0; transform:scale(.85); }
+  to   { opacity:1; transform:scale(1); }
+}
+
+@keyframes toastIn {
+  from { opacity:0; transform:translateX(30px) scale(.95); }
+  to   { opacity:1; transform:translateX(0) scale(1); }
+}
+
+@keyframes pulse {
+  0%,100% { transform:scale(1); }
+  50% { transform:scale(1.05); }
+}
+
+@keyframes glow {
+  0%,100% { box-shadow: 0 0 20px rgba(244,168,54,.2); }
+  50%      { box-shadow: 0 0 40px rgba(244,168,54,.5); }
+}
+
+@keyframes float {
+  0%,100% { transform:translateY(0); }
+  50%      { transform:translateY(-12px); }
+}
+
+@keyframes spin {
+  to { transform:rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes starFloat {
+  0%   { transform:translateY(0) rotate(0deg); opacity:1; }
+  100% { transform:translateY(-80px) rotate(360deg); opacity:0; }
+}
+
+@keyframes slideDown {
+  from { opacity:0; transform:translateY(-10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+@keyframes heroGlow {
+  0%,100% { opacity:.5; }
+  50%      { opacity:1; }
+}
+
+@keyframes countUp {
+  from { opacity:0; }
+  to   { opacity:1; }
+}
+
+@keyframes borderSpin {
+  to { transform:rotate(360deg); }
+}
+
+/* Scroll Animation Classes */
+.reveal {
+  opacity:0;
+  transform:translateY(24px);
+  transition: opacity .7s ease, transform .7s ease;
+}
+.reveal.visible {
+  opacity:1;
+  transform:translateY(0);
+}
+.reveal-left  { opacity:0; transform:translateX(-24px); transition:opacity .7s ease, transform .7s ease; }
+.reveal-right { opacity:0; transform:translateX(24px);  transition:opacity .7s ease, transform .7s ease; }
+.reveal-left.visible,.reveal-right.visible { opacity:1; transform:translateX(0); }
+.reveal-scale { opacity:0; transform:scale(.9);        transition:opacity .6s ease, transform .6s ease; }
+.reveal-scale.visible { opacity:1; transform:scale(1); }
+
+/* Stagger children */
+.stagger > *:nth-child(1) { transition-delay:.05s; }
+.stagger > *:nth-child(2) { transition-delay:.1s; }
+.stagger > *:nth-child(3) { transition-delay:.15s; }
+.stagger > *:nth-child(4) { transition-delay:.2s; }
+.stagger > *:nth-child(5) { transition-delay:.25s; }
+.stagger > *:nth-child(6) { transition-delay:.3s; }
+
+/* Loading skeleton */
+.skeleton {
+  background:linear-gradient(90deg, var(--navy-700) 25%, var(--navy-600) 50%, var(--navy-700) 75%);
+  background-size:200% auto;
+  animation:shimmer 1.5s linear infinite;
+  border-radius:var(--radius-sm);
+}
+
+/* Floating particles */
+.particle {
+  position:absolute;
+  width:4px; height:4px;
+  border-radius:50%;
+  background:var(--gold-500);
+  opacity:.3;
+  animation:float 4s ease-in-out infinite;
+}
+
+/* Hover lift effect */
+.lift { transition:transform .25s ease, box-shadow .25s ease; }
+.lift:hover { transform:translateY(-6px); box-shadow:0 16px 40px rgba(0,0,0,.4); }
+
+/* Glow animated border */
+.glow-border {
+  position:relative;
+}
+.glow-border::before {
+  content:'';
+  position:absolute;
+  inset:-1px;
+  border-radius:inherit;
+  background:linear-gradient(135deg,var(--gold-500),transparent,var(--gold-700));
+  z-index:-1;
+  opacity:0;
+  transition:opacity .3s;
+}
+.glow-border:hover::before { opacity:1; }
+
+/* Shimmer text */
+.shimmer-text {
+  background:linear-gradient(90deg, var(--gold-400), var(--gold-600), var(--gold-400));
+  background-size:200% auto;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation:shimmer 3s linear infinite;
+}
+
+/* Loading spinner */
+.spinner {
+  width:24px; height:24px;
+  border:2px solid var(--glass-border);
+  border-top-color:var(--gold-500);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+  display:inline-block;
+}
+
+/* Pulse dot (online indicator) */
+.pulse-dot {
+  width:8px; height:8px;
+  border-radius:50%;
+  background:var(--success);
+  position:relative;
+}
+.pulse-dot::after {
+  content:'';
+  position:absolute;
+  inset:-3px;
+  border-radius:50%;
+  background:var(--success);
+  opacity:.4;
+  animation:pulse 1.5s ease-in-out infinite;
+}
+
+/* Hero floating blobs */
+.blob {
+  position:absolute;
+  border-radius:50%;
+  filter:blur(80px);
+  pointer-events:none;
+  animation:float 8s ease-in-out infinite;
+}
+.blob-1 { width:400px; height:400px; background:rgba(244,168,54,.06); top:-100px; right:-100px; animation-delay:0s; }
+.blob-2 { width:300px; height:300px; background:rgba(31,53,88,.8); bottom:-80px; left:-80px; animation-delay:-3s; }
+.blob-3 { width:200px; height:200px; background:rgba(244,168,54,.04); top:50%; right:20%; animation-delay:-6s; }

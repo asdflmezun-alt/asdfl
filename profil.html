@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profilim | ASDFL Mezunlar Derneği</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/animations.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  .profile-header {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  .profile-avatar-lg {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-500), var(--gold-600));
+    color: var(--brand-dark);
+    font-size: 2.5rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    box-shadow: 0 10px 25px rgba(244,168,54,0.3);
+  }
+</style>
+</head>
+<body>
+
+<nav class="navbar" id="navbar">
+  <a href="index.html" class="nav-brand"><div class="logo-icon"><i data-lucide="microscope" style="width:1em;height:1em"></i></div><div>ASDFL<span class="sub">Mezunlar Derneği</span></div></a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="index.html"><i data-lucide="home" style="width:1.2rem;height:1.2rem"></i> Ana Sayfa</a></li>
+    <li><a href="mezunlar.html"><i data-lucide="users" style="width:1.2rem;height:1.2rem"></i> Mezunlar</a></li>
+    <li><a href="topluluk.html"><i data-lucide="message-circle" style="width:1.2rem;height:1.2rem"></i> Topluluk</a></li>
+    <li><a href="etkinlikler.html"><i data-lucide="megaphone" style="width:1.2rem;height:1.2rem"></i> Etkinlikler</a></li>
+    <li><a href="galeri.html"><i data-lucide="image" style="width:1.2rem;height:1.2rem"></i> Galeri</a></li>
+    <li><a href="burs-mentorluk.html"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i> Burs &amp; Mentörlük</a></li>
+    <li><a href="kariyer.html"><i data-lucide="briefcase" style="width:1.2rem;height:1.2rem"></i> Kariyer Ağı</a></li>
+  </ul>
+  <div class="nav-cta">
+    <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+  </div>
+</nav>
+
+<section class="section" style="padding-top:8rem">
+  <div class="container" style="max-width:800px">
+    <div class="profile-header reveal">
+      <div class="profile-avatar-lg" id="profileInitials">?</div>
+      <h1 id="profileName" style="margin-bottom:.5rem">Profil Yükleniyor...</h1>
+      <p id="profileRole" style="color:var(--text-secondary);font-size:1.1rem"></p>
+    </div>
+
+    <div class="card reveal" style="padding:2rem">
+      <h3 style="margin-bottom:1.5rem;border-bottom:1px solid var(--glass-border);padding-bottom:1rem">Kişisel Bilgiler</h3>
+      
+      <div class="grid-2">
+        <!-- Ortak Alanlar -->
+        <div class="form-group">
+          <label class="form-label">Ad Soyad</label>
+          <input type="text" class="form-input" id="editName" placeholder="Adınız Soyadınız">
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-posta</label>
+          <input type="email" class="form-input" id="editEmail" disabled>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Telefon Numarası</label>
+          <input type="tel" class="form-input" id="editPhone" placeholder="0555 555 55 55">
+        </div>
+        <div class="form-group" id="groupClassSection">
+          <label class="form-label">Şube</label>
+          <input type="text" class="form-input" id="editClassSection" placeholder="Örn: A" maxlength="2">
+        </div>
+
+        <!-- Mezun Alanları -->
+        <div class="form-group role-field role-mezun">
+          <label class="form-label">Mezuniyet Yılı</label>
+          <input type="number" class="form-input" id="editGradYear" placeholder="Örn: 2015">
+        </div>
+        <div class="form-group role-field role-mezun">
+          <label class="form-label">Meslek</label>
+          <input type="text" class="form-input" id="editJob" placeholder="Örn: Doktor">
+        </div>
+        <div class="form-group role-field role-mezun">
+          <label class="form-label">Çalıştığı Kurum / Şirket</label>
+          <input type="text" class="form-input" id="editCompany" placeholder="Örn: Hacettepe Üni. / Şehir Hastanesi">
+        </div>
+        <div class="form-group role-field role-mezun">
+          <label class="form-label">Yaşadığı Şehir</label>
+          <select class="form-select" id="editCity"><option value="" disabled selected>Şehir Seçin</option></select>
+        </div>
+
+        <!-- Öğrenci Alanları -->
+        <div class="form-group role-field role-ogrenci">
+          <label class="form-label">Sınıf</label>
+          <select class="form-select" id="editGrade">
+            <option value="9. Sınıf">9. Sınıf</option>
+            <option value="10. Sınıf">10. Sınıf</option>
+            <option value="11. Sınıf">11. Sınıf</option>
+            <option value="12. Sınıf">12. Sınıf</option>
+          </select>
+        </div>
+
+        <!-- Öğretmen Alanları -->
+        <div class="form-group role-field role-ogretmen">
+          <label class="form-label">Branş</label>
+          <input type="text" class="form-input" id="editBranch" placeholder="Örn: Matematik">
+        </div>
+        <div class="form-group role-field role-ogretmen">
+          <label class="form-label">Görev Başlangıç Yılı</label>
+          <input type="number" class="form-input" id="editTeachingYear" placeholder="Örn: 2010">
+        </div>
+      </div>
+      
+      <div style="margin-top:1.5rem; display:flex; flex-direction:column; gap:0.5rem; border-top:1px solid var(--glass-border); padding-top:1.5rem; text-align: left;">
+        <h4 style="margin-bottom:.5rem; font-family:'Outfit',sans-serif">İletişim Bilgileri Paylaşım Tercihleri</h4>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--text-secondary); cursor: pointer;">
+          <input type="checkbox" id="editSharePhone" style="accent-color: var(--gold-500);"> Telefon numaramı diğer mezunlarla paylaş
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--text-secondary); cursor: pointer;">
+          <input type="checkbox" id="editShareEmail" style="accent-color: var(--gold-500);"> E-posta adresimi diğer mezunlarla paylaş
+        </label>
+      </div>
+      
+      <div style="text-align:right;margin-top:1.5rem">
+        <button class="btn btn-primary" id="saveProfileBtn" onclick="saveProfile()">Değişiklikleri Kaydet</button>
+      </div>
+    </div>
+
+    <!-- GELEN İLETİŞİM TALEPLERİ -->
+    <div class="card reveal" style="padding:2rem; margin-top:2rem;">
+      <h3 style="margin-bottom:1.5rem;border-bottom:1px solid var(--glass-border);padding-bottom:1rem; font-family:'Outfit',sans-serif"><i data-lucide="bell" style="width:1.2rem;height:1.2rem;display:inline-block;vertical-align:middle;margin-top:-3px"></i> Gelen İletişim Talepleri</h3>
+      <div id="contactRequestsList">
+        <p style="color:var(--text-muted);text-align:center;padding:1rem">Yükleniyor...</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer" style="margin-top:4rem"><div class="container">
+  <div class="footer-grid">
+    <div class="footer-brand"><div class="nav-brand" style="margin-bottom:.5rem"><div class="logo-icon" style="width:38px;height:38px;font-size:1.1rem"><i data-lucide="microscope" style="width:1em;height:1em"></i></div><div>ASDFL<span class="sub">Mezunlar Derneği</span></div></div><p>Afyon Süleyman Demirel Fen Lisesi mezunlarını buluşturan platform.</p></div>
+  </div>
+  <div class="footer-bottom"><span>© 2025 ASDFL Mezunlar Derneği</span><span>💛 ASDFL ruhuyla yapıldı</span></div>
+</div></footer>
+
+<div class="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/app.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    await ASDFL.waitForAuth();
+    await loadProfile();
+  });
+
+  async function loadProfile() {
+    if (!ASDFL.currentUser) {
+      window.location.href = 'index.html';
+      return;
+    }
+
+    const user = ASDFL.currentUser;
+    document.getElementById('profileInitials').textContent = ASDFL.getInitials(user.name);
+    document.getElementById('profileName').textContent = user.name;
+    document.getElementById('profileRole').textContent = user.role + (user.gradYear ? ' · ' + user.gradYear + ' Mezunu' : '');
+
+    document.getElementById('editName').value = user.name;
+    document.getElementById('editEmail').value = user.email;
+
+    // Show/hide fields based on user role
+    document.querySelectorAll('.role-field').forEach(el => el.classList.add('hidden'));
+    const groupClassSection = document.getElementById('groupClassSection');
+    if (groupClassSection) {
+      groupClassSection.classList.toggle('hidden', user.role === 'Öğretmen');
+    }
+
+    if (user.role === 'Mezun') {
+      document.querySelectorAll('.role-mezun').forEach(el => el.classList.remove('hidden'));
+    } else if (user.role === 'Öğrenci') {
+      document.querySelectorAll('.role-ogrenci').forEach(el => el.classList.remove('hidden'));
+    } else if (user.role === 'Öğretmen') {
+      document.querySelectorAll('.role-ogretmen').forEach(el => el.classList.remove('hidden'));
+    }
+
+    if(ASDFL.supabase) {
+      const { data } = await ASDFL.supabase.from('profiles').select('*').eq('id', user.id).single();
+      if(data) {
+        document.getElementById('editCity').value = data.city || '';
+        document.getElementById('editJob').value = data.job || '';
+        document.getElementById('editCompany').value = data.company || '';
+        document.getElementById('editClassSection').value = data.class_section || '';
+        document.getElementById('editGradYear').value = data.grad_year || '';
+        document.getElementById('editGrade').value = data.grade || '9. Sınıf';
+        document.getElementById('editBranch').value = data.branch || '';
+        document.getElementById('editTeachingYear').value = data.teaching_year || '';
+        document.getElementById('editPhone').value = data.phone || '';
+        document.getElementById('editSharePhone').checked = !!data.share_phone;
+        document.getElementById('editShareEmail').checked = !!data.share_email;
+      }
+      await loadContactRequests();
+    } else {
+      document.getElementById('editCity').value = user.city || '';
+      document.getElementById('editJob').value = user.job || '';
+      document.getElementById('editCompany').value = user.company || '';
+      document.getElementById('editClassSection').value = user.classSection || '';
+      document.getElementById('editGradYear').value = user.gradYear || '';
+      document.getElementById('editGrade').value = user.grade || '9. Sınıf';
+      document.getElementById('editBranch').value = user.branch || '';
+      document.getElementById('editTeachingYear').value = user.teachingYear || '';
+      document.getElementById('editPhone').value = user.phone || '';
+      document.getElementById('editSharePhone').checked = !!user.sharePhone;
+      document.getElementById('editShareEmail').checked = !!user.shareEmail;
+      document.getElementById('contactRequestsList').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem">Çevrimdışı modda iletişim talepleri devre dışıdır.</p>';
+    }
+    
+    ASDFL.initReveal();
+    setTimeout(() => lucide.createIcons(), 10);
+  }
+
+  async function loadContactRequests() {
+    const el = document.getElementById('contactRequestsList');
+    if (!el || !ASDFL.supabase || !ASDFL.currentUser) return;
+
+    const { data, error } = await ASDFL.supabase
+      .from('contact_requests')
+      .select('*, profiles!contact_requests_sender_id_fkey(name, role, grad_year, email, phone)')
+      .eq('receiver_id', ASDFL.currentUser.id);
+
+    if (error) {
+      console.error('Error fetching contact requests:', error);
+      el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem">Talepler yüklenirken bir hata oluştu.</p>';
+      return;
+    }
+
+    const pendingRequests = data.filter(r => r.status === 'Pending');
+
+    if (pendingRequests.length === 0) {
+      el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1.5rem">Bekleyen herhangi bir iletişim talebiniz bulunmamaktadır.</p>';
+      return;
+    }
+
+    el.innerHTML = pendingRequests.map(r => {
+      const sender = r.profiles;
+      const desc = sender.role + (sender.grad_year ? ` (${sender.grad_year} Mezunu)` : '');
+      return `
+        <div class="reveal" style="display:flex; align-items:center; justify-content:space-between; padding:1rem; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:var(--radius-md); margin-bottom:1rem; text-align:left;">
+          <div>
+            <strong style="display:block; font-size:.95rem">${sender.name}</strong>
+            <span style="font-size:.8rem; color:var(--text-secondary)">${desc} iletişim bilgilerinize erişmek istiyor.</span>
+          </div>
+          <div style="display:flex; gap:.5rem;">
+            <button class="btn btn-primary btn-sm" onclick="respondRequest('${r.id}', 'Approved')" style="padding:.25rem .75rem; font-size:.8rem">Onayla</button>
+            <button class="btn btn-sm" onclick="respondRequest('${r.id}', 'Rejected')" style="padding:.25rem .75rem; font-size:.8rem; background:rgba(255,255,255,.05); border:1px solid var(--glass-border)">Reddet</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    setTimeout(() => lucide.createIcons(), 10);
+  }
+
+  window.respondRequest = async function(requestId, status) {
+    if (!ASDFL.supabase) return;
+    
+    const { error } = await ASDFL.supabase
+      .from('contact_requests')
+      .update({ status })
+      .eq('id', requestId);
+
+    if (error) {
+      ASDFL.toast('İşlem başarısız: ' + error.message, 'error');
+    } else {
+      ASDFL.toast(status === 'Approved' ? 'Talep onaylandı!' : 'Talep reddedildi.', 'success');
+      await loadContactRequests();
+    }
+  };
+
+  window.saveProfile = async function() {
+    if(!ASDFL.currentUser) return;
+    
+    const btn = document.getElementById('saveProfileBtn');
+    btn.textContent = 'Kaydediliyor...';
+    btn.disabled = true;
+
+    const name = document.getElementById('editName').value;
+    const city = document.getElementById('editCity').value;
+    const job = document.getElementById('editJob').value;
+    const company = document.getElementById('editCompany').value;
+    const phone = document.getElementById('editPhone').value;
+    const classSectionRaw = document.getElementById('editClassSection').value;
+    const classSection = classSectionRaw ? classSectionRaw.toUpperCase() : '';
+    const gradYear = document.getElementById('editGradYear').value ? parseInt(document.getElementById('editGradYear').value) : null;
+    const grade = document.getElementById('editGrade').value;
+    const branch = document.getElementById('editBranch').value;
+    const teachingYear = document.getElementById('editTeachingYear').value ? parseInt(document.getElementById('editTeachingYear').value) : null;
+    
+    const sharePhone = document.getElementById('editSharePhone').checked;
+    const shareEmail = document.getElementById('editShareEmail').checked;
+
+    if (ASDFL.supabase) {
+      const { error } = await ASDFL.supabase
+        .from('profiles')
+        .update({ 
+          name, 
+          city, 
+          job, 
+          company, 
+          class_section: classSection, 
+          grad_year: gradYear,
+          grade,
+          branch,
+          teaching_year: teachingYear,
+          phone, 
+          share_phone: sharePhone, 
+          share_email: shareEmail 
+        })
+        .eq('id', ASDFL.currentUser.id);
+
+      if (error) {
+        ASDFL.toast('Güncelleme hatası: ' + error.message, 'error');
+        btn.textContent = 'Değişiklikleri Kaydet';
+        btn.disabled = false;
+        return;
+      }
+      
+      await ASDFL.supabase.auth.updateUser({
+        data: { name, city, job, company, classSection, gradYear, grade, branch, teachingYear, phone, sharePhone, shareEmail }
+      });
+    } else {
+      const updatedUser = {
+        ...ASDFL.currentUser,
+        name, city, job, company, classSection, gradYear, grade, branch, teachingYear, phone, sharePhone, shareEmail
+      };
+      localStorage.setItem('asdfl_user', JSON.stringify(updatedUser));
+    }
+
+    ASDFL.currentUser.name = name;
+    ASDFL.currentUser.city = city;
+    ASDFL.currentUser.job = job;
+    ASDFL.currentUser.company = company;
+    ASDFL.currentUser.classSection = classSection;
+    ASDFL.currentUser.gradYear = gradYear;
+    ASDFL.currentUser.grade = grade;
+    ASDFL.currentUser.branch = branch;
+    ASDFL.currentUser.teachingYear = teachingYear;
+    ASDFL.currentUser.phone = phone;
+    ASDFL.currentUser.sharePhone = sharePhone;
+    ASDFL.currentUser.shareEmail = shareEmail;
+
+    document.getElementById('profileInitials').textContent = ASDFL.getInitials(name);
+    document.getElementById('profileName').textContent = name;
+    document.getElementById('profileRole').textContent = ASDFL.currentUser.role + (gradYear ? ' · ' + gradYear + ' Mezunu' : '');
+
+    ASDFL.toast('Profil başarıyla güncellendi!', 'success');
+    btn.textContent = 'Değişiklikleri Kaydet';
+    btn.disabled = false;
+  };
+</script>
+</body>
+</html>

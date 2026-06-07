@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASDFL Yönetim Paneli | ASDFL Mezunlar Derneği</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/yonetim.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<nav class="navbar" id="navbar">
+  <a href="index.html" class="nav-brand"><div class="logo-icon"><i data-lucide="microscope" style="width:1em;height:1em"></i></div><div>ASDFL<span class="sub">Mezunlar Derneği</span></div></a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="index.html"><i data-lucide="home" style="width:1.2rem;height:1.2rem"></i> Ana Sayfa</a></li>
+    <li><a href="mezunlar.html"><i data-lucide="users" style="width:1.2rem;height:1.2rem"></i> Mezunlar</a></li>
+    <li><a href="topluluk.html"><i data-lucide="message-circle" style="width:1.2rem;height:1.2rem"></i> Topluluk</a></li>
+    <li><a href="etkinlikler.html"><i data-lucide="megaphone" style="width:1.2rem;height:1.2rem"></i> Etkinlikler</a></li>
+    <li><a href="galeri.html"><i data-lucide="image" style="width:1.2rem;height:1.2rem"></i> Galeri</a></li>
+    <li><a href="burs-mentorluk.html"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i> Burs &amp; Mentörlük</a></li>
+    <li><a href="kariyer.html"><i data-lucide="briefcase" style="width:1.2rem;height:1.2rem"></i> Kariyer Ağı</a></li>
+  </ul>
+  <div class="nav-cta">
+    <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+  </div>
+</nav>
+
+<section class="section" style="padding-top:8rem">
+  <div class="container" style="max-width:1200px">
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <span class="badge badge-gold" style="font-size: 0.85rem; padding: 0.5rem 1rem; border-radius: 50px;"><i data-lucide="shield-check" style="display:inline-block; vertical-align:middle; margin-top:-2px; width: 1.1em; height: 1.1em;"></i> SİSTEM YÖNETİCİSİ</span>
+      <h1 style="margin-top: 1rem;">ASDFL Yönetim Portalı</h1>
+      <p style="color:var(--text-secondary); max-width:600px; margin: 0.5rem auto 0; font-size: .92rem;">Sitenin üyelerini, etkinliklerini, burs &amp; mentorluk başvurularını tek bir noktadan yönetin.</p>
+    </div>
+
+    <!-- Security Blocking Box (Hidden when authorized) -->
+    <div id="adminAuthBlock" style="display:none; text-align:center; padding: 4rem 2rem; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); backdrop-filter: blur(12px);">
+      <div style="font-size: 4rem; color: var(--gold-500); margin-bottom: 1.5rem;"><i data-lucide="shield-alert"></i></div>
+      <h2 style="margin-bottom: 0.5rem;">Yetkisiz Erişim!</h2>
+      <p style="color: var(--text-muted); margin-bottom: 2rem;">Bu sayfayı görüntülemek için sistem yöneticisi (Admin) yetkisine sahip olmalısınız.</p>
+      <a href="index.html" class="btn btn-primary">Ana Sayfaya Dön</a>
+    </div>
+
+    <!-- Active Management Panels -->
+    <div class="admin-wrapper" id="adminActiveWrapper" style="display:none; grid-template-columns: 280px 1fr; gap: 2rem;">
+      <!-- Sidebar Navigation -->
+      <aside class="card" style="padding: 1rem; align-self: start; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+        <nav class="admin-nav">
+          <button class="admin-tab-btn active" id="btn-tab-dashboard" onclick="switchAdminTab('dashboard', this)"><i data-lucide="layout-dashboard" style="width:1.2rem;height:1.2rem"></i> Genel Bakış</button>
+          <button class="admin-tab-btn" id="btn-tab-members" onclick="switchAdminTab('members', this)"><i data-lucide="users" style="width:1.2rem;height:1.2rem"></i> Üye Yönetimi</button>
+          <button class="admin-tab-btn" id="btn-tab-events" onclick="switchAdminTab('events', this)"><i data-lucide="calendar" style="width:1.2rem;height:1.2rem"></i> Etkinlikler &amp; Duyurular</button>
+          <button class="admin-tab-btn" id="btn-tab-burs" onclick="switchAdminTab('burs', this)"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i> Burs Programları</button>
+          <button class="admin-tab-btn" id="btn-tab-applications" onclick="switchAdminTab('applications', this)"><i data-lucide="clipboard-check" style="width:1.2rem;height:1.2rem"></i> Başvurular <span class="badge badge-gold" id="pendingAppsBadge" style="margin-left:auto; display:none; padding:.2rem .4rem; font-size:.7rem">0</span></button>
+        </nav>
+      </aside>
+
+      <!-- Tab Content Area -->
+      <main class="admin-content">
+        <!-- 1. DASHBOARD TAB -->
+        <div id="tab-dashboard" class="admin-panel-tab">
+          <div class="admin-stats-grid">
+            <div class="card admin-stat-card reveal">
+              <div class="admin-stat-icon"><i data-lucide="users"></i></div>
+              <div class="admin-stat-info">
+                <h3 id="statTotalUsers">0</h3>
+                <p>Kayıtlı Üye</p>
+              </div>
+            </div>
+            <div class="card admin-stat-card reveal">
+              <div class="admin-stat-icon"><i data-lucide="calendar"></i></div>
+              <div class="admin-stat-info">
+                <h3 id="statTotalEvents">0</h3>
+                <p>Aktif Etkinlik</p>
+              </div>
+            </div>
+            <div class="card admin-stat-card reveal">
+              <div class="admin-stat-icon" style="color:var(--gold-500); background:rgba(244,168,54,0.1);"><i data-lucide="clock"></i></div>
+              <div class="admin-stat-info">
+                <h3 id="statPendingApps">0</h3>
+                <p>Bekleyen Başvuru</p>
+              </div>
+            </div>
+            <div class="card admin-stat-card reveal">
+              <div class="admin-stat-icon"><i data-lucide="award"></i></div>
+              <div class="admin-stat-info">
+                <h3 id="statTotalScholarships">0</h3>
+                <p>Burs Programı</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top: 2rem;">
+            <!-- Son Katılanlar -->
+            <div class="card reveal" style="padding:1.5rem">
+              <h3 style="font-size:1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem"><i data-lucide="user-plus" style="color:var(--gold-500)"></i> Son Kayıt Olan Üyeler</h3>
+              <div style="display:flex; flex-direction:column; gap:.75rem;" id="recentMembersList"></div>
+            </div>
+
+            <!-- Son Başvurular -->
+            <div class="card reveal" style="padding:1.5rem">
+              <h3 style="font-size:1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem"><i data-lucide="clipboard-list" style="color:var(--gold-500)"></i> Son Başvurular</h3>
+              <div style="display:flex; flex-direction:column; gap:.75rem;" id="recentApplicationsList"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. MEMBERS TAB -->
+        <div id="tab-members" class="admin-panel-tab" style="display:none">
+          <div class="admin-actions-row">
+            <div class="admin-search-wrapper">
+              <i data-lucide="search" class="admin-search-icon"></i>
+              <input class="form-input admin-search-input" placeholder="Üye adı veya e-posta ara..." id="memberSearch" oninput="filterMembersList()">
+            </div>
+            <div style="display:flex; gap:.5rem;">
+              <select class="form-select" style="max-width:160px" id="memberRoleFilter" onchange="filterMembersList()">
+                <option value="ALL">Tüm Roller</option>
+                <option value="Mezun">Mezun</option>
+                <option value="Öğrenci">Öğrenci</option>
+                <option value="Öğretmen">Öğretmen</option>
+                <option value="Admin">Admin</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Üye</th>
+                  <th>E-posta &amp; Tel</th>
+                  <th>Rol</th>
+                  <th>Mentör?</th>
+                  <th style="text-align:right">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody id="adminMembersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. EVENTS TAB -->
+        <div id="tab-events" class="admin-panel-tab" style="display:none">
+          <div class="admin-actions-row">
+            <div style="font-family:'Outfit',sans-serif;font-weight:600" id="eventsCount">0 aktif etkinlik</div>
+            <button class="btn btn-primary btn-sm" onclick="openAddEventModal()"><i data-lucide="plus" style="width:1em;height:1em"></i> Yeni Etkinlik/Duyuru Ekle</button>
+          </div>
+
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Başlık</th>
+                  <th>Tür</th>
+                  <th>Tarih</th>
+                  <th>Konum</th>
+                  <th style="text-align:right">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody id="adminEventsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4. SCHOLARSHIPS TAB -->
+        <div id="tab-burs" class="admin-panel-tab" style="display:none">
+          <div class="admin-actions-row">
+            <div style="font-family:'Outfit',sans-serif;font-weight:600" id="scholarshipsCount">0 burs programı</div>
+            <button class="btn btn-primary btn-sm" onclick="openAddScholarshipModal()"><i data-lucide="plus" style="width:1em;height:1em"></i> Yeni Burs Programı Ekle</button>
+          </div>
+
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Sponsor</th>
+                  <th>Burs Başlığı</th>
+                  <th>Miktar</th>
+                  <th>Son Tarih</th>
+                  <th>Durum</th>
+                  <th style="text-align:right">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody id="adminScholarshipsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 5. APPLICATIONS TAB -->
+        <div id="tab-applications" class="admin-panel-tab" style="display:none">
+          <div class="admin-actions-row">
+            <div style="display:flex; gap:.5rem;">
+              <button class="btn btn-ghost btn-sm active" id="appFilterAll" onclick="filterApplicationsList('ALL', this)">Tümü</button>
+              <button class="btn btn-ghost btn-sm" id="appFilterBurs" onclick="filterApplicationsList('Burs', this)">Burs</button>
+              <button class="btn btn-ghost btn-sm" id="appFilterTaleb" onclick="filterApplicationsList('MentorlukTalebi', this)">Mentörlük Talebi</button>
+              <button class="btn btn-ghost btn-sm" id="appFilterKayit" onclick="filterApplicationsList('MentorlukKaydi', this)">Mentörlük Kaydı</button>
+            </div>
+            <select class="form-select" style="max-width:160px" id="appStatusFilter" onchange="filterApplicationsListByStatus()">
+              <option value="Pending">Bekleyenler</option>
+              <option value="Approved">Onaylananlar</option>
+              <option value="Rejected">Reddedilenler</option>
+              <option value="ALL">Tüm Durumlar</option>
+            </select>
+          </div>
+
+          <div id="adminApplicationsList"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- EVENT ADD/EDIT MODAL -->
+<div class="modal-overlay" id="adminEventModal" onclick="if(event.target===this)ASDFL.closeModal('adminEventModal')">
+  <div class="modal" style="max-width:550px">
+    <button class="modal-close" onclick="ASDFL.closeModal('adminEventModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <h3 id="adminEventModalTitle" style="margin-bottom:1.5rem"><i data-lucide="calendar" style="width:1em;height:1em"></i> Yeni Etkinlik / Duyuru</h3>
+    <input type="hidden" id="eventEditId">
+    <div class="form-group">
+      <label class="form-label">Tür</label>
+      <select class="form-select" id="eventFieldType">
+        <option value="etkinlik">Etkinlik</option>
+        <option value="duyuru">Duyuru</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Başlık</label>
+      <input type="text" class="form-input" id="eventFieldTitle" placeholder="Örn: 2026 Pilav Günü">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Detaylı İçerik</label>
+      <textarea class="form-textarea" id="eventFieldDesc" placeholder="Etkinlik ayrıntılarını, amaçlarını buraya yazın..." style="height:100px"></textarea>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Tarih</label>
+        <input type="date" class="form-input" id="eventFieldDate">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Konum / Platform</label>
+        <input type="text" class="form-input" id="eventFieldLocation" placeholder="Örn: Okul Bahçesi veya Zoom">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Görsel URL (İsteğe bağlı)</label>
+      <input type="url" class="form-input" id="eventFieldImage" placeholder="https://example.com/image.jpg">
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="saveEventFromModal()">Kaydet ve Yayınla</button>
+  </div>
+</div>
+
+<!-- SCHOLARSHIP ADD/EDIT MODAL -->
+<div class="modal-overlay" id="adminScholarshipModal" onclick="if(event.target===this)ASDFL.closeModal('adminScholarshipModal')">
+  <div class="modal" style="max-width:550px">
+    <button class="modal-close" onclick="ASDFL.closeModal('adminScholarshipModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <h3 id="adminScholarshipModalTitle" style="margin-bottom:1.5rem"><i data-lucide="award" style="width:1em;height:1em"></i> Yeni Burs Programı</h3>
+    <input type="hidden" id="bursEditId">
+    <div class="form-group">
+      <label class="form-label">Sponsor / Veren Kurum</label>
+      <input type="text" class="form-input" id="bursFieldSponsor" placeholder="Örn: ASDFL Mezunlar Derneği veya Şahıs Adı">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Burs Başlığı</label>
+      <input type="text" class="form-input" id="bursFieldTitle" placeholder="Örn: STEM Üstün Başarı Bursu">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Açıklama</label>
+      <textarea class="form-textarea" id="bursFieldDesc" placeholder="Başvuru kriterleri, detaylar..." style="height:100px"></textarea>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Burs Miktarı</label>
+        <input type="text" class="form-input" id="bursFieldAmount" placeholder="Örn: 1.500₺ / Ay">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Son Başvuru Tarihi</label>
+        <input type="date" class="form-input" id="bursFieldDeadline">
+      </div>
+    </div>
+    <div class="form-group" style="display:flex; align-items:center; gap:0.5rem; text-align:left">
+      <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.88rem; cursor:pointer">
+        <input type="checkbox" id="bursFieldActive" style="accent-color:var(--gold-500)" checked> Burs Programı Aktif (Başvurulara Açık)
+      </label>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="saveScholarshipFromModal()">Burs Programını Kaydet</button>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer"><div class="container">
+  <div class="footer-grid">
+    <div class="footer-brand"><div class="nav-brand" style="margin-bottom:.5rem"><div class="logo-icon" style="width:38px;height:38px;font-size:1.1rem"><i data-lucide="microscope" style="width:1em;height:1em"></i></div><div>ASDFL<span class="sub">Mezunlar Derneği</span></div></div><p>Afyon Süleyman Demirel Fen Lisesi mezunlarını buluşturan platform.</p></div>
+    <div class="footer-col"><h5>Sayfalar</h5><ul class="footer-links"><li><a href="index.html">Ana Sayfa</a></li><li><a href="mezunlar.html">Mezunlar</a></li><li><a href="etkinlikler.html">Etkinlikler</a></li><li><a href="galeri.html">Galeri</a></li></ul></div>
+    <div class="footer-col"><h5>Destek</h5><ul class="footer-links"><li><a href="burs-mentorluk.html#basvuru">Burs Başvurusu</a></li>
+          <li><a href="kariyer.html">Kariyer Ağı</a></li><li><a href="burs-mentorluk.html#mentor">Mentör Ol</a></li><li><a href="burs-mentorluk.html#bagis">Bağış Yap</a></li></ul></div>
+    <div class="footer-col"><h5>İletişim</h5><ul class="footer-links"><li><a href="mailto:info@asdfl.org">info@asdfl.org</a></li></ul></div>
+  </div>
+  <div class="footer-bottom"><span>© 2025 ASDFL Mezunlar Derneği</span><span>💛 ASDFL ruhuyla yapıldı</span></div>
+</div></footer>
+
+<!-- LOGIN / REGISTER MODALS (Standard across platform) -->
+<div class="modal-overlay" id="loginModal" onclick="if(event.target===this)ASDFL.closeModal('loginModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="ASDFL.closeModal('loginModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2.5rem;margin-bottom:.5rem"><i data-lucide="microscope" style="width:1em;height:1em"></i></div>
+      <h3>ASDFL'ye Hoş Geldin</h3>
+      <p style="font-size:.9rem;margin-top:.25rem">E-posta ve şifrenizle giriş yapın</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">E-posta</label>
+      <input type="email" class="form-input" placeholder="ornek@email.com" id="loginEmail">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Şifre</label>
+      <input type="password" class="form-input" placeholder="••••••••" id="loginPass">
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="ASDFL.handleLogin('loginEmail', 'loginPass')">Giriş Yap</button>
+    <div class="divider"></div>
+    <p style="text-align:center;font-size:.88rem">Henüz üye değil misin? <a href="javascript:void(0)" onclick="ASDFL.closeModal('loginModal');ASDFL.openModal('registerModal')">Kayıt Ol</a></p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="registerModal" onclick="if(event.target===this)ASDFL.closeModal('registerModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="ASDFL.closeModal('registerModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2.5rem;margin-bottom:.5rem"><i data-lucide="user-plus" style="width:1em;height:1em"></i></div>
+      <h3>Aileye Katıl</h3>
+      <p style="font-size:.9rem;margin-top:.25rem">Mezun, öğrenci veya öğretmen olarak kayıt ol</p>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Üyelik Rolü</label>
+      <select class="form-select" id="regRole" onchange="toggleRegFields(this.value)">
+        <option value="Mezun">Mezun</option>
+        <option value="Öğrenci">Aktif Öğrenci</option>
+        <option value="Öğretmen">Öğretmen / İdari Kadro</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Ad Soyad</label>
+      <input type="text" class="form-input" placeholder="Adınız Soyadınız" id="regName">
+    </div>
+
+    <!-- Mezun Alanları -->
+    <div id="mezunFields">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Mezuniyet Yılı</label>
+          <input type="number" class="form-input" placeholder="Örn: 2015" id="regGradYear">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şube</label>
+          <input type="text" class="form-input" placeholder="Örn: A" id="regClassSectionAlumni" maxlength="2">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Meslek</label>
+          <input type="text" class="form-input" placeholder="Örn: Doktor" id="regJob">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Çalıştığı Kurum / Şirket</label>
+          <input type="text" class="form-input" placeholder="Örn: Hacettepe Üni. / Şehir Hastanesi" id="regCompany">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Yaşadığı Şehir</label>
+        <select class="form-select" id="regCity"><option value="" disabled selected>Şehir Seçin</option></select>
+      </div>
+    </div>
+
+    <!-- Öğrenci Alanları -->
+    <div id="ogrenciFields" class="hidden">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Sınıf</label>
+          <select class="form-select" id="regGrade">
+            <option value="9. Sınıf">9. Sınıf</option>
+            <option value="10. Sınıf">10. Sınıf</option>
+            <option value="11. Sınıf">11. Sınıf</option>
+            <option value="12. Sınıf">12. Sınıf</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şube</label>
+          <input type="text" class="form-input" placeholder="Örn: A" id="regClassSectionStudent" maxlength="2">
+        </div>
+      </div>
+    </div>
+
+    <!-- Öğretmen Alanları -->
+    <div id="ogretmenFields" class="hidden">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Branş</label>
+          <input type="text" class="form-input" placeholder="Örn: Matematik" id="regBranch">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Görev Yılı</label>
+          <input type="number" class="form-input" placeholder="Örn: 2010" id="regTeachingYear">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:1rem">
+      <label class="form-label">Telefon Numarası</label>
+      <input type="tel" class="form-input" placeholder="0555 555 55 55" id="regPhone">
+    </div>
+    <div class="form-group" style="margin-top:1rem">
+      <label class="form-label">E-posta</label>
+      <input type="email" class="form-input" placeholder="ornek@email.com" id="regEmail">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Şifre</label>
+      <input type="password" class="form-input" placeholder="••••••••" id="regPass">
+    </div>
+    <div class="form-group" style="margin-top:1rem; display: flex; flex-direction: column; gap: 0.5rem; text-align: left;">
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
+        <input type="checkbox" id="regSharePhone" style="accent-color: var(--gold-500);"> Telefon numaramı diğer mezunlarla paylaş
+      </label>
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
+        <input type="checkbox" id="regShareEmail" style="accent-color: var(--gold-500);"> E-posta adresimi diğer mezunlarla paylaş
+      </label>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="ASDFL.handleRegister()">Kayıt Ol</button>
+    <div class="divider"></div>
+    <p style="text-align:center;font-size:.88rem">Zaten üye misin? <a href="javascript:void(0)" onclick="ASDFL.closeModal('registerModal');ASDFL.openModal('loginModal')">Giriş Yap</a></p>
+  </div>
+</div>
+
+<script>
+function toggleRegFields(role) {
+  document.getElementById('mezunFields').classList.toggle('hidden', role !== 'Mezun');
+  document.getElementById('ogrenciFields').classList.toggle('hidden', role !== 'Öğrenci');
+  document.getElementById('ogretmenFields').classList.toggle('hidden', role !== 'Öğretmen');
+}
+</script>
+
+<div class="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/app.js"></script>
+<script src="js/yonetim.js"></script>
+</body>
+</html>

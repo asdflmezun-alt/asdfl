@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASDFL Mezunlar Derneği | Afyon Süleyman Demirel Fen Lisesi</title>
+<meta name="description" content="Afyon Süleyman Demirel Fen Lisesi mezunları ve öğrencilerini buluşturan platform. Burs, mentörlük, etkinlik ve anılar.">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/home.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar" id="navbar">
+  <a href="index.html" class="nav-brand">
+    <div class="logo-icon"><i data-lucide="microscope" style="width:1em;height:1em"></i></div>
+    <div>ASDFL<span class="sub">Mezunlar Derneği</span></div>
+  </a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="index.html" class="active"><i data-lucide="home" style="width:1.2rem;height:1.2rem"></i> Ana Sayfa</a></li>
+    <li><a href="mezunlar.html"><i data-lucide="users" style="width:1.2rem;height:1.2rem"></i> Mezunlar</a></li>
+    <li><a href="topluluk.html"><i data-lucide="message-circle" style="width:1.2rem;height:1.2rem"></i> Topluluk</a></li>
+    <li><a href="etkinlikler.html"><i data-lucide="megaphone" style="width:1.2rem;height:1.2rem"></i> Etkinlikler</a></li>
+    <li><a href="galeri.html"><i data-lucide="image" style="width:1.2rem;height:1.2rem"></i> Galeri</a></li>
+    <li><a href="burs-mentorluk.html"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i> Burs &amp; Mentörlük</a></li>
+    <li><a href="kariyer.html"><i data-lucide="briefcase" style="width:1.2rem;height:1.2rem"></i> Kariyer Ağı</a></li>
+  </ul>
+  <div class="nav-cta">
+    <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="hero-particles" id="particles"></div>
+  <div class="container">
+    <div class="hero-content">
+      <div class="hero-badge reveal">
+        <span class="pulse-dot"></span>
+        <span>1992'den beri güçlü bir topluluk</span>
+      </div>
+      <h1 class="hero-title reveal">
+        <span class="shimmer-text">ASDFL</span> Mezunlar<br>Derneği
+      </h1>
+      <p class="hero-desc reveal">Afyon Süleyman Demirel Fen Lisesi'nin köklü geleneğini ve başarılarını yaşatıyoruz. Mezunlar, öğrenciler ve okul ailesi için tek platform.</p>
+      <div class="hero-actions reveal">
+        <a href="mezunlar.html" class="btn btn-primary btn-lg">Mezunları Keşfet <i data-lucide="arrow-right" style="width:1em;height:1em"></i></a>
+        <a href="burs-mentorluk.html" class="btn btn-secondary btn-lg">Burs & Mentörlük</a>
+      </div>
+      <div class="hero-stats reveal stagger">
+        <div class="hero-stat">
+          <span class="stat-number" data-count="3200">0</span>
+          <span class="stat-label">Mezun</span>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <span class="stat-number" data-count="32">0</span>
+          <span class="stat-label">Mezuniyet Yılı</span>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <span class="stat-number" data-count="148">0</span>
+          <span class="stat-label">Aktif Mentör</span>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <span class="stat-number" data-count="86">0</span>
+          <span class="stat-label">Burs Verilen</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-visual reveal-right">
+      <div class="hero-card-stack">
+        <div class="floating-card card-1">
+          <div class="fc-icon"><i data-lucide="graduation-cap" style="width:1em;height:1em"></i></div>
+          <div><strong>2025 Mezunları</strong><br><small>128 yeni mezun</small></div>
+        </div>
+        <div class="floating-card card-2">
+          <div class="fc-icon"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i></div>
+          <div><strong>Burs Başvurusu</strong><br><small>Son 5 gün!</small></div>
+        </div>
+        <div class="floating-card card-3">
+          <div class="fc-icon"><i data-lucide="calendar" style="width:1em;height:1em"></i></div>
+          <div><strong>Yaz Turnuvası</strong><br><small>20 Temmuz 2025</small></div>
+        </div>
+        <div class="school-badge">
+          <div class="school-badge-inner">
+            <div style="font-size:3rem"><i data-lucide="microscope" style="width:1em;height:1em"></i></div>
+            <div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:1.2rem;color:var(--gold-400)">ASDFL</div>
+            <div style="font-size:.7rem;color:var(--text-muted);letter-spacing:.05em">EST. 1992</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="hero-scroll-hint">
+    <div class="scroll-mouse"><div class="scroll-wheel"></div></div>
+    <span>Aşağı kaydır</span>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section features-section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Neler Sunuyoruz</span>
+      <h2 class="section-title">Mezun olmak <span>sona ermez</span></h2>
+      <p class="section-desc">ASDFL ailesinin bir parçası olmaya devam edin. Bağlantılar kurun, destek olun, büyüyün.</p>
+    </div>
+    <div class="grid-3 stagger">
+      <div class="feature-card card reveal">
+        <div class="feature-icon"><i data-lucide="users" style="width:1.2rem;height:1.2rem"></i></div>
+        <h3>Mezun Rehberi</h3>
+        <p>Yıla, şehre ve mesleğe göre mezunları bulun. Ağınızı genişletin.</p>
+        <a href="mezunlar.html" class="btn btn-ghost btn-sm" style="margin-top:1rem">Keşfet <i data-lucide="arrow-right" style="width:1em;height:1em"></i></a>
+      </div>
+      <div class="feature-card card reveal">
+        <div class="feature-icon"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i></div>
+        <h3>Burs & Mentörlük</h3>
+        <p>Başarılı öğrencilere burs imkânı. Deneyimli mezunlardan birebir mentörlük.</p>
+        <a href="burs-mentorluk.html" class="btn btn-ghost btn-sm" style="margin-top:1rem">Başvur <i data-lucide="arrow-right" style="width:1em;height:1em"></i></a>
+      </div>
+      <div class="feature-card card reveal">
+        <div class="feature-icon"><i data-lucide="image" style="width:1.2rem;height:1.2rem"></i></div>
+        <h3>Anılar & Galeri</h3>
+        <p>Okul anılarınızı paylaşın. Yıllara göre organize edilmiş fotoğraf arşivi.</p>
+        <a href="galeri.html" class="btn btn-ghost btn-sm" style="margin-top:1rem">Gör <i data-lucide="arrow-right" style="width:1em;height:1em"></i></a>
+      </div>
+      <div class="feature-card card reveal">
+        <div class="feature-icon"><i data-lucide="megaphone" style="width:1.2rem;height:1.2rem"></i></div>
+        <h3>Etkinlik & Duyurular</h3>
+        <p>Mezun buluşmaları, kariyer günleri ve okul etkinliklerini takip edin.</p>
+        <a href="etkinlikler.html" class="btn btn-ghost btn-sm" style="margin-top:1rem">Takip Et <i data-lucide="arrow-right" style="width:1em;height:1em"></i></a>
+      </div>
+      <div class="feature-card card reveal">
+        <div class="feature-icon"><i data-lucide="graduation-cap" style="width:1em;height:1em"></i></div>
+        <h3>Yıl Bazlı Alanlar</h3>
+        <p>Her mezuniyet yılı için özel sosyal alan. Sınıf arkadaşlarınızla buluşun.</p>
+        <a href="mezunlar.html#yillar" class="btn btn-ghost btn-sm" style="margin-top:1rem">Git <i data-lucide="arrow-right" style="width:1em;height:1em"></i></a>
+      </div>
+      <div class="feature-card card reveal">
+        <div class="feature-icon"><i data-lucide="handshake" style="width:1em;height:1em"></i></div>
+        <h3>Kariyer Ağı</h3>
+        <p>Sektörden mezunlarla bağlantı kurun. Staj ve iş fırsatları bulun.</p>
+        <a href="mezunlar.html" class="btn btn-ghost btn-sm" style="margin-top:1rem">Bağlan <i data-lucide="arrow-right" style="width:1em;height:1em"></i></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- UPCOMING EVENTS -->
+<section class="section events-preview">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Yaklaşan Etkinlikler</span>
+      <h2 class="section-title">Takvime <span>ekle</span></h2>
+    </div>
+    <div class="events-list" id="homeEventsList"></div>
+    <div style="text-align:center;margin-top:2.5rem">
+      <a href="etkinlikler.html" class="btn btn-secondary">Tüm Etkinlikler <i data-lucide="arrow-right" style="width:1em;height:1em"></i></a>
+    </div>
+  </div>
+</section>
+
+<!-- RECENT ALUMNI -->
+<section class="section alumni-preview">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Öne Çıkan Mezunlar</span>
+      <h2 class="section-title">Başarılı <span>isimlerimiz</span></h2>
+    </div>
+    <div class="grid-4" id="featuredAlumni"></div>
+    <div style="text-align:center;margin-top:2.5rem">
+      <a href="mezunlar.html" class="btn btn-secondary">Tüm Mezunları Gör <i data-lucide="arrow-right" style="width:1em;height:1em"></i></a>
+    </div>
+  </div>
+</section>
+
+<!-- BURS CTA -->
+<section class="section burs-cta-section">
+  <div class="container">
+    <div class="burs-cta-card card reveal">
+      <div class="burs-cta-content">
+        <span class="section-label">Burs Programı</span>
+        <h2>Geleceğin <span style="background:linear-gradient(135deg,var(--gold-400),var(--gold-600));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">bilim insanlarını</span> destekle</h2>
+        <p>Derneğimiz her yıl başarılı ve ihtiyaç sahibi öğrencilere burs sağlamaktadır. Siz de bağışınızla bu zincirin bir halkası olun.</p>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem">
+          <a href="burs-mentorluk.html#basvuru" class="btn btn-primary">Burs Başvurusu Yap</a>
+          <a href="burs-mentorluk.html#bagis" class="btn btn-secondary">Bağış Yap</a>
+        </div>
+      </div>
+      <div class="burs-cta-stats">
+        <div class="burs-stat">
+          <div class="stat-number" data-count="86">0</div>
+          <div class="stat-label">Toplam Burslu</div>
+        </div>
+        <div class="burs-stat">
+          <div class="stat-number" data-count="3">0</div>
+          <div class="stat-label">Aktif Burs Türü</div>
+        </div>
+        <div class="burs-stat">
+          <div class="stat-number" data-count="148">0</div>
+          <div class="stat-label">Aktif Mentör</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL FEED PREVIEW -->
+<section class="section feed-preview">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Topluluk</span>
+      <h2 class="section-title">Son <span>paylaşımlar</span></h2>
+      <p class="section-desc">Mezunlarımızın ve öğrencilerimizin son paylaşımları. Tüm akışa katılmak için Topluluk sayfasını ziyaret et!</p>
+    </div>
+    <div class="grid-2" id="homeFeed"></div>
+    <div style="text-align:center;margin-top:2rem">
+      <a href="topluluk.html" class="btn btn-primary"><i data-lucide="message-circle" style="width:1em;height:1em"></i> Topluluğa Katıl</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="nav-brand" style="margin-bottom:.5rem">
+          <div class="logo-icon" style="width:38px;height:38px;font-size:1.1rem"><i data-lucide="microscope" style="width:1em;height:1em"></i></div>
+          <div>ASDFL<span class="sub">Mezunlar Derneği</span></div>
+        </div>
+        <p>Afyon Süleyman Demirel Fen Lisesi mezunlarını bir araya getiren, burs ve mentörlük sağlayan köklü platform.</p>
+      </div>
+      <div class="footer-col">
+        <h5>Sayfalar</h5>
+        <ul class="footer-links">
+          <li><a href="index.html">Ana Sayfa</a></li>
+          <li><a href="mezunlar.html">Mezunlar</a></li>
+          <li><a href="etkinlikler.html">Etkinlikler</a></li>
+          <li><a href="galeri.html">Galeri</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Destek</h5>
+        <ul class="footer-links">
+          <li><a href="burs-mentorluk.html">Burs Programı</a></li>
+          <li><a href="kariyer.html">Kariyer Ağı</a></li>
+          <li><a href="burs-mentorluk.html#mentor">Mentör Ol</a></li>
+          <li><a href="burs-mentorluk.html#bagis">Bağış Yap</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>İletişim</h5>
+        <ul class="footer-links">
+          <li><a href="mailto:info@asdfl.org">info@asdfl.org</a></li>
+          <li><a href="#">Afyonkarahisar</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 ASDFL Mezunlar Derneği. Tüm hakları saklıdır.</span>
+      <span>💛 ASDFL ruhuyla yapıldı</span>
+    </div>
+  </div>
+</footer>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="loginModal" onclick="if(event.target===this)ASDFL.closeModal('loginModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="ASDFL.closeModal('loginModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2.5rem;margin-bottom:.5rem"><i data-lucide="microscope" style="width:1em;height:1em"></i></div>
+      <h3>ASDFL'ye Hoş Geldin</h3>
+      <p style="font-size:.9rem;margin-top:.25rem">E-posta ve şifrenizle giriş yapın</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">E-posta</label>
+      <input type="email" class="form-input" placeholder="ornek@email.com" id="loginEmail">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Şifre</label>
+      <input type="password" class="form-input" placeholder="••••••••" id="loginPass">
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="ASDFL.handleLogin('loginEmail', 'loginPass')">Giriş Yap</button>
+    <div class="divider"></div>
+    <p style="text-align:center;font-size:.88rem">Henüz üye değil misin? <a href="javascript:void(0)" onclick="ASDFL.closeModal('loginModal');ASDFL.openModal('registerModal')">Kayıt Ol</a></p>
+  </div>
+</div>
+
+<!-- REGISTER MODAL -->
+<div class="modal-overlay" id="registerModal" onclick="if(event.target===this)ASDFL.closeModal('registerModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="ASDFL.closeModal('registerModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2.5rem;margin-bottom:.5rem"><i data-lucide="user-plus" style="width:1em;height:1em"></i></div>
+      <h3>Aileye Katıl</h3>
+      <p style="font-size:.9rem;margin-top:.25rem">Mezun, öğrenci veya öğretmen olarak kayıt ol</p>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Üyelik Rolü</label>
+      <select class="form-select" id="regRole" onchange="toggleRegFields(this.value)">
+        <option value="Mezun">Mezun</option>
+        <option value="Öğrenci">Aktif Öğrenci</option>
+        <option value="Öğretmen">Öğretmen / İdari Kadro</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Ad Soyad</label>
+      <input type="text" class="form-input" placeholder="Adınız Soyadınız" id="regName">
+    </div>
+
+    <!-- Mezun Alanları -->
+    <div id="mezunFields">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Mezuniyet Yılı</label>
+          <input type="number" class="form-input" placeholder="Örn: 2015" id="regGradYear">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şube</label>
+          <input type="text" class="form-input" placeholder="Örn: A" id="regClassSectionAlumni" maxlength="2">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Meslek</label>
+          <input type="text" class="form-input" placeholder="Örn: Doktor" id="regJob">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Çalıştığı Kurum / Şirket</label>
+          <input type="text" class="form-input" placeholder="Örn: Hacettepe Üni. / Şehir Hastanesi" id="regCompany">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Yaşadığı Şehir</label>
+        <select class="form-select" id="regCity"><option value="" disabled selected>Şehir Seçin</option></select>
+      </div>
+    </div>
+
+    <!-- Öğrenci Alanları -->
+    <div id="ogrenciFields" class="hidden">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Sınıf</label>
+          <select class="form-select" id="regGrade">
+            <option value="9. Sınıf">9. Sınıf</option>
+            <option value="10. Sınıf">10. Sınıf</option>
+            <option value="11. Sınıf">11. Sınıf</option>
+            <option value="12. Sınıf">12. Sınıf</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şube</label>
+          <input type="text" class="form-input" placeholder="Örn: A" id="regClassSectionStudent" maxlength="2">
+        </div>
+      </div>
+    </div>
+
+    <!-- Öğretmen Alanları -->
+    <div id="ogretmenFields" class="hidden">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Branş</label>
+          <input type="text" class="form-input" placeholder="Örn: Matematik" id="regBranch">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Görev Yılı</label>
+          <input type="number" class="form-input" placeholder="Örn: 2010" id="regTeachingYear">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:1rem">
+      <label class="form-label">Telefon Numarası</label>
+      <input type="tel" class="form-input" placeholder="0555 555 55 55" id="regPhone">
+    </div>
+    <div class="form-group" style="margin-top:1rem">
+      <label class="form-label">E-posta</label>
+      <input type="email" class="form-input" placeholder="ornek@email.com" id="regEmail">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Şifre</label>
+      <input type="password" class="form-input" placeholder="••••••••" id="regPass">
+    </div>
+    <div class="form-group" style="margin-top:1rem; display: flex; flex-direction: column; gap: 0.5rem; text-align: left;">
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
+        <input type="checkbox" id="regSharePhone" style="accent-color: var(--gold-500);"> Telefon numaramı diğer mezunlarla paylaş
+      </label>
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
+        <input type="checkbox" id="regShareEmail" style="accent-color: var(--gold-500);"> E-posta adresimi diğer mezunlarla paylaş
+      </label>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="ASDFL.handleRegister()">Kayıt Ol</button>
+    <div class="divider"></div>
+    <p style="text-align:center;font-size:.88rem">Zaten üye misin? <a href="javascript:void(0)" onclick="ASDFL.closeModal('registerModal');ASDFL.openModal('loginModal')">Giriş Yap</a></p>
+  </div>
+</div>
+
+<script>
+function toggleRegFields(role) {
+  document.getElementById('mezunFields').classList.toggle('hidden', role !== 'Mezun');
+  document.getElementById('ogrenciFields').classList.toggle('hidden', role !== 'Öğrenci');
+  document.getElementById('ogretmenFields').classList.toggle('hidden', role !== 'Öğretmen');
+}
+</script>
+
+<div class="toast-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/app.js"></script>
+<script src="js/home.js"></script>
+</body>
+</html>

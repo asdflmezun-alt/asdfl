@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mezunlar | ASDFL Mezunlar Derneği</title>
+<meta name="description" content="ASDFL mezunlarını yıla, şehre ve mesleğe göre keşfedin. Sınıf arkadaşlarınızla bağlantı kurun.">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/mezunlar.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<nav class="navbar" id="navbar">
+  <a href="index.html" class="nav-brand">
+    <div class="logo-icon"><i data-lucide="microscope" style="width:1em;height:1em"></i></div>
+    <div>ASDFL<span class="sub">Mezunlar Derneği</span></div>
+  </a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="index.html"><i data-lucide="home" style="width:1.2rem;height:1.2rem"></i> Ana Sayfa</a></li>
+    <li><a href="mezunlar.html" class="active"><i data-lucide="users" style="width:1.2rem;height:1.2rem"></i> Mezunlar</a></li>
+    <li><a href="topluluk.html"><i data-lucide="message-circle" style="width:1.2rem;height:1.2rem"></i> Topluluk</a></li>
+    <li><a href="etkinlikler.html"><i data-lucide="megaphone" style="width:1.2rem;height:1.2rem"></i> Etkinlikler</a></li>
+    <li><a href="galeri.html"><i data-lucide="image" style="width:1.2rem;height:1.2rem"></i> Galeri</a></li>
+    <li><a href="burs-mentorluk.html"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i> Burs &amp; Mentörlük</a></li>
+    <li><a href="kariyer.html"><i data-lucide="briefcase" style="width:1.2rem;height:1.2rem"></i> Kariyer Ağı</a></li>
+  </ul>
+  <div class="nav-cta">
+    <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+  </div>
+</nav>
+
+<!-- PAGE HERO -->
+<section class="page-hero">
+  <div class="container">
+    <div class="page-hero-content">
+      <span class="section-label">3200+ Mezun</span>
+      <h1 style="margin:.75rem 0">Mezun <span style="background:linear-gradient(135deg,var(--gold-400),var(--gold-600));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Rehberi</span></h1>
+      <p style="max-width:550px;margin:0 auto">1992'den bugüne tüm ASDFL mezunlarını keşfedin. Yıla, şehre veya mesleğe göre filtreleyin.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TAB NAVIGATION -->
+<div class="mezun-tabs-wrapper" id="mezunTabsWrapper">
+  <div class="container">
+    <div class="mezun-tabs">
+      <button class="mezun-tab active" onclick="switchTab('rehber',this)"><i data-lucide="users" style="width:1.2rem;height:1.2rem"></i> Mezun Rehberi</button>
+      <button class="mezun-tab" onclick="switchTab('yillar',this)"><i data-lucide="graduation-cap" style="width:1em;height:1em"></i> Yıl Bazlı Alanlar</button>
+      <button class="mezun-tab" onclick="switchTab('mentorlar',this)"><i data-lucide="sparkles" style="width:1em;height:1em"></i> Mentörler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Giriş yapmamışsa uyar -->
+<div class="container" id="loginPrompt" style="display:none; padding: 4rem 1.5rem; text-align: center;">
+  <div class="card" style="max-width: 600px; margin: 0 auto; padding: 3rem 2rem; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); backdrop-filter: blur(12px);">
+    <i data-lucide="lock" style="width:3rem;height:3rem;color:var(--gold-500);margin-bottom:1.25rem;display:inline-block"></i>
+    <h3 style="margin-bottom:1rem;font-size:1.5rem;font-family:'Outfit',sans-serif">Mezun Rehberini Keşfedin</h3>
+    <p style="color:var(--text-secondary);margin-bottom:2rem;line-height:1.6">1992'den bugüne tüm ASDFL mezunlarımızı görmek, şehre, yıla ve mesleğe göre arama yapmak ve mentörlük programımıza erişebilmek için üye olmanız gerekmektedir.</p>
+    <button class="btn btn-primary" onclick="ASDFL.openModal('loginModal')">Giriş Yap / Üye Ol</button>
+  </div>
+</div>
+
+<!-- TAB: REHBER -->
+<section class="section section-sm" id="tab-rehber">
+  <div class="container">
+    <!-- Filters -->
+    <div class="filters-bar">
+      <input type="text" class="form-input" id="searchInput" placeholder="İsim, meslek, şirket ara..." oninput="filterAlumni()" style="max-width:320px">
+      <select class="form-select" id="yearFilter" onchange="filterAlumni()" style="max-width:160px">
+        <option value="all">Tüm Yıllar</option>
+      </select>
+      <select class="form-select" id="cityFilter" onchange="filterAlumni()" style="max-width:180px">
+        <option value="all">Tüm Şehirler</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:.5rem;color:var(--text-secondary);font-size:.88rem;cursor:pointer">
+        <input type="checkbox" id="mentorOnly" onchange="filterAlumni()" style="accent-color:var(--gold-500)">
+        Sadece Mentörler
+      </label>
+    </div>
+    <div class="alumni-count" id="alumniCount"></div>
+    <div class="grid-auto" id="alumniGrid"></div>
+  </div>
+</section>
+
+<!-- TAB: YIL BAZLI -->
+<section class="section section-sm" id="tab-yillar" style="display:none">
+  <div class="container">
+    <div class="yillar-grid" id="yillarGrid"></div>
+  </div>
+</section>
+
+<!-- TAB: MENTÖRLER -->
+<section class="section section-sm" id="tab-mentorlar" style="display:none">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:2rem">
+      <p style="font-size:1rem">Deneyimli mezunlarımız, genç nesillere rehberlik etmeye hazır.</p>
+      <button class="btn btn-primary" style="margin-top:1rem" onclick="ASDFL.openModal('mentorModal')">Mentör Olmak İstiyorum</button>
+    </div>
+    <div class="grid-3" id="mentorGrid"></div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="nav-brand" style="margin-bottom:.5rem">
+          <div class="logo-icon" style="width:38px;height:38px;font-size:1.1rem"><i data-lucide="microscope" style="width:1em;height:1em"></i></div>
+          <div>ASDFL<span class="sub">Mezunlar Derneği</span></div>
+        </div>
+        <p>Afyon Süleyman Demirel Fen Lisesi mezunlarını buluşturan platform.</p>
+      </div>
+      <div class="footer-col"><h5>Sayfalar</h5><ul class="footer-links"><li><a href="index.html">Ana Sayfa</a></li><li><a href="mezunlar.html">Mezunlar</a></li><li><a href="etkinlikler.html">Etkinlikler</a></li><li><a href="galeri.html">Galeri</a></li></ul></div>
+      <div class="footer-col"><h5>Destek</h5><ul class="footer-links"><li><a href="burs-mentorluk.html">Burs Programı</a></li>
+          <li><a href="kariyer.html">Kariyer Ağı</a></li><li><a href="burs-mentorluk.html#mentor">Mentör Ol</a></li></ul></div>
+      <div class="footer-col"><h5>İletişim</h5><ul class="footer-links"><li><a href="mailto:info@asdfl.org">info@asdfl.org</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 ASDFL Mezunlar Derneği</span>
+      <span>💛 ASDFL ruhuyla yapıldı</span>
+    </div>
+  </div>
+</footer>
+
+<!-- CLASS MODAL -->
+<div class="modal-overlay" id="classModal" onclick="if(event.target===this)ASDFL.closeModal('classModal')">
+  <div class="modal" style="max-width:800px;width:100%">
+    <button class="modal-close" onclick="ASDFL.closeModal('classModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <div style="text-align:center;margin-bottom:2rem">
+      <h3 id="classModalTitle" style="font-size:2rem;margin-bottom:.5rem"></h3>
+      <p style="color:var(--text-secondary)">Sınıf (Şube) bazlı mezun listesi</p>
+    </div>
+    
+    <div class="mezun-tabs" id="classTabs" style="margin-bottom:2rem;justify-content:center;flex-wrap:wrap">
+      <!-- Tabs will be injected here -->
+    </div>
+    
+    <div class="grid-auto" id="classGrid">
+      <!-- Students will be injected here -->
+    </div>
+  </div>
+</div>
+
+<!-- MENTOR MODAL -->
+<div class="modal-overlay" id="mentorModal" onclick="if(event.target===this)ASDFL.closeModal('mentorModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="ASDFL.closeModal('mentorModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <h3 style="margin-bottom:1.5rem"><i data-lucide="sparkles" style="width:1em;height:1em"></i> Mentör Ol</h3>
+    <div class="form-group"><label class="form-label">Ad Soyad</label><input class="form-input" placeholder="Adınız Soyadınız"></div>
+    <div class="form-group"><label class="form-label">Mezuniyet Yılı</label><input class="form-input" type="number" placeholder="2010"></div>
+    <div class="form-group"><label class="form-label">Meslek & Şirket</label><input class="form-input" placeholder="Yazılım Mühendisi - TÜBİTAK"></div>
+    <div class="form-group"><label class="form-label">Uzmanlık Alanı</label><input class="form-input" placeholder="Yapay Zeka, Tıp, Hukuk..."></div>
+    <div class="form-group"><label class="form-label">Kısa Bio</label><textarea class="form-textarea" placeholder="Kendinizi tanıtın..."></textarea></div>
+    <button class="btn btn-primary" style="width:100%" onclick="ASDFL.toast('Mentörlük başvurunuz alındı! Yakında iletişime geçeceğiz.','success');ASDFL.closeModal('mentorModal')">Başvuruyu Gönder</button>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="loginModal" onclick="if(event.target===this)ASDFL.closeModal('loginModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="ASDFL.closeModal('loginModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2.5rem;margin-bottom:.5rem"><i data-lucide="microscope" style="width:1em;height:1em"></i></div>
+      <h3>ASDFL'ye Hoş Geldin</h3>
+      <p style="font-size:.9rem;margin-top:.25rem">E-posta ve şifrenizle giriş yapın</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">E-posta</label>
+      <input type="email" class="form-input" placeholder="ornek@email.com" id="loginEmail">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Şifre</label>
+      <input type="password" class="form-input" placeholder="••••••••" id="loginPass">
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="ASDFL.handleLogin('loginEmail', 'loginPass')">Giriş Yap</button>
+    <div class="divider"></div>
+    <p style="text-align:center;font-size:.88rem">Henüz üye değil misin? <a href="javascript:void(0)" onclick="ASDFL.closeModal('loginModal');ASDFL.openModal('registerModal')">Kayıt Ol</a></p>
+  </div>
+</div>
+
+<!-- REGISTER MODAL -->
+<div class="modal-overlay" id="registerModal" onclick="if(event.target===this)ASDFL.closeModal('registerModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="ASDFL.closeModal('registerModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2.5rem;margin-bottom:.5rem"><i data-lucide="user-plus" style="width:1em;height:1em"></i></div>
+      <h3>Aileye Katıl</h3>
+      <p style="font-size:.9rem;margin-top:.25rem">Mezun, öğrenci veya öğretmen olarak kayıt ol</p>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Üyelik Rolü</label>
+      <select class="form-select" id="regRole" onchange="toggleRegFields(this.value)">
+        <option value="Mezun">Mezun</option>
+        <option value="Öğrenci">Aktif Öğrenci</option>
+        <option value="Öğretmen">Öğretmen / İdari Kadro</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Ad Soyad</label>
+      <input type="text" class="form-input" placeholder="Adınız Soyadınız" id="regName">
+    </div>
+
+    <!-- Mezun Alanları -->
+    <div id="mezunFields">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Mezuniyet Yılı</label>
+          <input type="number" class="form-input" placeholder="Örn: 2015" id="regGradYear">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şube</label>
+          <input type="text" class="form-input" placeholder="Örn: A" id="regClassSectionAlumni" maxlength="2">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Meslek</label>
+          <input type="text" class="form-input" placeholder="Örn: Doktor" id="regJob">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Çalıştığı Kurum / Şirket</label>
+          <input type="text" class="form-input" placeholder="Örn: Hacettepe Üni. / Şehir Hastanesi" id="regCompany">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Yaşadığı Şehir</label>
+        <select class="form-select" id="regCity"><option value="" disabled selected>Şehir Seçin</option></select>
+      </div>
+    </div>
+
+    <!-- Öğrenci Alanları -->
+    <div id="ogrenciFields" class="hidden">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Sınıf</label>
+          <select class="form-select" id="regGrade">
+            <option value="9. Sınıf">9. Sınıf</option>
+            <option value="10. Sınıf">10. Sınıf</option>
+            <option value="11. Sınıf">11. Sınıf</option>
+            <option value="12. Sınıf">12. Sınıf</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şube</label>
+          <input type="text" class="form-input" placeholder="Örn: A" id="regClassSectionStudent" maxlength="2">
+        </div>
+      </div>
+    </div>
+
+    <!-- Öğretmen Alanları -->
+    <div id="ogretmenFields" class="hidden">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Branş</label>
+          <input type="text" class="form-input" placeholder="Örn: Matematik" id="regBranch">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Görev Yılı</label>
+          <input type="number" class="form-input" placeholder="Örn: 2010" id="regTeachingYear">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:1rem">
+      <label class="form-label">Telefon Numarası</label>
+      <input type="tel" class="form-input" placeholder="0555 555 55 55" id="regPhone">
+    </div>
+    <div class="form-group" style="margin-top:1rem">
+      <label class="form-label">E-posta</label>
+      <input type="email" class="form-input" placeholder="ornek@email.com" id="regEmail">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Şifre</label>
+      <input type="password" class="form-input" placeholder="••••••••" id="regPass">
+    </div>
+    <div class="form-group" style="margin-top:1rem; display: flex; flex-direction: column; gap: 0.5rem; text-align: left;">
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
+        <input type="checkbox" id="regSharePhone" style="accent-color: var(--gold-500);"> Telefon numaramı diğer mezunlarla paylaş
+      </label>
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
+        <input type="checkbox" id="regShareEmail" style="accent-color: var(--gold-500);"> E-posta adresimi diğer mezunlarla paylaş
+      </label>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="ASDFL.handleRegister()">Kayıt Ol</button>
+    <div class="divider"></div>
+    <p style="text-align:center;font-size:.88rem">Zaten üye misin? <a href="javascript:void(0)" onclick="ASDFL.closeModal('registerModal');ASDFL.openModal('loginModal')">Giriş Yap</a></p>
+  </div>
+</div>
+
+<script>
+function toggleRegFields(role) {
+  document.getElementById('mezunFields').classList.toggle('hidden', role !== 'Mezun');
+  document.getElementById('ogrenciFields').classList.toggle('hidden', role !== 'Öğrenci');
+  document.getElementById('ogretmenFields').classList.toggle('hidden', role !== 'Öğretmen');
+}
+</script>
+
+<div class="toast-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/app.js"></script>
+<script src="js/mezunlar.js"></script>
+</body>
+</html>

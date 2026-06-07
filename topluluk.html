@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+  <script>document.documentElement.classList.add('no-transitions');</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Topluluk | ASDFL Mezunlar Derneği</title>
 <meta name="description" content="ASDFL mezunlar topluluğu. Paylaşım yap, beğen, sınıf arkadaşlarınla iletişim kur.">
-<link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="css/animations.css">
-<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/lucide@0.577.0"></script>
 <style>
 /* =========================================================================
    ASDFL MEZUNLAR DERNEĞİ — TOPLULUK (SOCIAL WALL) PREMIUM DESIGN SYSTEM
@@ -839,10 +841,70 @@
     <li><a href="galeri.html"><i data-lucide="image" style="width:1.2rem;height:1.2rem"></i> Galeri</a></li>
     <li><a href="burs-mentorluk.html"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i> Burs &amp; Mentörlük</a></li>
     <li><a href="kariyer.html"><i data-lucide="briefcase" style="width:1.2rem;height:1.2rem"></i> Kariyer Ağı</a></li>
+  
+    <script>
+      (function() {
+        const userStr = localStorage.getItem('asdfl_user');
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            if (user) {
+              document.write('<li><a href="mentorluk.html"><i data-lucide="sparkles" style="width:1.2rem;height:1.2rem"></i> Mentörlük Paneli</a></li>');
+              if (user.role === 'Admin') {
+                document.write('<li><a href="yonetim.html"><i data-lucide="shield-check" style="width:1.2rem;height:1.2rem"></i> Yönetim</a></li>');
+              }
+            }
+          } catch (e) {}
+        }
+      })();
+    </script>
   </ul>
   <div class="nav-cta">
-    <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
-    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    <script>
+      (function() {
+        const userStr = localStorage.getItem('asdfl_user');
+        const container = document.currentScript.parentElement;
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            if (user) {
+              const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : '';
+              const avatarUrl = user.avatar_url || user.avatarUrl || '';
+              const avatarHTML = avatarUrl 
+                ? `<div class="profile-avatar" style="background-image: url('${avatarUrl}'); background-size: cover; background-position: center; border: 1.5px solid var(--gold-500);"></div>`
+                : `<div class="profile-avatar">${initials}</div>`;
+              container.innerHTML = `
+                <div class="user-profile" onclick="this.classList.toggle('open')">
+                  <button class="profile-btn">
+                    ${avatarHTML}
+                    <span class="user-name-span">${user.name}</span>
+                    <i data-lucide="chevron-down" style="width:14px;height:14px"></i>
+                  </button>
+                  <div class="profile-menu">
+                    <div style="padding:.5rem 1rem;border-bottom:1px solid var(--glass-border);margin-bottom:.25rem">
+                      <strong style="color:var(--text-primary);display:block">${user.name}</strong>
+                      <span style="font-size:.75rem;color:var(--text-muted)">${user.role}</span>
+                    </div>
+                    <a href="profil.html" style="display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;color:var(--text-secondary);text-decoration:none;transition:all .2s"><i data-lucide="user" style="width:16px;height:16px"></i> Profilim</a>
+                    <button onclick="ASDFL.logout()" class="logout"><i data-lucide="log-out" style="width:16px;height:16px"></i> Çıkış Yap</button>
+                  </div>
+                </div>
+                <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+              `;
+              if (window.lucide) {
+                window.lucide.createIcons();
+              }
+              return;
+            }
+          } catch (e) {}
+        }
+        container.innerHTML = `
+          <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
+          <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+        `;
+      })();
+    </script>
+  </div>
   </div>
 </nav>
 
@@ -912,6 +974,17 @@
       <p style="color:var(--text-muted);margin-bottom:1.25rem">Paylaşımları görmek, yeni paylaşım yapmak ve etkileşime geçmek için üye olmanız gerekmektedir.</p>
       <button class="btn btn-primary" onclick="ASDFL.openModal('loginModal')">Giriş Yap / Kayıt Ol</button>
     </div>
+    <script>
+      (function() {
+        const userStr = localStorage.getItem('asdfl_user');
+        if (userStr) {
+          const composeBox = document.getElementById('composeBox');
+          const loginPrompt = document.getElementById('loginPrompt');
+          if (composeBox) composeBox.classList.remove('hidden');
+          if (loginPrompt) loginPrompt.classList.add('hidden');
+        }
+      })();
+    </script>
 
     <!-- POSTS -->
     <div id="feedPosts">

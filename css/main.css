@@ -2,7 +2,16 @@
    ASDFL MEZUNLAR DERNEĞİ — DESIGN SYSTEM
    ======================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+/* Font yüklemesi HTML'de <link> ile yapılıyor (daha hızlı, non-blocking) */
+
+/* Sayfa yüklenirken navbar geçişlerini devre dışı bırak */
+.no-transitions .navbar,
+.no-transitions .navbar *,
+.no-transitions .nav-cta,
+.no-transitions .nav-cta * {
+  transition: none !important;
+}
+
 
 :root {
   --navy-950: #05111E;
@@ -86,17 +95,33 @@ a:hover { color: var(--gold-400); }
   background: rgba(5,17,30,0.75);
   backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid var(--glass-border);
-  transition: all var(--ease-slow);
+  transition: padding var(--ease-slow), background var(--ease-slow), box-shadow var(--ease-slow), border-color var(--ease-slow), backdrop-filter var(--ease-slow);
 }
 .navbar.scrolled { padding: .75rem 1.5rem; background: rgba(5,17,30,0.97); box-shadow: var(--shadow-md); }
 .nav-brand { display:flex; align-items:center; gap:.75rem; font-family:'Outfit',sans-serif; font-weight:800; font-size:1.1rem; color:var(--text-primary); text-decoration:none; }
 .nav-brand .logo-icon { width:42px; height:42px; background: url('../assets/images/logo.png') center/cover no-repeat, var(--navy-800); border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-gold); flex-shrink:0; border: 2px solid var(--gold-500); } .nav-brand .logo-icon i, .nav-brand .logo-icon svg { display: none !important; }
 .nav-brand .sub { display:block; color:var(--gold-500); font-size:.6rem; font-weight:500; letter-spacing:.08em; text-transform:uppercase; opacity:.8; }
 .nav-links { display:flex; align-items:center; gap:.25rem; list-style:none; }
-.nav-links a { display:flex; align-items:center; gap:.5rem; padding:.5rem 1rem; border-radius:var(--radius-full); font-size:.88rem; font-weight:500; color:var(--text-secondary); transition: all var(--ease-normal); }
+.nav-links a { display:flex; align-items:center; gap:.5rem; padding:.5rem 1rem; border-radius:var(--radius-full); font-size:.88rem; font-weight:500; color:var(--text-secondary); transition: color var(--ease-normal), background var(--ease-normal); }
 .nav-links a:hover,.nav-links a.active { color:var(--text-primary); background:var(--glass-bg-hover); }
 .nav-links a.active { color:var(--gold-400); }
-.nav-cta { display:flex; align-items:center; gap:.75rem; }
+.nav-cta { display:flex; align-items:center; gap:.75rem; min-height: 44px; }
+
+/* Sabit navbar ikon boyutları - layout shift önleme */
+.navbar [data-lucide], .navbar i[data-lucide], .navbar svg {
+  width: 1rem; height: 1rem;
+  display: block; flex-shrink: 0;
+}
+.nav-links [data-lucide], .nav-links i[data-lucide], .nav-links svg {
+  width: 1.2rem; height: 1.2rem;
+  display: block; flex-shrink: 0;
+}
+.profile-btn [data-lucide], .profile-btn i[data-lucide], .profile-btn svg {
+  width: 14px; height: 14px;
+  display: block; flex-shrink: 0;
+}
+/* Logo gibi büyük SVG'ler etkilenmesin */
+.nav-brand svg, .logo-icon svg { width: auto; height: auto; }
 .hamburger { display:none; flex-direction:column; gap:5px; cursor:pointer; padding:.5rem; }
 .hamburger span { display:block; width:24px; height:2px; background:var(--text-secondary); border-radius:var(--radius-full); transition:all var(--ease-normal); }
 
@@ -368,7 +393,7 @@ body.nav-open::after {
 
 /* USER PROFILE DROPDOWN */
 .user-profile { position:relative; }
-.profile-btn { display:flex; align-items:center; gap:.5rem; padding:.4rem .75rem; border-radius:var(--radius-full); background:var(--glass-bg); border:1px solid var(--glass-border); color:var(--text-primary); cursor:pointer; font-family:'Inter',sans-serif; font-size:.85rem; font-weight:600; transition:all var(--ease-normal); }
+.profile-btn { display:flex; align-items:center; gap:.5rem; padding:.4rem .75rem; height: 40px; border-radius:var(--radius-full); background:var(--glass-bg); border:1px solid var(--glass-border); color:var(--text-primary); cursor:pointer; font-family:'Inter',sans-serif; font-size:.85rem; font-weight:600; transition: background var(--ease-normal), border-color var(--ease-normal), color var(--ease-normal); }
 .profile-btn:hover { background:var(--glass-bg-hover); border-color:var(--glass-border-hover); }
 .profile-avatar {
   width: 32px !important;
@@ -386,7 +411,7 @@ body.nav-open::after {
   font-size: .85rem !important;
   overflow: hidden !important;
 }
-.profile-menu { position:absolute; top:calc(100% + .5rem); right:0; background:var(--navy-800); border:1px solid var(--glass-border); border-radius:var(--radius-md); padding:.5rem; min-width:180px; box-shadow:var(--shadow-lg); opacity:0; pointer-events:none; transform:translateY(-10px); transition:all var(--ease-normal); display:flex; flex-direction:column; gap:.25rem; }
+.profile-menu { position:absolute; top:calc(100% + .5rem); right:0; background:var(--navy-800); border:1px solid var(--glass-border); border-radius:var(--radius-md); padding:.5rem; min-width:180px; box-shadow:var(--shadow-lg); opacity:0; pointer-events:none; transform:translateY(-10px); transition: opacity var(--ease-normal), transform var(--ease-normal); display:flex; flex-direction:column; gap:.25rem; }
 .user-profile.open .profile-menu { opacity:1; pointer-events:all; transform:translateY(0); }
 .profile-menu button { display:flex; align-items:center; gap:.5rem; width:100%; padding:.6rem 1rem; border:none; background:transparent; color:var(--text-secondary); font-family:'Inter',sans-serif; font-size:.85rem; cursor:pointer; text-align:left; border-radius:var(--radius-sm); transition:all 150ms ease; }
 .profile-menu button:hover { background:var(--glass-bg); color:var(--text-primary); }

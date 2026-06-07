@@ -191,3 +191,63 @@
 .blob-1 { width:400px; height:400px; background:rgba(244,168,54,.06); top:-100px; right:-100px; animation-delay:0s; }
 .blob-2 { width:300px; height:300px; background:rgba(31,53,88,.8); bottom:-80px; left:-80px; animation-delay:-3s; }
 .blob-3 { width:200px; height:200px; background:rgba(244,168,54,.04); top:50%; right:20%; animation-delay:-6s; }
+
+/* Page-Load Animations (Immediate visual representation to bypass initial blank state load delays) */
+.fade-in-up-init {
+  opacity: 0;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.fade-in-right-init {
+  opacity: 0;
+  animation: fadeInRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.scale-in-init {
+  opacity: 0;
+  animation: scaleIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ========================================
+   SAYFA GEÇİŞ ANİMASYONLARI
+   ======================================== */
+
+/* Giriş: sayfa yüklenince içerik aşağıdan yumuşakça gelir */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Çıkış: başka sayfaya geçerken içerik yukarıya çekilir */
+@keyframes pageExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Body sayfa girişinde otomatik animasyon */
+body {
+  animation: pageEnter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Geçiş çıkış state'i */
+body.page-exit {
+  animation: pageExit 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+
+/* Navbar giriş ve çıkış animasyonlarından tamamen bağımsız */
+.navbar {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}

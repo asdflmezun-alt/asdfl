@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+  <script>document.documentElement.classList.add('no-transitions');</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Profilim | ASDFL Mezunlar Derneği</title>
-<link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="css/animations.css">
-<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/lucide@0.577.0"></script>
 <style>
   .profile-header {
     background: var(--glass-bg);
@@ -128,14 +130,57 @@
     <li><a href="kariyer.html"><i data-lucide="briefcase" style="width:1.2rem;height:1.2rem"></i> Kariyer Ağı</a></li>
   </ul>
   <div class="nav-cta">
-    <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
-    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    <script>
+      (function() {
+        const userStr = localStorage.getItem('asdfl_user');
+        const container = document.currentScript.parentElement;
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            if (user) {
+              const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : '';
+              const avatarUrl = user.avatar_url || user.avatarUrl || '';
+              const avatarHTML = avatarUrl 
+                ? `<div class="profile-avatar" style="background-image: url('${avatarUrl}'); background-size: cover; background-position: center; border: 1.5px solid var(--gold-500);"></div>`
+                : `<div class="profile-avatar">${initials}</div>`;
+              container.innerHTML = `
+                <div class="user-profile" onclick="this.classList.toggle('open')">
+                  <button class="profile-btn">
+                    ${avatarHTML}
+                    <span class="user-name-span">${user.name}</span>
+                    <i data-lucide="chevron-down" style="width:14px;height:14px"></i>
+                  </button>
+                  <div class="profile-menu">
+                    <div style="padding:.5rem 1rem;border-bottom:1px solid var(--glass-border);margin-bottom:.25rem">
+                      <strong style="color:var(--text-primary);display:block">${user.name}</strong>
+                      <span style="font-size:.75rem;color:var(--text-muted)">${user.role}</span>
+                    </div>
+                    <a href="profil.html" style="display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;color:var(--text-secondary);text-decoration:none;transition:all .2s"><i data-lucide="user" style="width:16px;height:16px"></i> Profilim</a>
+                    <button onclick="ASDFL.logout()" class="logout"><i data-lucide="log-out" style="width:16px;height:16px"></i> Çıkış Yap</button>
+                  </div>
+                </div>
+                <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+              `;
+              if (window.lucide) {
+                window.lucide.createIcons();
+              }
+              return;
+            }
+          } catch (e) {}
+        }
+        container.innerHTML = `
+          <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
+          <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+        `;
+      })();
+    </script>
+  </div>
   </div>
 </nav>
 
 <section class="section" style="padding-top:8rem">
   <div class="container" style="max-width:800px">
-    <div class="profile-header reveal">
+    <div class="profile-header scale-in-init">
       <div class="profile-avatar-wrapper" style="position: relative; display: inline-block; margin-bottom: 1rem;">
         <div class="profile-avatar-lg" id="profileAvatar" style="cursor: pointer;" onclick="document.getElementById('avatarInput').click()" title="Profil Fotoğrafı Yükle">
           <span id="profileInitials">?</span>
@@ -150,14 +195,14 @@
     </div>
 
     <!-- Tab Switches -->
-    <div class="mezun-tabs reveal">
+    <div class="mezun-tabs fade-in-up-init" style="animation-delay: 0.1s">
       <button class="mezun-tab active" id="btn-tab-social" onclick="switchProfileTab('social')"><i data-lucide="user"></i> Profilim</button>
       <button class="mezun-tab" id="btn-tab-settings" onclick="switchProfileTab('settings')"><i data-lucide="settings"></i> Ayarlar</button>
       <button class="mezun-tab" id="btn-tab-requests" onclick="switchProfileTab('requests')"><i data-lucide="bell"></i> Talepler <span class="badge badge-gold" id="requestsCountBadge" style="margin-left: 0.35rem; padding: 0.05rem 0.3rem; font-size: 0.7rem; display: none;">0</span></button>
     </div>
 
     <!-- 1. SOCIAL PROFILE TAB CONTENT -->
-    <div id="profile-tab-social" class="profile-tab-content reveal">
+    <div id="profile-tab-social" class="profile-tab-content fade-in-up-init" style="animation-delay: 0.2s">
       <div style="display: grid; grid-template-columns: 280px 1fr; gap: 2rem;">
         <!-- Left Column: Personal info card -->
         <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; background: var(--glass-bg); border: 1px solid var(--glass-border); text-align: left; height: fit-content; border-radius: var(--radius-lg);">
@@ -386,18 +431,215 @@
 <script src="js/universities.js"></script>
 <script src="js/app.js"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', async () => {
-    await ASDFL.waitForAuth();
-    await loadProfile();
-    // Diagnostics toast
-    setTimeout(() => {
-      const el = document.getElementById('social-instagram');
-      if (el) {
-        ASDFL.toast('Debug HTML: ' + el.innerHTML.slice(0, 80).replace(/</g, '&lt;').replace(/>/g, '&gt;'), 'info');
-      } else {
-        ASDFL.toast('Debug: Element not found', 'error');
+  function renderInitialProfile() {
+    const userStr = localStorage.getItem('asdfl_user');
+    if (!userStr) return;
+    try {
+      const user = JSON.parse(userStr);
+      if (!user) return;
+
+      const nameEl = document.getElementById('profileName');
+      const roleEl = document.getElementById('profileRole');
+      if (nameEl) nameEl.textContent = user.name;
+      if (roleEl) roleEl.textContent = user.role + (user.gradYear ? ' · ' + user.gradYear + ' Mezunu' : '');
+
+      const avatarEl = document.getElementById('profileAvatar');
+      const initialsEl = document.getElementById('profileInitials');
+      if (avatarEl && initialsEl) {
+        const avatarUrl = user.avatar_url || user.avatarUrl;
+        const position = user.avatar_position || user.avatarPosition || '1.00,0%,0%';
+        let pZoom = 1.0;
+        let pX = 0;
+        let pY = 0;
+        if (position.includes(',')) {
+          const [scale, x, y] = position.split(',');
+          pZoom = parseFloat(scale) || 1.0;
+          pX = parseInt(x) || 0;
+          pY = parseInt(y) || 0;
+        }
+        
+        if (avatarUrl) {
+          let transformStr = '';
+          let objPosStr = 'object-position: center;';
+          if (position.includes(',')) {
+            transformStr = `transform: scale(${pZoom}) translate(${pX}%, ${pY}%); transform-origin: center center;`;
+            objPosStr = '';
+          } else {
+            objPosStr = `object-position: ${position};`;
+          }
+          avatarEl.style.backgroundImage = '';
+          avatarEl.style.position = 'relative';
+          avatarEl.style.overflow = 'hidden';
+          avatarEl.style.display = 'flex';
+          avatarEl.style.alignItems = 'center';
+          avatarEl.style.justifyContent = 'center';
+          avatarEl.innerHTML = `<img id="profileAvatarImg" src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover; ${objPosStr} ${transformStr}">`;
+          initialsEl.style.display = 'none';
+          const posSec = document.getElementById('avatarPositionSection');
+          if (posSec) posSec.classList.remove('hidden');
+        } else {
+          avatarEl.innerHTML = '<span id="profileInitials">?</span>';
+          const newInitialsEl = document.getElementById('profileInitials');
+          avatarEl.style.backgroundImage = '';
+          if (newInitialsEl) {
+            newInitialsEl.textContent = ASDFL.getInitials ? ASDFL.getInitials(user.name) : (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : '?');
+            newInitialsEl.style.display = 'block';
+          }
+        }
       }
-    }, 1500);
+
+      const sliderZoom = document.getElementById('sliderZoom');
+      const sliderX = document.getElementById('sliderPosX');
+      const sliderY = document.getElementById('sliderPosY');
+      const valZoom = document.getElementById('valZoom');
+      const valX = document.getElementById('valPosX');
+      const valY = document.getElementById('valPosY');
+      
+      if (sliderZoom && sliderX && sliderY && valZoom && valX && valY) {
+        const position = user.avatar_position || user.avatarPosition || '1.00,0%,0%';
+        let pZoom = 1.0;
+        let pX = 0;
+        let pY = 0;
+        if (position.includes(',')) {
+          const [scale, x, y] = position.split(',');
+          pZoom = parseFloat(scale) || 1.0;
+          pX = parseInt(x) || 0;
+          pY = parseInt(y) || 0;
+        }
+        sliderZoom.value = pZoom;
+        sliderX.value = pX;
+        sliderY.value = pY;
+        valZoom.textContent = pZoom.toFixed(2) + 'x';
+        valX.textContent = (pX >= 0 ? '+' : '') + pX + '%';
+        valY.textContent = (pY >= 0 ? '+' : '') + pY + '%';
+      }
+
+      const editName = document.getElementById('editName');
+      const editEmail = document.getElementById('editEmail');
+      if (editName) editName.value = user.name || '';
+      if (editEmail) editEmail.value = user.email || '';
+
+      const editCity = document.getElementById('editCity');
+      const editJob = document.getElementById('editJob');
+      const editCompany = document.getElementById('editCompany');
+      const editClassSection = document.getElementById('editClassSection');
+      const editGradYear = document.getElementById('editGradYear');
+      const editGrade = document.getElementById('editGrade');
+      const editBranch = document.getElementById('editBranch');
+      const editTeachingYear = document.getElementById('editTeachingYear');
+      const editPhone = document.getElementById('editPhone');
+      const editSharePhone = document.getElementById('editSharePhone');
+      const editShareEmail = document.getElementById('editShareEmail');
+      const editBio = document.getElementById('editBio');
+      const editUniversity = document.getElementById('editUniversity');
+      const editStudentUniversity = document.getElementById('editStudentUniversity');
+      const editLinkedin = document.getElementById('editLinkedin');
+      const editGithub = document.getElementById('editGithub');
+      const editInstagram = document.getElementById('editInstagram');
+
+      if (editCity) editCity.value = user.city || '';
+      if (editJob) editJob.value = user.job || '';
+      if (editCompany) editCompany.value = user.company || '';
+      if (editClassSection) editClassSection.value = user.class_section || user.classSection || '';
+      if (editGradYear) editGradYear.value = user.grad_year || user.gradYear || '';
+      if (editGrade) editGrade.value = user.grade || '9. Sınıf';
+      if (editBranch) editBranch.value = user.branch || '';
+      if (editTeachingYear) editTeachingYear.value = user.teaching_year || user.teachingYear || '';
+      if (editPhone) editPhone.value = user.phone || '';
+      if (editSharePhone) editSharePhone.checked = !!(user.share_phone || user.sharePhone);
+      if (editShareEmail) editShareEmail.checked = !!(user.share_email || user.shareEmail);
+      if (editBio) editBio.value = user.bio || '';
+      if (editUniversity) editUniversity.value = user.university || '';
+      if (editStudentUniversity) editStudentUniversity.value = user.university || '';
+      if (editLinkedin) editLinkedin.value = user.linkedin_url || user.linkedinUrl || '';
+      if (editGithub) editGithub.value = user.github_url || user.githubUrl || '';
+      if (editInstagram) editInstagram.value = user.instagram_url || user.instagramUrl || '';
+
+      const socialCity = document.getElementById('social-city');
+      const socialUni = document.getElementById('social-uni');
+      const socialJob = document.getElementById('social-job');
+      const socialEmail = document.getElementById('social-email');
+      const socialBio = document.getElementById('social-bio');
+
+      if (socialCity) socialCity.textContent = user.city || 'Belirtilmemiş';
+      if (socialUni) socialUni.textContent = user.university || 'Belirtilmemiş';
+      if (socialJob) {
+        let jobText = 'Belirtilmemiş';
+        if (user.job) {
+          jobText = user.job + (user.company ? `, ${user.company}` : '');
+        }
+        socialJob.textContent = jobText;
+      }
+      if (socialEmail) socialEmail.textContent = user.email || '';
+      if (socialBio) {
+        const bioText = user.bio || 'Kendiniz hakkında henüz bilgi girmediniz. Ayarlar sekmesinden doldurabilirsiniz.';
+        socialBio.textContent = bioText;
+        if (!user.bio) {
+          socialBio.style.fontStyle = 'italic';
+          socialBio.style.color = 'var(--text-muted)';
+        } else {
+          socialBio.style.fontStyle = 'normal';
+          socialBio.style.color = 'var(--text-secondary)';
+        }
+      }
+
+      const socialLinkedin = document.getElementById('social-linkedin');
+      const socialGithub = document.getElementById('social-github');
+      const socialInstagram = document.getElementById('social-instagram');
+
+      const linkedinUrl = user.linkedin_url || user.linkedinUrl;
+      const githubUrl = user.github_url || user.githubUrl;
+      const instagramUrl = user.instagram_url || user.instagramUrl;
+
+      if (socialLinkedin) {
+        if (linkedinUrl) {
+          socialLinkedin.href = linkedinUrl;
+          socialLinkedin.style.display = 'flex';
+        } else {
+          socialLinkedin.style.display = 'none';
+        }
+      }
+      if (socialGithub) {
+        if (githubUrl) {
+          socialGithub.href = githubUrl;
+          socialGithub.style.display = 'flex';
+        } else {
+          socialGithub.style.display = 'none';
+        }
+      }
+      if (socialInstagram) {
+        if (instagramUrl) {
+          socialInstagram.href = instagramUrl;
+          socialInstagram.style.display = 'flex';
+        } else {
+          socialInstagram.style.display = 'none';
+        }
+      }
+
+      document.querySelectorAll('.role-field').forEach(el => el.classList.add('hidden'));
+      const groupClassSection = document.getElementById('groupClassSection');
+      if (groupClassSection) {
+        groupClassSection.classList.toggle('hidden', user.role === 'Öğretmen');
+      }
+      if (user.role === 'Mezun' || user.role === 'Admin') {
+        document.querySelectorAll('.role-mezun').forEach(el => el.classList.remove('hidden'));
+      } else if (user.role === 'Öğrenci') {
+        document.querySelectorAll('.role-ogrenci').forEach(el => el.classList.remove('hidden'));
+      } else if (user.role === 'Öğretmen') {
+        document.querySelectorAll('.role-ogretmen').forEach(el => el.classList.remove('hidden'));
+      }
+
+    } catch (e) {
+      console.error('Error parsing cached user:', e);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderInitialProfile();
+    (async () => {
+      await ASDFL.waitForAuth();
+      await loadProfile();
+    })();
   });
 
   window.switchProfileTab = function(tabName) {
@@ -709,6 +951,41 @@
     
     ASDFL.initReveal();
     setTimeout(() => lucide.createIcons(), 10);
+
+    // Sync all loaded fields back to the global currentUser object so that the cache is complete
+    if (ASDFL.currentUser) {
+      ASDFL.currentUser = {
+        ...ASDFL.currentUser,
+        city: profileData.city || '',
+        job: profileData.job || '',
+        company: profileData.company || '',
+        class_section: profileData.class_section || '',
+        classSection: profileData.class_section || '',
+        grad_year: profileData.grad_year || '',
+        gradYear: profileData.grad_year || '',
+        grade: profileData.grade || '9. Sınıf',
+        branch: profileData.branch || '',
+        teaching_year: profileData.teaching_year || '',
+        teachingYear: profileData.teaching_year || '',
+        phone: profileData.phone || '',
+        share_phone: profileData.share_phone,
+        sharePhone: profileData.share_phone,
+        share_email: profileData.share_email,
+        shareEmail: profileData.share_email,
+        bio: profileData.bio || '',
+        university: profileData.university || '',
+        linkedin_url: profileData.linkedin_url || '',
+        linkedinUrl: profileData.linkedin_url || '',
+        github_url: profileData.github_url || '',
+        githubUrl: profileData.github_url || '',
+        instagram_url: profileData.instagram_url || '',
+        instagramUrl: profileData.instagram_url || '',
+        avatar_url: profileData.avatar_url || '',
+        avatarPosition: profileData.avatar_position || '50% 50%',
+        avatar_position: profileData.avatar_position || '50% 50%'
+      };
+      localStorage.setItem('asdfl_user', JSON.stringify(ASDFL.currentUser));
+    }
   }
 
   window.handleAvatarUpload = async function(event) {
@@ -990,6 +1267,7 @@
     document.getElementById('profileName').textContent = name;
     document.getElementById('profileRole').textContent = ASDFL.currentUser.role + (gradYear ? ' · ' + gradYear + ' Mezunu' : '');
 
+    localStorage.setItem('asdfl_user', JSON.stringify(ASDFL.currentUser));
     await loadProfile();
     ASDFL.toast('Profil başarıyla güncellendi!', 'success');
     btn.textContent = 'Değişiklikleri Kaydet';

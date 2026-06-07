@@ -14,12 +14,23 @@
 
   /* ---------- Başlat ---------- */
   document.addEventListener('DOMContentLoaded', async () => {
+    const composeBox = document.getElementById('composeBox');
+    const loginPrompt = document.getElementById('loginPrompt');
+    
+    // Synchronous local session check to avoid initial load warning box flicker/flash
+    const userStr = localStorage.getItem('asdfl_user');
+    if (userStr) {
+      if (composeBox) composeBox.classList.remove('hidden');
+      if (loginPrompt) loginPrompt.classList.add('hidden');
+    } else {
+      if (composeBox) composeBox.classList.add('hidden');
+      if (loginPrompt) loginPrompt.classList.remove('hidden');
+    }
+
     await ASDFL.waitForAuth();
     
     // Toggle compose box and login prompt based on resolved auth state
     const isLoggedIn = !!ASDFL.currentUser;
-    const composeBox = document.getElementById('composeBox');
-    const loginPrompt = document.getElementById('loginPrompt');
     if (composeBox) {
       composeBox.classList.toggle('hidden', !isLoggedIn);
     }

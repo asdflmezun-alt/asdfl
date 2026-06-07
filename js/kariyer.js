@@ -340,10 +340,22 @@ window.filterRequests = function() {
  * Checks auth and builds core dashboard statistics & sub-menu visibility
  */
 window.renderDashboard = async function() {
-  await ASDFL.waitForAuth();
-  
   const loginPrompt = document.getElementById('dashboardLoginPrompt');
   const mainArea = document.getElementById('dashboardMainArea');
+  
+  // Synchronous check to avoid unauthenticated flash during ASDFL.waitForAuth delay
+  const userStr = localStorage.getItem('asdfl_user');
+  if (loginPrompt && mainArea) {
+    if (userStr) {
+      loginPrompt.classList.add('hidden');
+      mainArea.classList.remove('hidden');
+    } else {
+      loginPrompt.classList.remove('hidden');
+      mainArea.classList.add('hidden');
+    }
+  }
+
+  await ASDFL.waitForAuth();
   
   if (!loginPrompt || !mainArea) return;
   

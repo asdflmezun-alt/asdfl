@@ -1029,8 +1029,17 @@ const ASDFL = {
   initNavbar() {
     const nav = document.querySelector('.navbar');
     if(!nav) return;
-    window.addEventListener('scroll', () => {
+    const handleScroll = () => {
       nav.classList.toggle('scrolled', window.scrollY > 60);
+    };
+    window.addEventListener('scroll', handleScroll);
+    // Scroll pozisyonunu geçiş animasyonu OLMADAN belirle
+    handleScroll();
+    // Küçük gecikme sonrası no-transitions kaldır: artık kullanıcı scroll'unda animasyon aktif
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.documentElement.classList.remove('no-transitions');
+      });
     });
     // hamburger
     const hamburger = document.getElementById('hamburger');
@@ -1111,15 +1120,31 @@ const ASDFL = {
 
   // Auth Functions
   async checkAuth() {
+    // Synchronous local session check to avoid initial page-load login state flicker/flashes
+    const userStr = localStorage.getItem('asdfl_user');
+    if (userStr) {
+      try {
+        this.currentUser = JSON.parse(userStr);
+        this.updateUIForAuth();
+      } catch (e) {
+        console.warn('Error parsing cached user:', e);
+      }
+    }
+
     if (!this.supabase) {
-      const userStr = localStorage.getItem('asdfl_user');
-      if (userStr) this.currentUser = JSON.parse(userStr);
       this.authReady = true;
       this.updateUIForAuth();
       return;
     }
     
-    const { data: { session } } = await this.supabase.auth.getSession();
+    let session = null;
+    try {
+      const { data } = await this.supabase.auth.getSession();
+      session = data?.session;
+    } catch (err) {
+      console.error('Error fetching session:', err);
+    }
+
     if (session) {
       let dbRole = session.user.user_metadata?.role || 'Kullanıcı';
       let dbAvatarUrl = session.user.user_metadata?.avatar_url || '';
@@ -1152,8 +1177,11 @@ const ASDFL = {
         avatar_url: dbAvatarUrl,
         avatar_position: dbAvatarPosition
       };
+      // Keep cached session up-to-date
+      localStorage.setItem('asdfl_user', JSON.stringify(this.currentUser));
     } else {
       this.currentUser = null;
+      localStorage.removeItem('asdfl_user');
     }
 
     // IMPORTANT: authReady is set AFTER the DB role is fetched, not before.
@@ -1194,9 +1222,11 @@ const ASDFL = {
             avatar_url: dbAvatarUrl,
             avatar_position: dbAvatarPosition
           };
+          localStorage.setItem('asdfl_user', JSON.stringify(this.currentUser));
         }
       } else if (event === 'SIGNED_OUT') {
         this.currentUser = null;
+        localStorage.removeItem('asdfl_user');
       }
       this.updateUIForAuth();
     });
@@ -1209,56 +1239,100 @@ const ASDFL = {
     if (!navCta) return;
 
     if (this.currentUser) {
-      const initials = this.getInitials(this.currentUser.name);
-      const avatarUrl = this.currentUser.avatar_url || this.currentUser.avatarUrl;
-      const avatarHTML = avatarUrl 
-        ? `<div class="profile-avatar" style="background-image: url(${avatarUrl}); background-size: cover; background-position: center; border: 1.5px solid var(--gold-500);"></div>`
-        : `<div class="profile-avatar">${initials}</div>`;
-      navCta.innerHTML = `
-        <div class="user-profile" onclick="this.classList.toggle('open')">
-          <button class="profile-btn">
-            ${avatarHTML}
-            <span style="display:none;@media(min-width:768px){display:inline}">${this.currentUser.name}</span>
-            <i data-lucide="chevron-down" style="width:14px;height:14px"></i>
-          </button>
-          <div class="profile-menu">
-            <div style="padding:.5rem 1rem;border-bottom:1px solid var(--glass-border);margin-bottom:.25rem">
-              <strong style="color:var(--text-primary);display:block">${this.currentUser.name}</strong>
-              <span style="font-size:.75rem;color:var(--text-muted)">${this.currentUser.role}</span>
+      const avatarUrl = this.currentUser.avatar_url || this.currentUser.avatarUrl || '';
+      const name = this.currentUser.name || '';
+      const role = this.currentUser.role || '';
+      const cacheKey = `${name}|${role}|${avatarUrl}`;
+      
+      // Eğer inline script zaten navbar'ı çizdiyse ama cache key set etmediyse,
+      // yeniden yazmaktan kaçın — sadece cache key'i set et
+      if (!navCta.dataset.userCache && navCta.querySelector('.user-profile')) {
+        navCta.dataset.userCache = cacheKey;
+      }
+      
+      if (navCta.dataset.userCache !== cacheKey) {
+        navCta.dataset.userCache = cacheKey;
+        const initials = this.getInitials(name);
+        const avatarHTML = avatarUrl 
+          ? `<div class="profile-avatar" style="background-image: url(${avatarUrl}); background-size: cover; background-position: center; border: 1.5px solid var(--gold-500);"></div>`
+          : `<div class="profile-avatar">${initials}</div>`;
+        navCta.innerHTML = `
+          <div class="user-profile" onclick="this.classList.toggle('open')">
+            <button class="profile-btn">
+              ${avatarHTML}
+              <span style="display:none;@media(min-width:768px){display:inline}">${name}</span>
+              <i data-lucide="chevron-down" style="width:14px;height:14px"></i>
+            </button>
+            <div class="profile-menu">
+              <div style="padding:.5rem 1rem;border-bottom:1px solid var(--glass-border);margin-bottom:.25rem">
+                <strong style="color:var(--text-primary);display:block">${name}</strong>
+                <span style="font-size:.75rem;color:var(--text-muted)">${role}</span>
+              </div>
+              <a href="profil.html" style="display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;color:var(--text-secondary);text-decoration:none;transition:all .2s"><i data-lucide="user" style="width:16px;height:16px"></i> Profilim</a>
+              <button onclick="ASDFL.logout()" class="logout"><i data-lucide="log-out" style="width:16px;height:16px"></i> Çıkış Yap</button>
             </div>
-            <a href="profil.html" style="display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;color:var(--text-secondary);text-decoration:none;transition:all .2s"><i data-lucide="user" style="width:16px;height:16px"></i> Profilim</a>
-            <button onclick="ASDFL.logout()" class="logout"><i data-lucide="log-out" style="width:16px;height:16px"></i> Çıkış Yap</button>
           </div>
-        </div>
-        <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
-      `;
+          <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+        `;
+        setTimeout(() => lucide.createIcons(), 10);
+      }
     } else {
-      navCta.innerHTML = `
-        <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
-        <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
-      `;
+      // Inline script zaten "Giriş Yap" butonunu çizdiyse, yeniden yazma
+      if (!navCta.dataset.userCache && navCta.querySelector('.btn-primary')) {
+        navCta.dataset.userCache = 'logged-out';
+      }
+      if (navCta.dataset.userCache !== 'logged-out') {
+        navCta.dataset.userCache = 'logged-out';
+        navCta.innerHTML = `
+          <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
+          <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+        `;
+        setTimeout(() => lucide.createIcons(), 10);
+      }
     }
     
     const navLinks = document.getElementById('navLinks');
     if (navLinks) {
       const existingAdminLink = navLinks.querySelector('a[href="yonetim.html"]');
-      if (existingAdminLink) {
-        existingAdminLink.parentElement.remove();
-      }
       const existingMentorLink = navLinks.querySelector('a[href="mentorluk.html"]');
-      if (existingMentorLink) {
-        existingMentorLink.parentElement.remove();
-      }
       
       if (this.currentUser) {
-        const liMentor = document.createElement('li');
-        liMentor.innerHTML = '<a href="mentorluk.html"><i data-lucide="sparkles" style="width:1.2rem;height:1.2rem"></i> Mentörlük Paneli</a>';
-        navLinks.appendChild(liMentor);
+        let changed = false;
+        if (!existingMentorLink) {
+          const liMentor = document.createElement('li');
+          liMentor.innerHTML = '<a href="mentorluk.html"><i data-lucide="sparkles" style="width:1.2rem;height:1.2rem"></i> Mentörlük Paneli</a>';
+          navLinks.appendChild(liMentor);
+          changed = true;
+        }
 
         if (this.currentUser.role === 'Admin') {
-          const liAdmin = document.createElement('li');
-          liAdmin.innerHTML = '<a href="yonetim.html"><i data-lucide="shield-check" style="width:1.2rem;height:1.2rem"></i> Yönetim</a>';
-          navLinks.appendChild(liAdmin);
+          if (!existingAdminLink) {
+            const liAdmin = document.createElement('li');
+            liAdmin.innerHTML = '<a href="yonetim.html"><i data-lucide="shield-check" style="width:1.2rem;height:1.2rem"></i> Yönetim</a>';
+            navLinks.appendChild(liAdmin);
+            changed = true;
+          }
+        } else {
+          if (existingAdminLink) {
+            existingAdminLink.parentElement.remove();
+            changed = true;
+          }
+        }
+        if (changed) {
+          setTimeout(() => lucide.createIcons(), 10);
+        }
+      } else {
+        let changed = false;
+        if (existingMentorLink) {
+          existingMentorLink.parentElement.remove();
+          changed = true;
+        }
+        if (existingAdminLink) {
+          existingAdminLink.parentElement.remove();
+          changed = true;
+        }
+        if (changed) {
+          setTimeout(() => lucide.createIcons(), 10);
         }
       }
     }
@@ -1281,10 +1355,9 @@ const ASDFL = {
   },
 
   async logout() {
+    localStorage.removeItem('asdfl_user');
     if (this.supabase) {
       await this.supabase.auth.signOut();
-    } else {
-      localStorage.removeItem('asdfl_user');
     }
     this.currentUser = null;
     this.toast('Çıkış yapıldı.', 'info');
@@ -1614,3 +1687,74 @@ const ASDFL = {
 };
 
 document.addEventListener('DOMContentLoaded', () => ASDFL.init());
+
+/* ================================================
+   SAYFA GEÇİŞ SİSTEMİ — Smooth Page Transitions
+   ================================================ */
+(function() {
+  const EXIT_DURATION = 220; // ms — pageExit animasyonuyla eşleşmeli
+
+  function isInternalLink(el) {
+    if (!el || el.tagName !== 'A') return false;
+    const href = el.getAttribute('href');
+    if (!href) return false;
+    // Anchor, javascript:, mailto:, tel:, http: dışındaki dış linkler hariç
+    if (href.startsWith('#') || href.startsWith('javascript:') ||
+        href.startsWith('mailto:') || href.startsWith('tel:')) return false;
+    if (href.startsWith('http://') || href.startsWith('https://')) {
+      // Aynı domain'se geçiş yap
+      try {
+        const url = new URL(href, window.location.href);
+        if (url.origin !== window.location.origin) return false;
+      } catch { return false; }
+    }
+    return true;
+  }
+
+  function navigateWithTransition(href, target) {
+    document.body.classList.add('page-exit');
+    setTimeout(() => {
+      if (target && target !== '_self') {
+        window.open(href, target);
+        document.body.classList.remove('page-exit');
+      } else {
+        window.location.href = href;
+      }
+    }, EXIT_DURATION);
+  }
+
+  document.addEventListener('click', function(e) {
+    // Modifier tuşlarla açılan linkler (yeni sekme vb.) hariç
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (e.button !== 0) return; // Sadece sol tıklama
+
+    const link = e.target.closest('a');
+    if (!isInternalLink(link)) return;
+
+    // Modal içindeki linkleri hariç tut (modal kapanırken link tıklanabilir)
+    if (link.closest('.modal')) return;
+
+    // Çıkış butonu değilse (logout gibi) geçiş yap
+    const href = link.getAttribute('href');
+    const target = link.getAttribute('target');
+
+    // Zaten bu sayfadaysak geçiş yapma
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    if (href === currentPage || href === '#') return;
+
+    e.preventDefault();
+    navigateWithTransition(href, target);
+  });
+
+  // Tarayıcı geri/ileri navigasyonunda da giriş animasyonu tetikle
+  window.addEventListener('pageshow', function(e) {
+    if (e.persisted) {
+      // bfcache'den geliyorsa animasyonu yeniden tetikle
+      document.body.classList.remove('page-exit');
+      document.body.style.animation = 'none';
+      requestAnimationFrame(() => {
+        document.body.style.animation = '';
+      });
+    }
+  });
+})();

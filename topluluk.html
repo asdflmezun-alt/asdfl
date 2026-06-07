@@ -849,7 +849,7 @@
   
     <script>
       (function() {
-        const userStr = localStorage.getItem('asdfl_user');
+        let userStr = null; try { userStr = localStorage.getItem('asdfl_user') || sessionStorage.getItem('asdfl_user'); } catch(e) {}
         if (userStr) {
           try {
             const user = JSON.parse(userStr);
@@ -867,7 +867,7 @@
   <div class="nav-cta">
     <script>
       (function() {
-        const userStr = localStorage.getItem('asdfl_user');
+        let userStr = null; try { userStr = localStorage.getItem('asdfl_user') || sessionStorage.getItem('asdfl_user'); } catch(e) {}
         const container = document.currentScript.parentElement;
         if (userStr) {
           try {
@@ -981,7 +981,7 @@
     </div>
     <script>
       (function() {
-        const userStr = localStorage.getItem('asdfl_user');
+        let userStr = null; try { userStr = localStorage.getItem('asdfl_user') || sessionStorage.getItem('asdfl_user'); } catch(e) {}
         if (userStr) {
           const composeBox = document.getElementById('composeBox');
           const loginPrompt = document.getElementById('loginPrompt');

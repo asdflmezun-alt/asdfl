@@ -33,7 +33,7 @@
     <li><a href="kariyer.html"><i data-lucide="briefcase" style="width:1.2rem;height:1.2rem"></i> Kariyer Ağı</a></li>
     <script>
       (function() {
-        const userStr = localStorage.getItem('asdfl_user');
+        let userStr = null; try { userStr = localStorage.getItem('asdfl_user') || sessionStorage.getItem('asdfl_user'); } catch(e) {}
         if (userStr) {
           try {
             const user = JSON.parse(userStr);
@@ -51,7 +51,7 @@
   <div class="nav-cta">
     <script>
       (function() {
-        const userStr = localStorage.getItem('asdfl_user');
+        let userStr = null; try { userStr = localStorage.getItem('asdfl_user') || sessionStorage.getItem('asdfl_user'); } catch(e) {}
         const container = document.currentScript.parentElement;
         if (userStr) {
           try {

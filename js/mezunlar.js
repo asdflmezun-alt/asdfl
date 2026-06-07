@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           ${a.grad_year ? `<span class="badge badge-blue">${a.grad_year}</span>` : ''}
         </div>
         <div class="ac-actions">
-          <button class="btn btn-ghost btn-sm" onclick="ASDFL.toast('Profil görüntüleme yakında!','info')">Profili Gör</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.location.href='profil.html?id=${a.id}'">Profili Gör</button>
           ${a.mentor ? `<button class="btn btn-secondary btn-sm" onclick="openMentorshipRequestModal('${a.id}', '${a.name}')">Bağlantı Kur</button>` : ''}
         </div>
       </div>`;

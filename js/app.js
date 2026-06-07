@@ -1124,16 +1124,32 @@ const ASDFL = {
   // Güvenli localStorage wrapper: hata durumunda sessionStorage veya memory'ye düşer.
   _storage: (() => {
     const memStore = {};
-    const safe = (fn, fallback) => { try { return fn(); } catch(e) { return fallback; } };
     try { localStorage.setItem('__sb_test__', '1'); localStorage.removeItem('__sb_test__'); return localStorage; } catch(e) {}
     try { sessionStorage.setItem('__sb_test__', '1'); sessionStorage.removeItem('__sb_test__'); return sessionStorage; } catch(e) {}
     return { getItem: k => memStore[k] ?? null, setItem: (k,v) => { memStore[k]=v; }, removeItem: k => { delete memStore[k]; } };
   })(),
-  supabase: window.supabase ? window.supabase.createClient(
-    'https://refpyezcxkkofpkwaqny.supabase.co',
-    'sb_publishable_NlYWAPtmP6F6LRlAiXyIxw_hm1OoP9m',
-    { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
-  ) : null,
+  supabase: (() => {
+    if (!window.supabase) return null;
+    const memStore = {};
+    let customStorage = null;
+    try { localStorage.setItem('__sb_test__', '1'); localStorage.removeItem('__sb_test__'); customStorage = localStorage; } catch(e) {}
+    if (!customStorage) {
+      try { sessionStorage.setItem('__sb_test__', '1'); sessionStorage.removeItem('__sb_test__'); customStorage = sessionStorage; } catch(e) {}
+    }
+    if (!customStorage) {
+      customStorage = { getItem: k => memStore[k] ?? null, setItem: (k,v) => { memStore[k]=v; }, removeItem: k => { delete memStore[k]; } };
+    }
+    try {
+      return window.supabase.createClient(
+        'https://refpyezcxkkofpkwaqny.supabase.co',
+        'sb_publishable_NlYWAPtmP6F6LRlAiXyIxw_hm1OoP9m',
+        { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: customStorage } }
+      );
+    } catch (e) {
+      console.error('Supabase initialization failed:', e);
+      return null;
+    }
+  })(),
   authReady: false,
   waitForAuth() {
     return new Promise(resolve => {
@@ -1149,7 +1165,7 @@ const ASDFL = {
   // Auth Functions
   async checkAuth() {
     // Synchronous local session check to avoid initial page-load login state flicker/flashes
-    const userStr = localStorage.getItem('asdfl_user');
+    const userStr = this._storage.getItem('asdfl_user');
     if (userStr) {
       try {
         this.currentUser = JSON.parse(userStr);
@@ -1206,10 +1222,10 @@ const ASDFL = {
         avatar_position: dbAvatarPosition
       };
       // Keep cached session up-to-date
-      localStorage.setItem('asdfl_user', JSON.stringify(this.currentUser));
+      this._storage.setItem('asdfl_user', JSON.stringify(this.currentUser));
     } else {
       this.currentUser = null;
-      localStorage.removeItem('asdfl_user');
+      this._storage.removeItem('asdfl_user');
     }
 
     // IMPORTANT: authReady is set AFTER the DB role is fetched, not before.
@@ -1250,11 +1266,11 @@ const ASDFL = {
             avatar_url: dbAvatarUrl,
             avatar_position: dbAvatarPosition
           };
-          localStorage.setItem('asdfl_user', JSON.stringify(this.currentUser));
+          this._storage.setItem('asdfl_user', JSON.stringify(this.currentUser));
         }
       } else if (event === 'SIGNED_OUT') {
         this.currentUser = null;
-        localStorage.removeItem('asdfl_user');
+        this._storage.removeItem('asdfl_user');
       }
       this.updateUIForAuth();
     });
@@ -1383,7 +1399,7 @@ const ASDFL = {
   },
 
   async logout() {
-    localStorage.removeItem('asdfl_user');
+    this._storage.removeItem('asdfl_user');
     if (this.supabase) {
       await this.supabase.auth.signOut();
     }
@@ -1458,14 +1474,14 @@ const ASDFL = {
         class_section: classSection,
         university: university
       };
-      localStorage.setItem('asdfl_user', JSON.stringify(newUser));
+      this._storage.setItem('asdfl_user', JSON.stringify(newUser));
       this.currentUser = newUser;
       
       // Also add to local alumni list for immediate directory visibility
       try {
-        const localAlumni = JSON.parse(localStorage.getItem('asdfl_alumni') || '[]');
+        const localAlumni = JSON.parse(this._storage.getItem('asdfl_alumni') || '[]');
         localAlumni.push(newUser);
-        localStorage.setItem('asdfl_alumni', JSON.stringify(localAlumni));
+        this._storage.setItem('asdfl_alumni', JSON.stringify(localAlumni));
       } catch (e) {
         console.warn('Could not add to local alumni list:', e);
       }
@@ -1488,20 +1504,51 @@ const ASDFL = {
         this.toast('Giriş başarısız: ' + error.message, 'error');
         return;
       }
+      
+      // Cache session data instantly before reload to avoid race conditions!
+      if (data.session) {
+        const session = data.session;
+        let dbRole = session.user.user_metadata?.role || 'Kullanıcı';
+        let dbAvatarUrl = session.user.user_metadata?.avatar_url || '';
+        let dbAvatarPosition = session.user.user_metadata?.avatar_position || '50% 50%';
+        try {
+          const { data: profile } = await this.supabase
+            .from('profiles')
+            .select('role, avatar_url, avatar_position')
+            .eq('id', session.user.id)
+            .single();
+          if (profile?.role) dbRole = profile.role;
+          if (profile?.avatar_url) dbAvatarUrl = profile.avatar_url;
+          if (profile?.avatar_position) dbAvatarPosition = profile.avatar_position;
+        } catch (e) {
+          console.error('Error fetching role during login:', e);
+        }
+        
+        this.currentUser = {
+          ...session.user.user_metadata,
+          id: session.user.id,
+          name: session.user.user_metadata?.name || session.user.email.split('@')[0],
+          email: session.user.email,
+          role: dbRole,
+          avatar_url: dbAvatarUrl,
+          avatar_position: dbAvatarPosition
+        };
+        this._storage.setItem('asdfl_user', JSON.stringify(this.currentUser));
+      }
     } else {
       let user = { id: Math.random().toString(36).substring(2), role: 'Kullanıcı', name: email.split('@')[0], email: email };
       if (email === 'admin@admin.com' && pass === 'admin') {
         user = { id: '1', role: 'Admin', name: 'Sistem Yöneticisi', email: 'admin@admin.com', mentor: true };
       } else {
         try {
-          const alumni = JSON.parse(localStorage.getItem('asdfl_alumni') || '[]');
+          const alumni = JSON.parse(this._storage.getItem('asdfl_alumni') || '[]');
           const matched = alumni.find(a => a.email.toLowerCase() === email.toLowerCase());
           if (matched) {
             user = { ...matched };
           }
         } catch(e) {}
       }
-      localStorage.setItem('asdfl_user', JSON.stringify(user));
+      this._storage.setItem('asdfl_user', JSON.stringify(user));
       this.currentUser = user;
     }
     

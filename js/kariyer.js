@@ -344,7 +344,7 @@ window.renderDashboard = async function() {
   const mainArea = document.getElementById('dashboardMainArea');
   
   // Synchronous check to avoid unauthenticated flash during ASDFL.waitForAuth delay
-  const userStr = localStorage.getItem('asdfl_user');
+  const userStr = ASDFL._storage.getItem('asdfl_user');
   if (loginPrompt && mainArea) {
     if (userStr) {
       loginPrompt.classList.add('hidden');

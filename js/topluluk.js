@@ -18,7 +18,7 @@
     const loginPrompt = document.getElementById('loginPrompt');
     
     // Synchronous local session check to avoid initial load warning box flicker/flash
-    const userStr = localStorage.getItem('asdfl_user');
+    const userStr = ASDFL._storage.getItem('asdfl_user');
     if (userStr) {
       if (composeBox) composeBox.classList.remove('hidden');
       if (loginPrompt) loginPrompt.classList.add('hidden');

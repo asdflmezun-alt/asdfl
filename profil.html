@@ -154,7 +154,7 @@
   <div class="nav-cta">
     <script>
       (function() {
-        const userStr = localStorage.getItem('asdfl_user');
+        let userStr = null; try { userStr = localStorage.getItem('asdfl_user') || sessionStorage.getItem('asdfl_user'); } catch(e) {}
         const container = document.currentScript.parentElement;
         if (userStr) {
           try {
@@ -197,11 +197,18 @@
       })();
     </script>
   </div>
-  </div>
 </nav>
 
 <section class="section" style="padding-top:8rem">
   <div class="container" style="max-width:800px">
+    <!-- Geri Dön Butonu -->
+    <div id="profileBackBtn" class="hidden" style="margin-bottom: 1.5rem;">
+      <button class="btn btn-ghost btn-sm" onclick="goBackToAlumni()" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem;">
+        <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+        <span>Geri Dön</span>
+      </button>
+    </div>
+
     <div class="profile-header scale-in-init">
       <div class="profile-avatar-wrapper" style="position: relative; display: inline-block; margin-bottom: 1rem;">
         <div class="profile-avatar-lg" id="profileAvatar" style="cursor: pointer;" onclick="document.getElementById('avatarInput').click()" title="Profil Fotoğrafı Yükle">
@@ -247,6 +254,13 @@
               <div class="social-info-item" id="social-email-wrapper">
                 <i data-lucide="mail" style="width:16px; height:16px; color:var(--gold-500); flex-shrink: 0;"></i>
                 <span id="social-email">Belirtilmemiş</span>
+              </div>
+              <div class="social-info-item" id="social-phone-wrapper">
+                <i data-lucide="phone" style="width:16px; height:16px; color:var(--gold-500); flex-shrink: 0;"></i>
+                <span id="social-phone">Belirtilmemiş</span>
+              </div>
+              <div id="social-phone-action" style="margin-top: 0.5rem; display: none; width: 100%;">
+                <!-- Dinamik iletişim bilgisi talep butonu veya talep durumu -->
               </div>
             </div>
           </div>
@@ -447,14 +461,21 @@
   </div>
   <div class="footer-bottom"><span>© 2025 ASDFL Mezunlar Derneği</span><span>💛 ASDFL ruhuyla yapıldı</span></div>
 </div></footer>
-
 <div class="toast-container"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/universities.js"></script>
 <script src="js/app.js"></script>
 <script>
+  window.goBackToAlumni = function() {
+    if (document.referrer && document.referrer.includes('mezunlar.html')) {
+      history.back();
+    } else {
+      window.location.href = 'mezunlar.html';
+    }
+  };
+
   function renderInitialProfile() {
-    const userStr = localStorage.getItem('asdfl_user');
+    const userStr = ASDFL._storage.getItem('asdfl_user');
     if (!userStr) return;
     try {
       const user = JSON.parse(userStr);
@@ -657,7 +678,33 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    renderInitialProfile();
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUserId = urlParams.get('id');
+    const cachedUserStr = ASDFL._storage.getItem('asdfl_user');
+    let likelyOwnProfile = true;
+    
+    if (targetUserId && cachedUserStr) {
+      try {
+        const cachedUser = JSON.parse(cachedUserStr);
+        if (cachedUser && targetUserId !== cachedUser.id) {
+          likelyOwnProfile = false;
+        }
+      } catch (e) {}
+    }
+
+    if (likelyOwnProfile) {
+      renderInitialProfile();
+    } else {
+      const nameEl = document.getElementById('profileName');
+      if (nameEl) nameEl.textContent = 'Profil Yükleniyor...';
+      const roleEl = document.getElementById('profileRole');
+      if (roleEl) roleEl.textContent = '';
+      const avatarEl = document.getElementById('profileAvatar');
+      if (avatarEl) {
+        avatarEl.innerHTML = '<span id="profileInitials">...</span>';
+      }
+    }
+
     (async () => {
       await ASDFL.waitForAuth();
       await loadProfile();
@@ -674,23 +721,112 @@
     if (targetBtn) targetBtn.classList.add('active');
   };
 
+  window.requestContactFromProfile = async function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUserId = urlParams.get('id');
+    if (!ASDFL.supabase || !ASDFL.currentUser || !targetUserId) return;
+
+    const btn = document.getElementById('profileContactRequestBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Talep Gönderiliyor...';
+    }
+
+    const { error } = await ASDFL.supabase
+      .from('contact_requests')
+      .insert({
+        sender_id: ASDFL.currentUser.id,
+        receiver_id: targetUserId,
+        status: 'Pending'
+      });
+
+    if (error) {
+      ASDFL.toast('Talep gönderilirken hata oluştu: ' + error.message, 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'İletişim Bilgilerini Talep Et';
+      }
+    } else {
+      ASDFL.toast('İletişim erişim talebi başarıyla gönderildi!', 'success');
+      await loadProfile();
+    }
+  };
+
   async function loadProfile() {
     if (!ASDFL.currentUser) {
       window.location.href = 'index.html';
       return;
     }
 
-    const user = ASDFL.currentUser;
-    document.getElementById('profileName').textContent = user.name;
-    document.getElementById('profileRole').textContent = user.role + (user.gradYear ? ' · ' + user.gradYear + ' Mezunu' : '');
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUserId = urlParams.get('id');
+    const isOwnProfile = !targetUserId || targetUserId === ASDFL.currentUser.id;
 
-    // Render avatar
+    // Geri dön butonu görünürlüğü
+    const backBtn = document.getElementById('profileBackBtn');
+    if (backBtn) {
+      if (isOwnProfile) {
+        backBtn.classList.add('hidden');
+      } else {
+        backBtn.classList.remove('hidden');
+      }
+    }
+
+    let profileData = {};
+    let requestStatus = null;
+    let relReq = null;
+
+    if (isOwnProfile) {
+      profileData = ASDFL.currentUser;
+    } else {
+      if (ASDFL.supabase) {
+        const { data, error } = await ASDFL.supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', targetUserId)
+          .single();
+        
+        if (error || !data) {
+          ASDFL.toast('Profil bulunamadı veya erişim yetkiniz yok.', 'error');
+          window.location.href = 'mezunlar.html';
+          return;
+        }
+        profileData = data;
+
+        // İlişki durumunu sorgula
+        const { data: reqs } = await ASDFL.supabase
+          .from('contact_requests')
+          .select('*')
+          .or(`sender_id.eq.${ASDFL.currentUser.id},receiver_id.eq.${ASDFL.currentUser.id}`);
+        
+        if (reqs) {
+          relReq = reqs.find(r => 
+            (r.sender_id === ASDFL.currentUser.id && r.receiver_id === targetUserId) ||
+            (r.sender_id === targetUserId && r.receiver_id === ASDFL.currentUser.id)
+          );
+          if (relReq) {
+            requestStatus = relReq.status;
+          }
+        }
+      } else {
+        // Çevrimdışı mod
+        const stored = ASDFL._storage.getItem('asdfl_alumni');
+        if (stored) {
+          const alumni = JSON.parse(stored);
+          profileData = alumni.find(a => a.id === targetUserId) || {};
+        }
+      }
+    }
+
+    document.getElementById('profileName').textContent = profileData.name || 'Bilinmeyen Üye';
+    document.getElementById('profileRole').textContent = (profileData.role || 'Kullanıcı') + (profileData.grad_year ? ' · ' + profileData.grad_year + ' Mezunu' : '');
+
+    // Avatar render
     const avatarEl = document.getElementById('profileAvatar');
     const initialsEl = document.getElementById('profileInitials');
     const posSec = document.getElementById('avatarPositionSection');
     
-    // Parse position: format is either "50% 50%" (legacy) or "scale,panX,panY" (new)
-    const position = user.avatar_position || user.avatarPosition || '1.00,0%,0%';
+    const position = profileData.avatar_position || '1.00,0%,0%';
     let pZoom = 1.0;
     let pX = 0;
     let pY = 0;
@@ -700,15 +836,10 @@
       pZoom = parseFloat(scale) || 1.0;
       pX = parseInt(x) || 0;
       pY = parseInt(y) || 0;
-    } else {
-      // Legacy format conversion
-      pZoom = 1.0;
-      pX = 0;
-      pY = 0;
     }
 
     if (avatarEl && initialsEl) {
-      const avatarUrl = user.avatar_url || user.avatarUrl;
+      const avatarUrl = profileData.avatar_url;
       if (avatarUrl) {
         let transformStr = '';
         let objPosStr = 'object-position: center;';
@@ -726,132 +857,134 @@
         avatarEl.style.justifyContent = 'center';
         avatarEl.innerHTML = `<img id="profileAvatarImg" src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover; ${objPosStr} ${transformStr}">`;
         initialsEl.style.display = 'none';
-        if (posSec) posSec.classList.remove('hidden');
       } else {
         avatarEl.innerHTML = '<span id="profileInitials">?</span>';
         const newInitialsEl = document.getElementById('profileInitials');
         avatarEl.style.backgroundImage = '';
         if (newInitialsEl) {
-          newInitialsEl.textContent = ASDFL.getInitials(user.name);
+          newInitialsEl.textContent = ASDFL.getInitials(profileData.name || 'U');
           newInitialsEl.style.display = 'block';
         }
-        if (posSec) posSec.classList.add('hidden');
       }
     }
-    
-    // Bind position to sliders
-    const sliderZoom = document.getElementById('sliderZoom');
-    const sliderX = document.getElementById('sliderPosX');
-    const sliderY = document.getElementById('sliderPosY');
-    const valZoom = document.getElementById('valZoom');
-    const valX = document.getElementById('valPosX');
-    const valY = document.getElementById('valPosY');
-    
-    if (sliderZoom && sliderX && sliderY && valZoom && valX && valY) {
-      sliderZoom.value = pZoom;
-      sliderX.value = pX;
-      sliderY.value = pY;
-      valZoom.textContent = pZoom.toFixed(2) + 'x';
-      valX.textContent = (pX >= 0 ? '+' : '') + pX + '%';
-      valY.textContent = (pY >= 0 ? '+' : '') + pY + '%';
-    }
 
-    // Settings fields defaults
-    document.getElementById('editName').value = user.name;
-    document.getElementById('editEmail').value = user.email;
+    // Yetki bazlı alanları kontrol et
+    const editBadge = document.querySelector('.avatar-edit-badge');
+    const tabsContainer = document.querySelector('.mezun-tabs');
 
-    // Show/hide fields based on user role
-    document.querySelectorAll('.role-field').forEach(el => el.classList.add('hidden'));
-    const groupClassSection = document.getElementById('groupClassSection');
-    if (groupClassSection) {
-      groupClassSection.classList.toggle('hidden', user.role === 'Öğretmen');
-    }
-
-    if (user.role === 'Mezun' || user.role === 'Admin') {
-      document.querySelectorAll('.role-mezun').forEach(el => el.classList.remove('hidden'));
-    } else if (user.role === 'Öğrenci') {
-      document.querySelectorAll('.role-ogrenci').forEach(el => el.classList.remove('hidden'));
-    } else if (user.role === 'Öğretmen') {
-      document.querySelectorAll('.role-ogretmen').forEach(el => el.classList.remove('hidden'));
-    }
-
-    let profileData = {};
-
-    if(ASDFL.supabase) {
-      const { data } = await ASDFL.supabase.from('profiles').select('*').eq('id', user.id).single();
-      if(data) {
-        profileData = data;
-        
-        // Sync local current user object just in case
-        if (data.avatar_url) ASDFL.currentUser.avatar_url = data.avatar_url;
-        if (data.avatar_position) ASDFL.currentUser.avatar_position = data.avatar_position;
-
-        document.getElementById('editCity').value = data.city || '';
-        document.getElementById('editJob').value = data.job || '';
-        document.getElementById('editCompany').value = data.company || '';
-        document.getElementById('editClassSection').value = data.class_section || '';
-        document.getElementById('editGradYear').value = data.grad_year || '';
-        document.getElementById('editGrade').value = data.grade || '9. Sınıf';
-        document.getElementById('editBranch').value = data.branch || '';
-        document.getElementById('editTeachingYear').value = data.teaching_year || '';
-        document.getElementById('editPhone').value = data.phone || '';
-        document.getElementById('editSharePhone').checked = !!data.share_phone;
-        document.getElementById('editShareEmail').checked = !!data.share_email;
-        
-        document.getElementById('editBio').value = data.bio || '';
-        document.getElementById('editUniversity').value = data.university || '';
-        document.getElementById('editStudentUniversity').value = data.university || '';
-        document.getElementById('editLinkedin').value = data.linkedin_url || '';
-        document.getElementById('editGithub').value = data.github_url || '';
-        document.getElementById('editInstagram').value = data.instagram_url || '';
+    if (isOwnProfile) {
+      if (editBadge) editBadge.style.display = 'flex';
+      if (tabsContainer) tabsContainer.style.display = 'flex';
+      if (avatarEl) {
+        avatarEl.style.cursor = 'pointer';
+        avatarEl.setAttribute('onclick', "document.getElementById('avatarInput').click()");
+        avatarEl.setAttribute('title', "Profil Fotoğrafı Yükle");
       }
-      await loadContactRequests();
+      if (posSec && profileData.avatar_url) posSec.classList.remove('hidden');
     } else {
-      // Local Fallback loading
-      profileData = {
-        city: user.city || '',
-        job: user.job || '',
-        company: user.company || '',
-        class_section: user.classSection || '',
-        grad_year: user.gradYear || '',
-        grade: user.grade || '9. Sınıf',
-        branch: user.branch || '',
-        teaching_year: user.teachingYear || '',
-        phone: user.phone || '',
-        share_phone: user.sharePhone,
-        share_email: user.shareEmail,
-        bio: user.bio || '',
-        university: user.university || '',
-        linkedin_url: user.linkedin_url || '',
-        github_url: user.github_url || '',
-        instagram_url: user.instagram_url || '',
-        avatar_url: user.avatar_url || user.avatarUrl || '',
-        avatar_position: user.avatar_position || user.avatarPosition || '50% 50%'
-      };
+      if (editBadge) editBadge.style.display = 'none';
+      if (tabsContainer) tabsContainer.style.display = 'none';
+      if (avatarEl) {
+        avatarEl.style.cursor = 'default';
+        avatarEl.removeAttribute('onclick');
+        avatarEl.removeAttribute('title');
+      }
+      if (posSec) posSec.classList.add('hidden');
+    }
+    
+    // Sliders & settings inputs binding (Only for own profile)
+    if (isOwnProfile) {
+      const sliderZoom = document.getElementById('sliderZoom');
+      const sliderX = document.getElementById('sliderPosX');
+      const sliderY = document.getElementById('sliderPosY');
+      const valZoom = document.getElementById('valZoom');
+      const valX = document.getElementById('valPosX');
+      const valY = document.getElementById('valPosY');
+      
+      if (sliderZoom && sliderX && sliderY && valZoom && valX && valY) {
+        sliderZoom.value = pZoom;
+        sliderX.value = pX;
+        sliderY.value = pY;
+        valZoom.textContent = pZoom.toFixed(2) + 'x';
+        valX.textContent = (pX >= 0 ? '+' : '') + pX + '%';
+        valY.textContent = (pY >= 0 ? '+' : '') + pY + '%';
+      }
 
-      document.getElementById('editCity').value = profileData.city;
-      document.getElementById('editJob').value = profileData.job;
-      document.getElementById('editCompany').value = profileData.company;
-      document.getElementById('editClassSection').value = profileData.class_section;
-      document.getElementById('editGradYear').value = profileData.grad_year;
-      document.getElementById('editGrade').value = profileData.grade;
-      document.getElementById('editBranch').value = profileData.branch;
-      document.getElementById('editTeachingYear').value = profileData.teaching_year;
-      document.getElementById('editPhone').value = profileData.phone;
+      document.getElementById('editName').value = profileData.name || '';
+      document.getElementById('editEmail').value = profileData.email || '';
+
+      document.querySelectorAll('.role-field').forEach(el => el.classList.add('hidden'));
+      const groupClassSection = document.getElementById('groupClassSection');
+      if (groupClassSection) {
+        groupClassSection.classList.toggle('hidden', profileData.role === 'Öğretmen');
+      }
+
+      if (profileData.role === 'Mezun' || profileData.role === 'Admin') {
+        document.querySelectorAll('.role-mezun').forEach(el => el.classList.remove('hidden'));
+      } else if (profileData.role === 'Öğrenci') {
+        document.querySelectorAll('.role-ogrenci').forEach(el => el.classList.remove('hidden'));
+      } else if (profileData.role === 'Öğretmen') {
+        document.querySelectorAll('.role-ogretmen').forEach(el => el.classList.remove('hidden'));
+      }
+
+      document.getElementById('editCity').value = profileData.city || '';
+      document.getElementById('editJob').value = profileData.job || '';
+      document.getElementById('editCompany').value = profileData.company || '';
+      document.getElementById('editClassSection').value = profileData.class_section || '';
+      document.getElementById('editGradYear').value = profileData.grad_year || '';
+      document.getElementById('editGrade').value = profileData.grade || '9. Sınıf';
+      document.getElementById('editBranch').value = profileData.branch || '';
+      document.getElementById('editTeachingYear').value = profileData.teaching_year || '';
+      document.getElementById('editPhone').value = profileData.phone || '';
       document.getElementById('editSharePhone').checked = !!profileData.share_phone;
       document.getElementById('editShareEmail').checked = !!profileData.share_email;
+      
+      document.getElementById('editBio').value = profileData.bio || '';
+      document.getElementById('editUniversity').value = profileData.university || '';
+      document.getElementById('editStudentUniversity').value = profileData.university || '';
+      document.getElementById('editLinkedin').value = profileData.linkedin_url || '';
+      document.getElementById('editGithub').value = profileData.github_url || '';
+      document.getElementById('editInstagram').value = profileData.instagram_url || '';
 
-      document.getElementById('editBio').value = profileData.bio;
-      document.getElementById('editUniversity').value = profileData.university;
-      document.getElementById('editStudentUniversity').value = profileData.university;
-      document.getElementById('editLinkedin').value = profileData.linkedin_url;
-      document.getElementById('editGithub').value = profileData.github_url;
-      document.getElementById('editInstagram').value = profileData.instagram_url;
+      await loadContactRequests();
 
-      document.getElementById('contactRequestsList').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem">Çevrimdışı modda iletişim talepleri devre dışıdır.</p>';
+      // Sync local current user object
+      if (ASDFL.currentUser) {
+        ASDFL.currentUser = {
+          ...ASDFL.currentUser,
+          city: profileData.city || '',
+          job: profileData.job || '',
+          company: profileData.company || '',
+          class_section: profileData.class_section || '',
+          classSection: profileData.class_section || '',
+          grad_year: profileData.grad_year || '',
+          gradYear: profileData.grad_year || '',
+          grade: profileData.grade || '9. Sınıf',
+          branch: profileData.branch || '',
+          teaching_year: profileData.teaching_year || '',
+          teachingYear: profileData.teaching_year || '',
+          phone: profileData.phone || '',
+          share_phone: profileData.share_phone,
+          sharePhone: profileData.share_phone,
+          share_email: profileData.share_email,
+          shareEmail: profileData.share_email,
+          bio: profileData.bio || '',
+          university: profileData.university || '',
+          linkedin_url: profileData.linkedin_url || '',
+          linkedinUrl: profileData.linkedin_url || '',
+          github_url: profileData.github_url || '',
+          githubUrl: profileData.github_url || '',
+          instagram_url: profileData.instagram_url || '',
+          instagramUrl: profileData.instagram_url || '',
+          avatar_url: profileData.avatar_url || '',
+          avatarPosition: profileData.avatar_position || '50% 50%',
+          avatar_position: profileData.avatar_position || '50% 50%'
+        };
+        ASDFL._storage.setItem('asdfl_user', JSON.stringify(ASDFL.currentUser));
+      }
     }
 
-    // Populate Social tab components
+    // Social Details Tab
     document.getElementById('social-city').textContent = profileData.city || 'Belirtilmemiş';
     document.getElementById('social-uni').textContent = profileData.university || 'Belirtilmemiş';
     
@@ -860,10 +993,63 @@
       jobText = profileData.job + (profileData.company ? `, ${profileData.company}` : '');
     }
     document.getElementById('social-job').textContent = jobText;
-    document.getElementById('social-email').textContent = user.email;
+
+    // İletişim bilgisi görünürlüğü kuralları
+    const hasPhoneShared = !!profileData.share_phone;
+    const hasEmailShared = !!profileData.share_email;
+    const isPending = (requestStatus === 'Pending');
+    const isApproved = (requestStatus === 'Approved');
+
+    // E-posta
+    const emailEl = document.getElementById('social-email');
+    if (emailEl) {
+      if (isOwnProfile || hasEmailShared || isApproved) {
+        emailEl.textContent = profileData.email || 'E-posta belirtilmemiş';
+        emailEl.style.fontStyle = 'normal';
+        emailEl.style.color = 'var(--text-secondary)';
+      } else {
+        emailEl.textContent = 'E-posta gizli';
+        emailEl.style.fontStyle = 'italic';
+        emailEl.style.color = 'var(--text-muted)';
+      }
+    }
+
+    // Telefon
+    const phoneEl = document.getElementById('social-phone');
+    const phoneAction = document.getElementById('social-phone-action');
+    if (phoneEl) {
+      if (isOwnProfile || hasPhoneShared || isApproved) {
+        phoneEl.textContent = profileData.phone || 'Telefon belirtilmemiş';
+        phoneEl.style.fontStyle = 'normal';
+        phoneEl.style.color = 'var(--text-secondary)';
+        if (phoneAction) phoneAction.style.display = 'none';
+      } else {
+        phoneEl.textContent = 'Telefon gizli';
+        phoneEl.style.fontStyle = 'italic';
+        phoneEl.style.color = 'var(--text-muted)';
+        
+        if (phoneAction) {
+          phoneAction.style.display = 'block';
+          if (isPending) {
+            phoneAction.innerHTML = `
+              <div style="font-size:.82rem; color:var(--gold-500); display:flex; align-items:center; justify-content:center; gap:.4rem; opacity:.85; padding:.4rem; border:1px dashed var(--glass-border); border-radius:var(--radius-sm); background:rgba(212,175,55,0.03);">
+                <i data-lucide="clock" style="width:1em;height:1em"></i>
+                <span>Erişim Talebi Beklemede</span>
+              </div>
+            `;
+          } else {
+            phoneAction.innerHTML = `
+              <button class="btn btn-secondary btn-sm" id="profileContactRequestBtn" onclick="requestContactFromProfile()" style="font-size:.75rem; padding:.25rem .75rem; width:100%; display:flex; align-items:center; justify-content:center; gap:.4rem;">
+                <i data-lucide="lock" style="width:.9em;height:.9em"></i> İletişim Bilgilerini Talep Et
+              </button>
+            `;
+          }
+        }
+      }
+    }
 
     // Bio
-    const bioText = profileData.bio || 'Kendiniz hakkında henüz bilgi girmediniz. Ayarlar sekmesinden doldurabilirsiniz.';
+    const bioText = profileData.bio || (isOwnProfile ? 'Kendiniz hakkında henüz bilgi girmediniz. Ayarlar sekmesinden doldurabilirsiniz.' : 'Bu üye henüz hakkında bilgi girmemiş.');
     const bioEl = document.getElementById('social-bio');
     if (bioEl) {
       bioEl.textContent = bioText;
@@ -876,16 +1062,18 @@
       }
     }
 
-    // Social URLs links
+    // Social Links
     const linkedinEl = document.getElementById('social-linkedin');
     const githubEl = document.getElementById('social-github');
+    const instagramEl = document.getElementById('social-instagram');
+
     if (linkedinEl) {
       if (profileData.linkedin_url) {
         linkedinEl.href = profileData.linkedin_url;
         linkedinEl.style.pointerEvents = 'auto';
         linkedinEl.style.opacity = '1';
       } else {
-        linkedinEl.href = '#';
+        linkedinEl.removeAttribute('href');
         linkedinEl.style.pointerEvents = 'none';
         linkedinEl.style.opacity = '0.3';
       }
@@ -896,7 +1084,7 @@
         githubEl.style.pointerEvents = 'auto';
         githubEl.style.opacity = '1';
       } else {
-        githubEl.href = '#';
+        githubEl.removeAttribute('href');
         githubEl.style.pointerEvents = 'none';
         githubEl.style.opacity = '0.3';
       }
@@ -908,17 +1096,18 @@
         instagramEl.style.pointerEvents = 'auto';
         instagramEl.style.opacity = '1';
       } else {
-        instagramEl.href = '#';
+        instagramEl.removeAttribute('href');
         instagramEl.style.pointerEvents = 'none';
         instagramEl.style.opacity = '0.3';
       }
     }
 
-    // Populate dynamic academic & mentor summary
+    // Academic details
     const academicDiv = document.getElementById('social-academic-details');
     if (academicDiv) {
       let academicHTML = '';
-      if (user.role === 'Mezun' || user.role === 'Admin') {
+      const role = profileData.role;
+      if (role === 'Mezun' || role === 'Admin') {
         academicHTML = `
           <div style="display:flex; justify-content:space-between; padding: 0.25rem 0; border-bottom:1px dashed rgba(255,255,255,0.03)">
             <span style="color:var(--text-muted)">Üyelik Türü:</span>
@@ -937,7 +1126,7 @@
             <span class="badge ${profileData.mentor ? 'badge-teal' : 'badge-red'}" style="font-weight:600">${profileData.mentor ? 'Aktif Mentör' : 'Mentör Değil'}</span>
           </div>
         `;
-      } else if (user.role === 'Öğrenci') {
+      } else if (role === 'Öğrenci') {
         academicHTML = `
           <div style="display:flex; justify-content:space-between; padding: 0.25rem 0; border-bottom:1px dashed rgba(255,255,255,0.03)">
             <span style="color:var(--text-muted)">Üyelik Türü:</span>
@@ -952,7 +1141,7 @@
             <strong style="color:var(--text-primary)">${profileData.class_section || 'Belirtilmemiş'}</strong>
           </div>
         `;
-      } else if (user.role === 'Öğretmen') {
+      } else if (role === 'Öğretmen') {
         academicHTML = `
           <div style="display:flex; justify-content:space-between; padding: 0.25rem 0; border-bottom:1px dashed rgba(255,255,255,0.03)">
             <span style="color:var(--text-muted)">Üyelik Türü:</span>
@@ -970,44 +1159,9 @@
       }
       academicDiv.innerHTML = academicHTML;
     }
-    
+
     ASDFL.initReveal();
     setTimeout(() => lucide.createIcons(), 10);
-
-    // Sync all loaded fields back to the global currentUser object so that the cache is complete
-    if (ASDFL.currentUser) {
-      ASDFL.currentUser = {
-        ...ASDFL.currentUser,
-        city: profileData.city || '',
-        job: profileData.job || '',
-        company: profileData.company || '',
-        class_section: profileData.class_section || '',
-        classSection: profileData.class_section || '',
-        grad_year: profileData.grad_year || '',
-        gradYear: profileData.grad_year || '',
-        grade: profileData.grade || '9. Sınıf',
-        branch: profileData.branch || '',
-        teaching_year: profileData.teaching_year || '',
-        teachingYear: profileData.teaching_year || '',
-        phone: profileData.phone || '',
-        share_phone: profileData.share_phone,
-        sharePhone: profileData.share_phone,
-        share_email: profileData.share_email,
-        shareEmail: profileData.share_email,
-        bio: profileData.bio || '',
-        university: profileData.university || '',
-        linkedin_url: profileData.linkedin_url || '',
-        linkedinUrl: profileData.linkedin_url || '',
-        github_url: profileData.github_url || '',
-        githubUrl: profileData.github_url || '',
-        instagram_url: profileData.instagram_url || '',
-        instagramUrl: profileData.instagram_url || '',
-        avatar_url: profileData.avatar_url || '',
-        avatarPosition: profileData.avatar_position || '50% 50%',
-        avatar_position: profileData.avatar_position || '50% 50%'
-      };
-      localStorage.setItem('asdfl_user', JSON.stringify(ASDFL.currentUser));
-    }
   }
 
   window.handleAvatarUpload = async function(event) {
@@ -1072,13 +1226,13 @@
     } else if (ASDFL.currentUser) {
       // Local fallback
       ASDFL.currentUser.avatarUrl = avatarData;
-      const stored = localStorage.getItem('asdfl_alumni');
+      const stored = ASDFL._storage.getItem('asdfl_alumni');
       if (stored) {
         let alumni = JSON.parse(stored);
         alumni = alumni.map(m => m.id === ASDFL.currentUser.id ? { ...m, avatar_url: avatarData } : m);
-        localStorage.setItem('asdfl_alumni', JSON.stringify(alumni));
+        ASDFL._storage.setItem('asdfl_alumni', JSON.stringify(alumni));
       }
-      localStorage.setItem('asdfl_user', JSON.stringify(ASDFL.currentUser));
+      ASDFL._storage.setItem('asdfl_user', JSON.stringify(ASDFL.currentUser));
     }
 
     ASDFL.currentUser.avatar_url = avatarData;
@@ -1252,7 +1406,7 @@
       };
       
       // Update in local array
-      const stored = localStorage.getItem('asdfl_alumni');
+      const stored = ASDFL._storage.getItem('asdfl_alumni');
       if (stored) {
         let alumni = JSON.parse(stored);
         alumni = alumni.map(m => m.id === ASDFL.currentUser.id ? { 
@@ -1260,10 +1414,10 @@
           name, city, job, company, class_section: classSection, grad_year: gradYear, grade, branch, teaching_year: teachingYear, phone, share_phone: sharePhone, share_email: shareEmail,
           bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition
         } : m);
-        localStorage.setItem('asdfl_alumni', JSON.stringify(alumni));
+        ASDFL._storage.setItem('asdfl_alumni', JSON.stringify(alumni));
       }
       
-      localStorage.setItem('asdfl_user', JSON.stringify(updatedUser));
+      ASDFL._storage.setItem('asdfl_user', JSON.stringify(updatedUser));
     }
 
     ASDFL.currentUser.name = name;
@@ -1289,7 +1443,7 @@
     document.getElementById('profileName').textContent = name;
     document.getElementById('profileRole').textContent = ASDFL.currentUser.role + (gradYear ? ' · ' + gradYear + ' Mezunu' : '');
 
-    localStorage.setItem('asdfl_user', JSON.stringify(ASDFL.currentUser));
+    ASDFL._storage.setItem('asdfl_user', JSON.stringify(ASDFL.currentUser));
     await loadProfile();
     ASDFL.toast('Profil başarıyla güncellendi!', 'success');
     btn.textContent = 'Değişiklikleri Kaydet';

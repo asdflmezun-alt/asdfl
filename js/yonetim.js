@@ -18,6 +18,19 @@ function safeSetItem(key, value) {
   }
 }
 
+// switchAdminTab global scope'da olmalı — onclick attribute'u DOMContentLoaded beklemez
+function switchAdminTab(tabName, btn) {
+  currentTab = tabName;
+  document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  document.querySelectorAll('.admin-panel-tab').forEach(t => t.style.display = 'none');
+  const tabEl = document.getElementById(`tab-${tabName}`);
+  if (tabEl) tabEl.style.display = 'block';
+
+  if (typeof renderAllPanels === 'function') renderAllPanels();
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await ASDFL.waitForAuth();
 
@@ -45,47 +58,88 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 3. Render Initial State
   renderAllPanels();
-
-  // Setup tab state
-  window.switchAdminTab = function(tabName, btn) {
-    currentTab = tabName;
-    document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-
-    document.querySelectorAll('.admin-panel-tab').forEach(t => t.style.display = 'none');
-    document.getElementById(`tab-${tabName}`).style.display = 'block';
-    
-    renderAllPanels();
-  };
 });
 
 // Load all site components
 async function loadAdminData() {
   if (ASDFL.supabase) {
+    // Her tablo ayrı ayrı çekiliyor — biri hata verse diğerleri çalışmaya devam eder
+    
+    // 1. Üyeler (profiles)
     try {
-      // Fetch core tables in parallel
-      const [membersRes, eventsRes, scholarshipsRes, appsRes] = await Promise.all([
-        ASDFL.supabase.from('profiles').select('*').order('name'),
-        ASDFL.supabase.from('events').select('*').order('date', { ascending: false }),
-        ASDFL.supabase.from('scholarships').select('*').order('created_at', { ascending: false }),
-        ASDFL.supabase.from('applications').select('*, profiles(name, role, grad_year, email, phone, avatar_url)').order('created_at', { ascending: false })
-      ]);
+      const { data, error } = await ASDFL.supabase.from('profiles').select('*').order('name');
+      if (error) console.error('profiles fetch error:', error.message);
+      allMembers = data || [];
+    } catch (e) {
+      console.error('profiles exception:', e);
+      allMembers = [];
+    }
 
-      allMembers = membersRes.data || [];
-      allEvents = eventsRes.data || [];
-      allScholarships = scholarshipsRes.data || [];
-      allApplications = appsRes.data || [];
-
-      // Fetch logo announcements separately to prevent table-not-found errors from crashing the main panel
-      try {
-        allAnnouncements = await ASDFL.fetchLogoAnnouncements();
-      } catch (annError) {
-        console.error('Error loading logo announcements inside loadAdminData:', annError);
-        allAnnouncements = [];
+    // 2. Etkinlikler (events)
+    try {
+      const { data, error } = await ASDFL.supabase.from('events').select('*').order('created_at', { ascending: false });
+      if (error) {
+        // created_at yoksa date ile tekrar dene
+        const { data: data2, error: error2 } = await ASDFL.supabase.from('events').select('*');
+        if (error2) console.error('events fetch error:', error2.message);
+        allEvents = data2 || [];
+      } else {
+        allEvents = data || [];
       }
-    } catch (err) {
-      console.error('Error loading admin data:', err);
-      ASDFL.toast('Supabase verileri yüklenirken hata oluştu.', 'error');
+    } catch (e) {
+      console.error('events exception:', e);
+      allEvents = [];
+    }
+
+    // 3. Burslar (scholarships)
+    try {
+      const { data, error } = await ASDFL.supabase.from('scholarships').select('*').order('created_at', { ascending: false });
+      if (error) {
+        const { data: data2 } = await ASDFL.supabase.from('scholarships').select('*');
+        allScholarships = data2 || [];
+      } else {
+        allScholarships = data || [];
+      }
+    } catch (e) {
+      console.error('scholarships exception:', e);
+      allScholarships = [];
+    }
+
+    // 4. Başvurular (applications) - FK join olmadan güvenli sorgu
+    try {
+      const { data, error } = await ASDFL.supabase
+        .from('applications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('applications fetch error:', error.message);
+        allApplications = [];
+      } else {
+        // Profil bilgilerini ayrı çek ve birleştir
+        if (data && data.length > 0 && allMembers.length > 0) {
+          allApplications = data.map(app => ({
+            ...app,
+            profiles: allMembers.find(m => m.id === (app.user_id || app.profile_id)) || null
+          }));
+        } else {
+          allApplications = data || [];
+        }
+      }
+    } catch (e) {
+      console.error('applications exception:', e);
+      allApplications = [];
+    }
+
+    // 5. Logo duyuruları
+    try {
+      allAnnouncements = await ASDFL.fetchLogoAnnouncements();
+    } catch (annError) {
+      console.error('Error loading logo announcements:', annError);
+      allAnnouncements = [];
+    }
+
+    // Eğer hiç üye yüklenmediyse offline fallback
+    if (!allMembers || allMembers.length === 0) {
       loadOfflineFallbackData();
     }
   } else {

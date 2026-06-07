@@ -3,7 +3,7 @@
 <head>
   <script>document.documentElement.classList.add('no-transitions');</script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Mentörlük Portalı | ASDFL Mezunlar Derneği</title>
 <meta name="description" content="ASDFL Mezunlar Derneği mentörlük yönetim portalı. Görüşmeleri planlayın, randevularınızı takip edin.">
     <link rel="stylesheet" href="css/fonts.css">
@@ -174,7 +174,7 @@
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; @media(max-width: 768px){grid-template-columns: 1fr;}">
+            <div class="overview-cards-grid">
               <!-- Upcoming meetings card -->
               <div class="card" style="padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
                 <h3 style="font-size: 1.1rem; margin-bottom: 1rem; font-weight:600;"><i data-lucide="clock" style="display:inline-block; vertical-align:middle; margin-top:-2px; margin-right:4px;"></i> Yaklaşan Görüşmeler</h3>
@@ -219,7 +219,7 @@
 
           <!-- 4. CALENDAR TAB -->
           <div id="tab-calendar" class="portal-tab-content">
-            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; @media(max-width: 992px){grid-template-columns: 1fr;}">
+            <div class="calendar-layout-grid">
               
               <!-- Left side: Calendar Grid & Daily Events list -->
               <div style="display: flex; flex-direction: column; gap: 1.5rem;">

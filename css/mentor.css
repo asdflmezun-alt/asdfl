@@ -7,9 +7,85 @@
   margin-top: 1.5rem;
 }
 
+/* Takvim ana layout: sol takvim + sağ form */
+.calendar-layout-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1.5rem;
+}
+
+/* Genel bakış kartları: 2 kolon */
+.overview-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
 @media (max-width: 992px) {
   .mentor-portal-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Mobil: sidebar nav yatay scroll tab bar'a dönüşür */
+  .mentor-portal-grid > aside {
+    padding: 0.5rem !important;
+  }
+
+  .mentor-portal-grid > aside nav {
+    flex-direction: row !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.4rem !important;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+  }
+  .mentor-portal-grid > aside nav::-webkit-scrollbar { display: none; }
+
+  .portal-nav-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 0.6rem 1rem !important;
+    font-size: 0.82rem !important;
+    border-radius: 50px !important;
+  }
+
+  /* Takvim: tek kolon */
+  .calendar-layout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Genel bakış: tek kolon */
+  .overview-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Takvim günleri küçük ekranda biraz daha sıkışık */
+  .calendar-day {
+    font-size: 0.78rem;
+  }
+
+  /* Randevu kartı meta bilgileri alt alta */
+  .appointment-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Çok küçük ekranlarda takvim hücreleri minimum dokunma boyutuna sahip olsun */
+  .calendar-days {
+    gap: 2px;
+  }
+  .calendar-day {
+    font-size: 0.72rem;
+    border-radius: 6px;
+  }
+  .calendar-wrapper {
+    padding: 1rem;
+  }
+  .calendar-header h3 {
+    font-size: 1rem;
   }
 }
 

@@ -3,7 +3,7 @@
 <head>
   <script>document.documentElement.classList.add('no-transitions');</script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Profilim | ASDFL Mezunlar Derneği</title>
     <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/main.css">
@@ -114,6 +114,28 @@
   .social-info-item:last-child {
     border-bottom: none;
   }
+  .profile-layout-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+  }
+  .avatar-adjust-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 900px) {
+    .profile-layout-grid {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+  @media (max-width: 600px) {
+    .avatar-adjust-grid {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+  }
 </style>
 </head>
 <body>
@@ -203,7 +225,7 @@
 
     <!-- 1. SOCIAL PROFILE TAB CONTENT -->
     <div id="profile-tab-social" class="profile-tab-content fade-in-up-init" style="animation-delay: 0.2s">
-      <div style="display: grid; grid-template-columns: 280px 1fr; gap: 2rem;">
+      <div class="profile-layout-grid">
         <!-- Left Column: Personal info card -->
         <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; background: var(--glass-bg); border: 1px solid var(--glass-border); text-align: left; height: fit-content; border-radius: var(--radius-lg);">
           <div>
@@ -268,7 +290,7 @@
         <div id="avatarPositionSection" class="hidden" style="margin-bottom: 1.5rem; padding: 1.25rem; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: var(--radius-md);">
           <h4 style="margin-top:0; margin-bottom:0.75rem; font-family:'Outfit',sans-serif; font-weight:600; font-size:1rem; color:var(--gold-400);">Fotoğraf Çerçevesi Ölçekleme & Hizalama</h4>
           <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:1rem;">Görselinizi yakınlaştırıp dikey ve yatay yönlerde kaydırarak çerçeveye sığdırabilirsiniz.</p>
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+          <div class="avatar-adjust-grid">
             <div class="form-group" style="margin-bottom:0">
               <label class="form-label" style="display:flex; justify-content:space-between;"><span>Yakınlaştırma</span><span id="valZoom">1.00x</span></label>
               <input type="range" min="1" max="3" step="0.05" value="1" class="form-input" id="sliderZoom" style="padding:0; height:8px; accent-color:var(--gold-500); cursor:pointer;" oninput="updateAvatarPositionPreview()">

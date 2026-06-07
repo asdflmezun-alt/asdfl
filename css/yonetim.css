@@ -1,6 +1,7 @@
-/* YONETIM PAGE SPECIFIC STYLES */
-
 .admin-wrapper {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2rem;
   margin-top: 2rem;
 }
 
@@ -216,14 +217,46 @@
   justify-content: flex-end;
 }
 
-/* Responsive Gaps */
+/* Responsive Gaps & Navigation Menu */
 @media (max-width: 991px) {
   .admin-wrapper {
     grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+  
+  .admin-wrapper > aside {
+    padding: 0.5rem !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .admin-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.5rem !important;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+  }
+  .admin-nav::-webkit-scrollbar {
+    display: none;
   }
   
   .admin-tab-btn {
-    padding: 0.75rem 1rem;
+    flex-shrink: 0;
+    white-space: nowrap;
+    width: auto !important;
+    padding: 0.6rem 1.1rem !important;
+    font-size: 0.85rem !important;
+    border-radius: 50px !important;
+    border-left: none !important;
+  }
+
+  .admin-tab-btn.active {
+    border-left: none !important;
+    padding-left: 1.1rem !important;
+    background: linear-gradient(135deg, var(--gold-500), var(--gold-600)) !important;
+    color: #05111e !important;
   }
 }
 

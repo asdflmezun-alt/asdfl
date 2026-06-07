@@ -927,12 +927,27 @@ const ASDFL = {
 
   openModal(id) {
     const m = document.getElementById(id);
-    if(m) m.classList.add('open');
+    if (!m) return;
+    m.classList.add('open');
+    // iOS Safari scroll lock: body'yi fixed yap, scroll atlamasını önle
+    const scrollY = window.scrollY;
+    document.body.style.top = `-${scrollY}px`;
+    document.body.classList.add('modal-open');
   },
 
   closeModal(id) {
     const m = document.getElementById(id);
-    if(m) m.classList.remove('open');
+    if (!m) return;
+    m.classList.remove('open');
+    // Başka açık modal var mı kontrol et
+    const anyOpen = document.querySelector('.modal-overlay.open');
+    if (!anyOpen) {
+      // Scroll pozisyonunu geri yükle
+      const scrollY = Math.abs(parseInt(document.body.style.top || '0', 10));
+      document.body.classList.remove('modal-open');
+      document.body.style.top = '';
+      window.scrollTo(0, scrollY);
+    }
   },
 
   getAvatarHTML(user, sizeClass = '', extraStyle = '') {
@@ -1105,7 +1120,20 @@ const ASDFL = {
 
   // ---- Auth State ----
   currentUser: null,
-  supabase: window.supabase ? window.supabase.createClient('https://refpyezcxkkofpkwaqny.supabase.co', 'sb_publishable_NlYWAPtmP6F6LRlAiXyIxw_hm1OoP9m') : null,
+  // Safari Private mode'da localStorage erişimi kısıtlı olabilir.
+  // Güvenli localStorage wrapper: hata durumunda sessionStorage veya memory'ye düşer.
+  _storage: (() => {
+    const memStore = {};
+    const safe = (fn, fallback) => { try { return fn(); } catch(e) { return fallback; } };
+    try { localStorage.setItem('__sb_test__', '1'); localStorage.removeItem('__sb_test__'); return localStorage; } catch(e) {}
+    try { sessionStorage.setItem('__sb_test__', '1'); sessionStorage.removeItem('__sb_test__'); return sessionStorage; } catch(e) {}
+    return { getItem: k => memStore[k] ?? null, setItem: (k,v) => { memStore[k]=v; }, removeItem: k => { delete memStore[k]; } };
+  })(),
+  supabase: window.supabase ? window.supabase.createClient(
+    'https://refpyezcxkkofpkwaqny.supabase.co',
+    'sb_publishable_NlYWAPtmP6F6LRlAiXyIxw_hm1OoP9m',
+    { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
+  ) : null,
   authReady: false,
   waitForAuth() {
     return new Promise(resolve => {

@@ -55,12 +55,19 @@
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background: var(--navy-900);
-  color: var(--text-primary);
-  line-height: 1.6;
-  min-height: 100vh;
-  overflow-x: hidden;
+  font-family: 'Inter',sans-serif;
+  background:var(--navy-900);
+  color:var(--text-primary);
+  line-height:1.6;
+  min-height:100vh;
+  overflow-x: clip;
+}
+/* iOS Safari modal scroll lock */
+body.modal-open {
+  position: fixed;
+  width: 100%;
+  overflow-y: scroll; /* kaydırma çubuğu genişliğini koru */
+  animation: none !important; /* sayfa geçiş animasyonuyla çakışmasın */
 }
 
 body::before {
@@ -199,10 +206,38 @@ a:hover { color: var(--gold-400); }
 .divider { height:1px; background:linear-gradient(90deg,transparent,var(--glass-border),transparent); margin:2rem 0; }
 
 /* MODAL */
-.modal-overlay { position:fixed; inset:0; background:rgba(5,17,30,.85); backdrop-filter:blur(8px); z-index:var(--z-modal); display:flex; align-items:center; justify-content:center; padding:1.5rem; opacity:0; pointer-events:none; transition:opacity var(--ease-normal); }
-.modal-overlay.open { opacity:1; pointer-events:all; }
-.modal { background:var(--navy-800); border:1px solid var(--glass-border); border-radius:var(--radius-xl); padding:2rem; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; position:relative; transform:scale(.9) translateY(20px); transition:transform var(--ease-spring); }
-.modal-overlay.open .modal { transform:scale(1) translateY(0); }
+.modal-overlay { 
+  position: fixed; inset: 0; 
+  background: rgba(5,17,30,.85); 
+  backdrop-filter: blur(8px); 
+  -webkit-backdrop-filter: blur(8px);
+  z-index: var(--z-modal); 
+  display: flex; 
+  align-items: flex-start;
+  justify-content: center; 
+  padding: 1.5rem;
+  padding-top: max(1.5rem, env(safe-area-inset-top, 1.5rem));
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 1.5rem));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  opacity: 0; pointer-events: none; 
+  transition: opacity var(--ease-normal); 
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal { 
+  background: var(--navy-800); 
+  border: 1px solid var(--glass-border); 
+  border-radius: var(--radius-xl); 
+  padding: 2rem; 
+  width: 100%; 
+  max-width: 560px; 
+  position: relative; 
+  transform: scale(.9) translateY(20px); 
+  transition: transform var(--ease-spring);
+  margin: auto;
+  flex-shrink: 0;
+}
+.modal-overlay.open .modal { transform: scale(1) translateY(0); }
 .modal-close { position:absolute; top:1.25rem; right:1.25rem; width:32px; height:32px; border-radius:var(--radius-sm); background:var(--glass-bg); border:1px solid var(--glass-border); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 150ms ease; font-size:1.1rem; }
 .modal-close:hover { background:var(--glass-bg-hover); color:var(--text-primary); }
 
@@ -248,6 +283,7 @@ a:hover { color: var(--gold-400); }
     right: -320px;
     width: 300px;
     height: 100vh;
+    height: 100dvh;
     background: linear-gradient(135deg, #0c1825 0%, #05111e 100%);
     backdrop-filter: blur(35px) saturate(190%);
     -webkit-backdrop-filter: blur(35px) saturate(190%);
@@ -258,8 +294,10 @@ a:hover { color: var(--gold-400); }
     flex-direction: column;
     gap: 0.25rem;
     z-index: 1001;
-    transition: right 450ms cubic-bezier(0.16, 1, 0.3, 1);
-    overflow: hidden;
+    transition: right 450ms cubic-bezier(0.16, 1, 0.3, 1), visibility 450ms cubic-bezier(0.16, 1, 0.3, 1);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    visibility: hidden;
   }
   
   /* Glowing organic background blob inside the drawer */
@@ -293,6 +331,7 @@ a:hover { color: var(--gold-400); }
 
   .nav-links.open {
     right: 0;
+    visibility: visible;
   }
 
   .nav-links li {
@@ -372,6 +411,19 @@ a:hover { color: var(--gold-400); }
   
   .footer-grid { grid-template-columns:1fr; }
   .footer-bottom { flex-direction:column; gap:.75rem; text-align:center; }
+
+  /* Mobil: profil butonunda isim metni gizle, sadece avatar göster */
+  .profile-btn .user-name-span { display: none; }
+  .profile-btn { padding: .35rem .5rem; gap: .3rem; }
+
+  /* Mobil: profil menüsü sağ tarafa taşmasın */
+  .profile-menu { right: -0.5rem; min-width: 200px; }
+
+  /* Mobil: modal padding azalt */
+  .modal { padding: 1.25rem; border-radius: 16px; }
+
+  /* Mobil: nav-cta sıkışmasın */
+  .nav-cta { gap: .4rem; }
 }
 
 /* Nav backdrop overlay */

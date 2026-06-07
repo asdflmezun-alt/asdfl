@@ -389,6 +389,10 @@
     flex-direction: column;
     align-items: stretch;
   }
+  .career-filters .form-group {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
   .job-card-header {
     flex-direction: column;
   }

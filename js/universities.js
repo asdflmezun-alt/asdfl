@@ -1,4 +1,5 @@
-const TURKISH_UNIVERSITIES = [
+// Çift yüklenmede hata oluşmasın — window üzerinden atanır
+if (!window.TURKISH_UNIVERSITIES) window.TURKISH_UNIVERSITIES = [
   "ABDULLAH GÜL ÜNİVERSİTESİ",
   "ACIBADEM MEHMET ALİ AYDINLAR ÜNİVERSİTESİ",
   "ADANA BİLİM VE TEKNOLOJİ ÜNİVERSİTESİ",

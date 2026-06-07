@@ -212,7 +212,7 @@ function renderOverviewTab() {
           <div class="appointment-card">
             <div class="appointment-meta">
               <div style="display:flex; align-items:center; gap:0.5rem">
-                <div class="avatar avatar-sm">${partnerInitials}</div>
+                ${ASDFL.getAvatarHTML(isMentor ? app.student : app.mentor, 'avatar avatar-sm')}
                 <div>
                   <strong style="color:var(--text-primary); font-size:0.88rem">${partnerName}</strong>
                   <span style="font-size:0.75rem; color:var(--text-muted); display:block">${partnerRole}</span>
@@ -309,7 +309,7 @@ function renderRequestsTab() {
           <div class="card" style="padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: var(--radius-md);">
             <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:1rem; border-bottom: 1px solid var(--glass-border); padding-bottom:1rem; margin-bottom:1rem;">
               <div style="display:flex; align-items:center; gap: 0.75rem;">
-                <div class="avatar">${ASDFL.getInitials(studentName)}</div>
+                ${ASDFL.getAvatarHTML(req.student, 'avatar')}
                 <div>
                   <h4 style="margin:0; font-size:1rem; color:var(--text-primary);">${studentName}</h4>
                   <span style="font-size:0.8rem; color:var(--text-muted);">${studentGrade} | ${studentCity}</span>
@@ -353,7 +353,7 @@ function renderRequestsTab() {
         return `
           <div class="card" style="padding: 1.25rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: var(--radius-md); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
             <div style="display:flex; align-items:center; gap: 0.75rem;">
-              <div class="avatar">${ASDFL.getInitials(mentorName)}</div>
+              ${ASDFL.getAvatarHTML(req.mentor, 'avatar')}
               <div>
                 <h4 style="margin:0; font-size:0.95rem; color:var(--text-primary);">${mentorName}</h4>
                 <span style="font-size:0.8rem; color:var(--text-muted);">${mentorJob} ${mentorGrad ? `(${mentorGrad} Mezunu)` : ''} ${mentorCity ? `| ${mentorCity}` : ''}</span>
@@ -399,7 +399,7 @@ function renderConnectionsTab() {
       <div class="card lift" style="padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); display:flex; flex-direction:column; justify-content:space-between; gap:1.25rem;">
         <div>
           <div style="display:flex; gap:0.75rem; align-items:center; margin-bottom:1rem;">
-            <div class="avatar avatar-lg">${partnerInitials}</div>
+            ${ASDFL.getAvatarHTML(isMentor ? conn.student : conn.mentor, 'avatar avatar-lg')}
             <div>
               <h4 style="margin:0; font-size:1.02rem; color:var(--text-primary);">${partnerName}</h4>
               <span style="font-size:0.78rem; color:var(--gold-500); font-weight:600; display:block; margin-top:0.15rem;">${partnerRole}</span>

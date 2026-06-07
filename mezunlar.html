@@ -69,14 +69,17 @@
   <div class="container">
     <!-- Filters -->
     <div class="filters-bar">
-      <input type="text" class="form-input" id="searchInput" placeholder="İsim, meslek, şirket ara..." oninput="filterAlumni()" style="max-width:320px">
-      <select class="form-select" id="yearFilter" onchange="filterAlumni()" style="max-width:160px">
+      <input type="text" class="form-input" id="searchInput" placeholder="İsim, meslek, üniversite, şirket..." oninput="filterAlumni()" style="max-width:260px">
+      <select class="form-select" id="yearFilter" onchange="filterAlumni()" style="max-width:140px">
         <option value="all">Tüm Yıllar</option>
       </select>
-      <select class="form-select" id="cityFilter" onchange="filterAlumni()" style="max-width:180px">
+      <select class="form-select" id="cityFilter" onchange="filterAlumni()" style="max-width:160px">
         <option value="all">Tüm Şehirler</option>
       </select>
-      <label style="display:flex;align-items:center;gap:.5rem;color:var(--text-secondary);font-size:.88rem;cursor:pointer">
+      <select class="form-select" id="universityFilter" onchange="filterAlumni()" style="max-width:180px">
+        <option value="all">Tüm Üniversiteler</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:.5rem;color:var(--text-secondary);font-size:.88rem;cursor:pointer;flex-shrink:0;">
         <input type="checkbox" id="mentorOnly" onchange="filterAlumni()" style="accent-color:var(--gold-500)">
         Sadece Mentörler
       </label>
@@ -248,6 +251,20 @@
       <div class="form-group">
         <label class="form-label">Yaşadığı Şehir</label>
         <select class="form-select" id="regCity"><option value="" disabled selected>Şehir Seçin</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mezun Olduğu Üniversite</label>
+        <div class="searchable-select-wrapper" id="wrapper-regUniversity">
+          <input type="text" class="form-input searchable-select-trigger" id="regUniversity" readonly placeholder="Seçmek için tıklayın veya arayın..." autocomplete="off">
+          <div class="searchable-select-dropdown" style="display:none;">
+            <div class="searchable-select-search-container">
+              <input type="text" class="searchable-select-search-input" placeholder="Üniversite Ara..." autocomplete="off">
+            </div>
+            <ul class="searchable-select-items">
+              <!-- Dinamik olarak doldurulur -->
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
 

@@ -370,7 +370,22 @@ body.nav-open::after {
 .user-profile { position:relative; }
 .profile-btn { display:flex; align-items:center; gap:.5rem; padding:.4rem .75rem; border-radius:var(--radius-full); background:var(--glass-bg); border:1px solid var(--glass-border); color:var(--text-primary); cursor:pointer; font-family:'Inter',sans-serif; font-size:.85rem; font-weight:600; transition:all var(--ease-normal); }
 .profile-btn:hover { background:var(--glass-bg-hover); border-color:var(--glass-border-hover); }
-.profile-avatar { width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,var(--gold-500),var(--gold-700)); color:var(--navy-950); display:flex; align-items:center; justify-content:center; font-family:'Outfit',sans-serif; font-weight:800; font-size:.8rem; }
+.profile-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 6px !important;
+  border: 1.5px solid var(--gold-500) !important;
+  box-shadow: 0 2px 8px rgba(244, 168, 54, 0.25) !important;
+  background: linear-gradient(135deg, var(--gold-500), var(--gold-700));
+  color: var(--navy-950) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 800 !important;
+  font-size: .85rem !important;
+  overflow: hidden !important;
+}
 .profile-menu { position:absolute; top:calc(100% + .5rem); right:0; background:var(--navy-800); border:1px solid var(--glass-border); border-radius:var(--radius-md); padding:.5rem; min-width:180px; box-shadow:var(--shadow-lg); opacity:0; pointer-events:none; transform:translateY(-10px); transition:all var(--ease-normal); display:flex; flex-direction:column; gap:.25rem; }
 .user-profile.open .profile-menu { opacity:1; pointer-events:all; transform:translateY(0); }
 .profile-menu button { display:flex; align-items:center; gap:.5rem; width:100%; padding:.6rem 1rem; border:none; background:transparent; color:var(--text-secondary); font-family:'Inter',sans-serif; font-size:.85rem; cursor:pointer; text-align:left; border-radius:var(--radius-sm); transition:all 150ms ease; }
@@ -381,3 +396,174 @@ body.nav-open::after {
 /* DYNAMIC FORM GROUPS */
 .hidden { display: none !important; }
 .form-group.hidden { display: none !important; }
+
+/* Searchable Select Dropdown */
+.searchable-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+.searchable-select-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  max-height: 250px;
+  background: #0b1a2e; /* dark navy matching design */
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  margin-top: 4px;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.searchable-select-search-container {
+  padding: 8px;
+  border-bottom: 1px solid var(--glass-border);
+  background: #0b1a2e;
+}
+.searchable-select-search-input {
+  width: 100%;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  outline: none;
+  transition: all 0.3s ease;
+}
+.searchable-select-search-input:focus {
+  border-color: var(--gold-500);
+  background: rgba(255, 255, 255, 0.08);
+}
+.searchable-select-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.searchable-select-items::-webkit-scrollbar {
+  width: 6px;
+}
+.searchable-select-items::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.01);
+}
+.searchable-select-items::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+}
+.searchable-select-items::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-500);
+}
+.searchable-select-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  text-align: left;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.02);
+}
+.searchable-select-item:last-child {
+  border-bottom: none;
+}
+.searchable-select-item:hover {
+  background: rgba(244, 168, 54, 0.1);
+  color: var(--gold-400);
+}
+.searchable-select-item.custom-add {
+  background: rgba(244, 168, 54, 0.05);
+  color: var(--gold-400);
+  font-weight: 500;
+}
+.searchable-select-item.custom-add:hover {
+  background: rgba(244, 168, 54, 0.15);
+}
+.searchable-select-item.no-results {
+  color: var(--text-muted);
+  cursor: default;
+  font-style: italic;
+}
+.searchable-select-item.no-results:hover {
+  background: transparent;
+  color: var(--text-muted);
+}
+.searchable-select-trigger[readonly] {
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ==========================================================
+   PREMIUM PHOTO FRAME STYLES (FOTOĞRAF ÇERÇEVESİ)
+   ========================================================== */
+.photo-frame {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: linear-gradient(135deg, var(--navy-600), var(--navy-700));
+  border: 2px solid var(--gold-500) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 4px 15px rgba(244, 168, 54, 0.2) !important;
+  overflow: hidden !important;
+  transition: all var(--ease-normal) !important;
+  flex-shrink: 0 !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 700 !important;
+  color: var(--gold-400) !important;
+}
+
+.photo-frame:hover {
+  transform: scale(1.05) rotate(1deg) !important;
+  box-shadow: 0 8px 25px rgba(244, 168, 54, 0.4) !important;
+  border-color: var(--gold-400) !important;
+}
+
+/* Default frame size (standard list avatars) */
+.photo-frame {
+  width: 76px !important;
+  height: 76px !important;
+  font-size: 1.5rem !important;
+}
+
+/* Small frame (comment avatars) */
+.photo-frame.avatar-sm,
+.photo-frame.comment-avatar {
+  width: 46px !important;
+  height: 46px !important;
+  font-size: 1.1rem !important;
+  border-radius: var(--radius-sm) !important;
+  border-width: 1.5px !important;
+  box-shadow: 0 2px 8px rgba(244, 168, 54, 0.15) !important;
+}
+
+/* Medium/Large frame (showcase cards, e.g. alumni directory grid) */
+.photo-frame.avatar-lg {
+  width: 130px !important;
+  height: 130px !important;
+  font-size: 2.2rem !important;
+  border-width: 2.5px !important;
+  border-radius: var(--radius-md) !important;
+}
+
+/* Custom override for post-avatar & compose-avatar positioning to keep inline heights nice */
+.photo-frame.post-avatar,
+.photo-frame.compose-avatar {
+  width: 64px !important;
+  height: 64px !important;
+  font-size: 1.3rem !important;
+  border-radius: 8px !important;
+  border-width: 1.8px !important;
+}
+
+/* Extra Large frame (featured mentors, e.g. home page / mentors page cards) */
+.photo-frame.avatar-xl {
+  width: 160px !important;
+  height: 160px !important;
+  font-size: 2.8rem !important;
+  border-width: 3px !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 6px 20px rgba(244, 168, 54, 0.25) !important;
+}

@@ -224,7 +224,7 @@ window.filterJobs = function() {
         
         <div class="job-footer">
           <div class="job-poster">
-            <div class="avatar avatar-xs" style="width:24px;height:24px;font-size:0.7rem">${initials}</div>
+            ${ASDFL.getAvatarHTML({ initials, avatar_url: job.employerAvatarUrl, avatar_position: job.employerAvatarPosition, name: job.employerName }, 'avatar avatar-sm')}
             <span>Yayınlayan: <strong>${job.employerName}</strong> ${job.employerYear ? `(${job.employerYear} Mezunu)` : ''}</span>
           </div>
           ${actionBtn}
@@ -308,7 +308,7 @@ window.filterRequests = function() {
     return `
       <div class="card req-card">
         <div class="req-header">
-          <div class="avatar avatar-sm">${initials}</div>
+          ${ASDFL.getAvatarHTML({ initials, avatar_url: req.studentAvatarUrl, avatar_position: req.studentAvatarPosition, name: req.studentName }, 'avatar')}
           <div class="req-student-info">
             <strong>${req.studentName}</strong>
             <span>${req.studentGrade || 'Öğrenci'} ${req.studentClassSection ? `(${req.studentClassSection} Şubesi)` : ''} — ${dateStr}</span>
@@ -361,7 +361,7 @@ window.renderDashboard = async function() {
   const title = document.getElementById('dashWelcomeTitle');
   const sub = document.getElementById('dashWelcomeSub');
   
-  if (avatar) avatar.textContent = ASDFL.getInitials(ASDFL.currentUser.name);
+  if (avatar) ASDFL.setAvatarElement(avatar, ASDFL.currentUser);
   if (title) title.textContent = `Hoş Geldiniz, ${ASDFL.currentUser.name}`;
   if (sub) sub.textContent = `Rolünüz: ${ASDFL.currentUser.role}`;
   
@@ -492,7 +492,7 @@ async function renderIncomingApplications() {
       <div class="app-item">
         <div class="app-item-header">
           <div class="app-applicant-profile">
-            <div class="avatar avatar-sm">${initials}</div>
+            ${ASDFL.getAvatarHTML({ initials, avatar_url: app.applicantAvatarUrl, avatar_position: app.applicantAvatarPosition, name: app.applicantName }, 'avatar')}
             <div>
               <strong style="color:var(--text-primary);display:block">${app.applicantName}</strong>
               <span style="font-size:0.75rem;color:var(--text-muted)">Öğrenci ${app.applicantYear ? `(${app.applicantYear} Mezunu/Girişli)` : ''}</span>

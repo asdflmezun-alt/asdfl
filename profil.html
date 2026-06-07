@@ -15,20 +15,102 @@
     padding: 3rem 2rem;
     text-align: center;
     margin-bottom: 2rem;
+    position: relative;
   }
   .profile-avatar-lg {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--gold-500), var(--gold-600));
-    color: var(--brand-dark);
-    font-size: 2.5rem;
+    width: 150px;
+    height: 150px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--navy-600), var(--navy-700));
+    color: var(--gold-400);
+    font-size: 3.5rem;
     font-weight: 700;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 1rem;
-    box-shadow: 0 10px 25px rgba(244,168,54,0.3);
+    box-shadow: 0 6px 20px rgba(244, 168, 54, 0.25);
+    background-size: cover;
+    background-position: center;
+    border: 3px solid var(--gold-500);
+    transition: all 0.3s ease;
+  }
+  .profile-avatar-wrapper:hover .profile-avatar-lg {
+    transform: scale(1.05) rotate(1deg);
+    border-color: var(--gold-400);
+    box-shadow: 0 8px 25px rgba(244, 168, 54, 0.4);
+  }
+  /* Sub Navigation Tabs */
+  .mezun-tabs {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--glass-border);
+    margin-bottom: 2rem;
+    justify-content: center;
+  }
+  .mezun-tab {
+    padding: 0.5rem 1.25rem;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-secondary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .mezun-tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    border-color: rgba(244, 168, 54, 0.3);
+  }
+  .mezun-tab.active {
+    background: linear-gradient(135deg, var(--gold-500), var(--gold-600));
+    color: #05111e;
+    border-color: transparent;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(244, 168, 54, 0.25);
+  }
+  .social-icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  .social-icon-btn i,
+  .social-icon-btn svg {
+    width: 16px !important;
+    height: 16px !important;
+    display: block !important;
+  }
+  .social-icon-btn:hover {
+    background: var(--glass-bg-hover);
+    color: var(--text-primary);
+    transform: translateY(-2px);
+    border-color: var(--gold-500);
+  }
+  .social-info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+  }
+  .social-info-item:last-child {
+    border-bottom: none;
   }
 </style>
 </head>
@@ -54,93 +136,238 @@
 <section class="section" style="padding-top:8rem">
   <div class="container" style="max-width:800px">
     <div class="profile-header reveal">
-      <div class="profile-avatar-lg" id="profileInitials">?</div>
+      <div class="profile-avatar-wrapper" style="position: relative; display: inline-block; margin-bottom: 1rem;">
+        <div class="profile-avatar-lg" id="profileAvatar" style="cursor: pointer;" onclick="document.getElementById('avatarInput').click()" title="Profil Fotoğrafı Yükle">
+          <span id="profileInitials">?</span>
+        </div>
+        <div class="avatar-edit-badge" onclick="document.getElementById('avatarInput').click()" style="position: absolute; bottom: 0; right: 0; background: var(--gold-500); color: var(--navy-950); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #05111e; box-shadow: 0 4px 10px rgba(0,0,0,0.3);" title="Profil Fotoğrafı Yükle">
+          <i data-lucide="camera" style="width: 14px; height: 14px;"></i>
+        </div>
+        <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+      </div>
       <h1 id="profileName" style="margin-bottom:.5rem">Profil Yükleniyor...</h1>
-      <p id="profileRole" style="color:var(--text-secondary);font-size:1.1rem"></p>
+      <p id="profileRole" style="color:var(--text-secondary);font-size:1.1rem;margin:0;"></p>
     </div>
 
-    <div class="card reveal" style="padding:2rem">
-      <h3 style="margin-bottom:1.5rem;border-bottom:1px solid var(--glass-border);padding-bottom:1rem">Kişisel Bilgiler</h3>
-      
-      <div class="grid-2">
-        <!-- Ortak Alanlar -->
-        <div class="form-group">
-          <label class="form-label">Ad Soyad</label>
-          <input type="text" class="form-input" id="editName" placeholder="Adınız Soyadınız">
-        </div>
-        <div class="form-group">
-          <label class="form-label">E-posta</label>
-          <input type="email" class="form-input" id="editEmail" disabled>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Telefon Numarası</label>
-          <input type="tel" class="form-input" id="editPhone" placeholder="0555 555 55 55">
-        </div>
-        <div class="form-group" id="groupClassSection">
-          <label class="form-label">Şube</label>
-          <input type="text" class="form-input" id="editClassSection" placeholder="Örn: A" maxlength="2">
+    <!-- Tab Switches -->
+    <div class="mezun-tabs reveal">
+      <button class="mezun-tab active" id="btn-tab-social" onclick="switchProfileTab('social')"><i data-lucide="user"></i> Profilim</button>
+      <button class="mezun-tab" id="btn-tab-settings" onclick="switchProfileTab('settings')"><i data-lucide="settings"></i> Ayarlar</button>
+      <button class="mezun-tab" id="btn-tab-requests" onclick="switchProfileTab('requests')"><i data-lucide="bell"></i> Talepler <span class="badge badge-gold" id="requestsCountBadge" style="margin-left: 0.35rem; padding: 0.05rem 0.3rem; font-size: 0.7rem; display: none;">0</span></button>
+    </div>
+
+    <!-- 1. SOCIAL PROFILE TAB CONTENT -->
+    <div id="profile-tab-social" class="profile-tab-content reveal">
+      <div style="display: grid; grid-template-columns: 280px 1fr; gap: 2rem;">
+        <!-- Left Column: Personal info card -->
+        <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; background: var(--glass-bg); border: 1px solid var(--glass-border); text-align: left; height: fit-content; border-radius: var(--radius-lg);">
+          <div>
+            <h4 style="font-family:'Outfit',sans-serif; font-size:1.05rem; color:var(--text-primary); margin-top:0; margin-bottom:0.75rem; border-bottom:1px solid var(--glass-border); padding-bottom:0.5rem; font-weight: 600;">Kişisel Bilgiler</h4>
+            
+            <div style="display:flex; flex-direction:column; gap:0.25rem; font-size:0.88rem; color:var(--text-secondary);">
+              <div class="social-info-item" id="social-city-wrapper">
+                <i data-lucide="map-pin" style="width:16px; height:16px; color:var(--gold-500); flex-shrink: 0;"></i>
+                <span id="social-city">Belirtilmemiş</span>
+              </div>
+              <div class="social-info-item" id="social-uni-wrapper">
+                <i data-lucide="graduation-cap" style="width:16px; height:16px; color:var(--gold-500); flex-shrink: 0;"></i>
+                <span id="social-uni">Belirtilmemiş</span>
+              </div>
+              <div class="social-info-item" id="social-job-wrapper">
+                <i data-lucide="briefcase" style="width:16px; height:16px; color:var(--gold-500); flex-shrink: 0;"></i>
+                <span id="social-job">Belirtilmemiş</span>
+              </div>
+              <div class="social-info-item" id="social-email-wrapper">
+                <i data-lucide="mail" style="width:16px; height:16px; color:var(--gold-500); flex-shrink: 0;"></i>
+                <span id="social-email">Belirtilmemiş</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Social Link Buttons -->
+          <div style="border-top:1px solid var(--glass-border); padding-top:1rem;">
+            <h5 style="margin: 0 0 0.75rem 0; font-family:'Outfit',sans-serif; color:var(--text-muted); font-size:0.75rem; text-transform:uppercase; font-weight: 600; letter-spacing: 0.05em;">Bağlantılar</h5>
+            <div style="display:flex; gap:0.5rem;">
+              <a href="#" id="social-linkedin" target="_blank" class="social-icon-btn" title="LinkedIn"><i data-lucide="linkedin" style="width:16px; height:16px;"></i></a>
+              <a href="#" id="social-github" target="_blank" class="social-icon-btn" title="GitHub"><i data-lucide="github" style="width:16px; height:16px;"></i></a>
+              <a href="#" id="social-instagram" target="_blank" class="social-icon-btn" title="Instagram"><i data-lucide="instagram" style="width:16px; height:16px;"></i></a>
+            </div>
+          </div>
         </div>
 
-        <!-- Mezun Alanları -->
-        <div class="form-group role-field role-mezun">
-          <label class="form-label">Mezuniyet Yılı</label>
-          <input type="number" class="form-input" id="editGradYear" placeholder="Örn: 2015">
-        </div>
-        <div class="form-group role-field role-mezun">
-          <label class="form-label">Meslek</label>
-          <input type="text" class="form-input" id="editJob" placeholder="Örn: Doktor">
-        </div>
-        <div class="form-group role-field role-mezun">
-          <label class="form-label">Çalıştığı Kurum / Şirket</label>
-          <input type="text" class="form-input" id="editCompany" placeholder="Örn: Hacettepe Üni. / Şehir Hastanesi">
-        </div>
-        <div class="form-group role-field role-mezun">
-          <label class="form-label">Yaşadığı Şehir</label>
-          <select class="form-select" id="editCity"><option value="" disabled selected>Şehir Seçin</option></select>
-        </div>
+        <!-- Right Column: Bio & Academic cards -->
+        <div style="display:flex; flex-direction:column; gap:1.5rem;">
+          <!-- Bio -->
+          <div class="card" style="padding: 2rem; background: var(--glass-bg); border: 1px solid var(--glass-border); text-align: left; border-radius: var(--radius-lg);">
+            <h3 style="margin-top:0; margin-bottom:1rem; border-bottom:1px solid var(--glass-border); padding-bottom:0.75rem; font-family:'Outfit',sans-serif; font-weight:600; font-size:1.2rem; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="quote" style="color:var(--gold-500); width:1.2rem; height:1.2rem;"></i> Hakkımda</h3>
+            <p id="social-bio" style="color:var(--text-secondary); line-height:1.6; white-space:pre-wrap; font-style:italic; margin: 0;">Kendiniz hakkında henüz bilgi girmediniz. Ayarlar sekmesinden doldurabilirsiniz.</p>
+          </div>
 
-        <!-- Öğrenci Alanları -->
-        <div class="form-group role-field role-ogrenci">
-          <label class="form-label">Sınıf</label>
-          <select class="form-select" id="editGrade">
-            <option value="9. Sınıf">9. Sınıf</option>
-            <option value="10. Sınıf">10. Sınıf</option>
-            <option value="11. Sınıf">11. Sınıf</option>
-            <option value="12. Sınıf">12. Sınıf</option>
-          </select>
+          <!-- Academic / Mentor detail -->
+          <div class="card" style="padding: 2rem; background: var(--glass-bg); border: 1px solid var(--glass-border); text-align: left; border-radius: var(--radius-lg);">
+            <h3 style="margin-top:0; margin-bottom:1rem; border-bottom:1px solid var(--glass-border); padding-bottom:0.75rem; font-family:'Outfit',sans-serif; font-weight:600; font-size:1.2rem; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="award" style="color:var(--gold-500); width:1.2rem; height:1.2rem;"></i> Mentorluk &amp; Eğitim Bilgileri</h3>
+            <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem; color:var(--text-secondary);" id="social-academic-details">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
         </div>
-
-        <!-- Öğretmen Alanları -->
-        <div class="form-group role-field role-ogretmen">
-          <label class="form-label">Branş</label>
-          <input type="text" class="form-input" id="editBranch" placeholder="Örn: Matematik">
-        </div>
-        <div class="form-group role-field role-ogretmen">
-          <label class="form-label">Görev Başlangıç Yılı</label>
-          <input type="number" class="form-input" id="editTeachingYear" placeholder="Örn: 2010">
-        </div>
-      </div>
-      
-      <div style="margin-top:1.5rem; display:flex; flex-direction:column; gap:0.5rem; border-top:1px solid var(--glass-border); padding-top:1.5rem; text-align: left;">
-        <h4 style="margin-bottom:.5rem; font-family:'Outfit',sans-serif">İletişim Bilgileri Paylaşım Tercihleri</h4>
-        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--text-secondary); cursor: pointer;">
-          <input type="checkbox" id="editSharePhone" style="accent-color: var(--gold-500);"> Telefon numaramı diğer mezunlarla paylaş
-        </label>
-        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--text-secondary); cursor: pointer;">
-          <input type="checkbox" id="editShareEmail" style="accent-color: var(--gold-500);"> E-posta adresimi diğer mezunlarla paylaş
-        </label>
-      </div>
-      
-      <div style="text-align:right;margin-top:1.5rem">
-        <button class="btn btn-primary" id="saveProfileBtn" onclick="saveProfile()">Değişiklikleri Kaydet</button>
       </div>
     </div>
 
-    <!-- GELEN İLETİŞİM TALEPLERİ -->
-    <div class="card reveal" style="padding:2rem; margin-top:2rem;">
-      <h3 style="margin-bottom:1.5rem;border-bottom:1px solid var(--glass-border);padding-bottom:1rem; font-family:'Outfit',sans-serif"><i data-lucide="bell" style="width:1.2rem;height:1.2rem;display:inline-block;vertical-align:middle;margin-top:-3px"></i> Gelen İletişim Talepleri</h3>
-      <div id="contactRequestsList">
-        <p style="color:var(--text-muted);text-align:center;padding:1rem">Yükleniyor...</p>
+    <!-- 2. SETTINGS TAB CONTENT -->
+    <div id="profile-tab-settings" class="profile-tab-content reveal" style="display:none">
+      <div class="card" style="padding:2rem">
+        <h3 style="margin-top:0; margin-bottom:1.5rem; border-bottom:1px solid var(--glass-border); padding-bottom:1rem; font-family:'Outfit',sans-serif; font-weight:600; font-size:1.25rem;">Bilgileri Düzenle</h3>
+        
+        <!-- Profil Fotoğrafı Hizalama -->
+        <div id="avatarPositionSection" class="hidden" style="margin-bottom: 1.5rem; padding: 1.25rem; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: var(--radius-md);">
+          <h4 style="margin-top:0; margin-bottom:0.75rem; font-family:'Outfit',sans-serif; font-weight:600; font-size:1rem; color:var(--gold-400);">Fotoğraf Çerçevesi Ölçekleme & Hizalama</h4>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:1rem;">Görselinizi yakınlaştırıp dikey ve yatay yönlerde kaydırarak çerçeveye sığdırabilirsiniz.</p>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label" style="display:flex; justify-content:space-between;"><span>Yakınlaştırma</span><span id="valZoom">1.00x</span></label>
+              <input type="range" min="1" max="3" step="0.05" value="1" class="form-input" id="sliderZoom" style="padding:0; height:8px; accent-color:var(--gold-500); cursor:pointer;" oninput="updateAvatarPositionPreview()">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label" style="display:flex; justify-content:space-between;"><span>Yatay Kaydırma</span><span id="valPosX">0%</span></label>
+              <input type="range" min="-50" max="50" step="1" value="0" class="form-input" id="sliderPosX" style="padding:0; height:8px; accent-color:var(--gold-500); cursor:pointer;" oninput="updateAvatarPositionPreview()">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label" style="display:flex; justify-content:space-between;"><span>Dikey Kaydırma</span><span id="valPosY">0%</span></label>
+              <input type="range" min="-50" max="50" step="1" value="0" class="form-input" id="sliderPosY" style="padding:0; height:8px; accent-color:var(--gold-500); cursor:pointer;" oninput="updateAvatarPositionPreview()">
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- Ortak Alanlar -->
+          <div class="form-group">
+            <label class="form-label">Ad Soyad</label>
+            <input type="text" class="form-input" id="editName" placeholder="Adınız Soyadınız">
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-posta</label>
+            <input type="email" class="form-input" id="editEmail" disabled>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Telefon Numarası</label>
+            <input type="tel" class="form-input" id="editPhone" placeholder="0555 555 55 55">
+          </div>
+          <div class="form-group" id="groupClassSection">
+            <label class="form-label">Şube</label>
+            <input type="text" class="form-input" id="editClassSection" placeholder="Örn: A" maxlength="2">
+          </div>
+
+          <!-- Mezun Alanları -->
+          <div class="form-group role-field role-mezun">
+            <label class="form-label">Mezuniyet Yılı</label>
+            <input type="number" class="form-input" id="editGradYear" placeholder="Örn: 2015">
+          </div>
+          <div class="form-group role-field role-mezun">
+            <label class="form-label">Meslek</label>
+            <input type="text" class="form-input" id="editJob" placeholder="Örn: Doktor">
+          </div>
+          <div class="form-group role-field role-mezun">
+            <label class="form-label">Çalıştığı Kurum / Şirket</label>
+            <input type="text" class="form-input" id="editCompany" placeholder="Örn: Hacettepe Üni. / Şehir Hastanesi">
+          </div>
+          <div class="form-group role-field role-mezun">
+            <label class="form-label">Yaşadığı Şehir</label>
+            <select class="form-select" id="editCity"><option value="" disabled selected>Şehir Seçin</option></select>
+          </div>
+          <div class="form-group role-field role-mezun">
+            <label class="form-label">Mezun Olduğu / Okuduğu Üniversite</label>
+            <div class="searchable-select-wrapper" id="wrapper-editUniversity">
+              <input type="text" class="form-input searchable-select-trigger" id="editUniversity" readonly placeholder="Seçmek için tıklayın veya arayın..." autocomplete="off">
+              <div class="searchable-select-dropdown" style="display:none;">
+                <div class="searchable-select-search-container">
+                  <input type="text" class="searchable-select-search-input" placeholder="Üniversite Ara..." autocomplete="off">
+                </div>
+                <ul class="searchable-select-items">
+                  <!-- Dinamik olarak doldurulur -->
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Öğrenci Alanları -->
+          <div class="form-group role-field role-ogrenci">
+            <label class="form-label">Sınıf</label>
+            <select class="form-select" id="editGrade">
+              <option value="9. Sınıf">9. Sınıf</option>
+              <option value="10. Sınıf">10. Sınıf</option>
+              <option value="11. Sınıf">11. Sınıf</option>
+              <option value="12. Sınıf">12. Sınıf</option>
+            </select>
+          </div>
+          <div class="form-group role-field role-ogrenci">
+            <label class="form-label">Hedeflediği / Okuduğu Üniversite</label>
+            <div class="searchable-select-wrapper" id="wrapper-editStudentUniversity">
+              <input type="text" class="form-input searchable-select-trigger" id="editStudentUniversity" readonly placeholder="Seçmek için tıklayın veya arayın..." autocomplete="off">
+              <div class="searchable-select-dropdown" style="display:none;">
+                <div class="searchable-select-search-container">
+                  <input type="text" class="searchable-select-search-input" placeholder="Üniversite Ara..." autocomplete="off">
+                </div>
+                <ul class="searchable-select-items">
+                  <!-- Dinamik olarak doldurulur -->
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Öğretmen Alanları -->
+          <div class="form-group role-field role-ogretmen">
+            <label class="form-label">Branş</label>
+            <input type="text" class="form-input" id="editBranch" placeholder="Örn: Matematik">
+          </div>
+          <div class="form-group role-field role-ogretmen">
+            <label class="form-label">Görev Başlangıç Yılı</label>
+            <input type="number" class="form-input" id="editTeachingYear" placeholder="Örn: 2010">
+          </div>
+
+          <!-- Sosyal Bağlantılar -->
+          <div class="form-group">
+            <label class="form-label">LinkedIn Profili (URL)</label>
+            <input type="url" class="form-input" id="editLinkedin" placeholder="https://linkedin.com/in/kullaniciadi">
+          </div>
+          <div class="form-group">
+            <label class="form-label">GitHub Profili (URL)</label>
+            <input type="url" class="form-input" id="editGithub" placeholder="https://github.com/kullaniciadi">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Instagram Profili (URL)</label>
+            <input type="url" class="form-input" id="editInstagram" placeholder="https://instagram.com/kullaniciadi">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:1rem">
+          <label class="form-label">Hakkımda / Özgeçmiş Tanıtımı</label>
+          <textarea class="form-textarea" id="editBio" placeholder="Kendiniz, başarılarınız ve ilgi alanlarınız hakkında kısa bir açıklama yazın..." style="height:110px"></textarea>
+        </div>
+        
+        <div style="margin-top:1.5rem; display:flex; flex-direction:column; gap:0.5rem; border-top:1px solid var(--glass-border); padding-top:1.5rem; text-align: left;">
+          <h4 style="margin-bottom:.5rem; font-family:'Outfit',sans-serif; font-size:1rem; font-weight:600;">İletişim Bilgileri Paylaşım Tercihleri</h4>
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--text-secondary); cursor: pointer;">
+            <input type="checkbox" id="editSharePhone" style="accent-color: var(--gold-500);"> Telefon numaramı diğer mezunlarla paylaş
+          </label>
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--text-secondary); cursor: pointer;">
+            <input type="checkbox" id="editShareEmail" style="accent-color: var(--gold-500);"> E-posta adresimi diğer mezunlarla paylaş
+          </label>
+        </div>
+        
+        <div style="text-align:right;margin-top:1.5rem">
+          <button class="btn btn-primary" id="saveProfileBtn" onclick="saveProfile()">Değişiklikleri Kaydet</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. REQUESTS TAB CONTENT -->
+    <div id="profile-tab-requests" class="profile-tab-content reveal" style="display:none">
+      <div class="card" style="padding:2rem">
+        <h3 style="margin-top:0; margin-bottom:1.5rem; border-bottom:1px solid var(--glass-border); padding-bottom:1rem; font-family:'Outfit',sans-serif; font-weight:600; font-size:1.25rem; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="bell" style="color:var(--gold-500)"></i> Gelen İletişim Talepleri</h3>
+        <div id="contactRequestsList">
+          <p style="color:var(--text-muted);text-align:center;padding:1rem">Yükleniyor...</p>
+        </div>
       </div>
     </div>
   </div>
@@ -156,12 +383,32 @@
 
 <div class="toast-container"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/universities.js"></script>
 <script src="js/app.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     await ASDFL.waitForAuth();
     await loadProfile();
+    // Diagnostics toast
+    setTimeout(() => {
+      const el = document.getElementById('social-instagram');
+      if (el) {
+        ASDFL.toast('Debug HTML: ' + el.innerHTML.slice(0, 80).replace(/</g, '&lt;').replace(/>/g, '&gt;'), 'info');
+      } else {
+        ASDFL.toast('Debug: Element not found', 'error');
+      }
+    }, 1500);
   });
+
+  window.switchProfileTab = function(tabName) {
+    document.querySelectorAll('.profile-tab-content').forEach(el => el.style.display = 'none');
+    const targetContent = document.getElementById(`profile-tab-${tabName}`);
+    if (targetContent) targetContent.style.display = 'block';
+
+    document.querySelectorAll('.mezun-tab').forEach(btn => btn.classList.remove('active'));
+    const targetBtn = document.getElementById(`btn-tab-${tabName}`);
+    if (targetBtn) targetBtn.classList.add('active');
+  };
 
   async function loadProfile() {
     if (!ASDFL.currentUser) {
@@ -170,10 +417,82 @@
     }
 
     const user = ASDFL.currentUser;
-    document.getElementById('profileInitials').textContent = ASDFL.getInitials(user.name);
     document.getElementById('profileName').textContent = user.name;
     document.getElementById('profileRole').textContent = user.role + (user.gradYear ? ' · ' + user.gradYear + ' Mezunu' : '');
 
+    // Render avatar
+    const avatarEl = document.getElementById('profileAvatar');
+    const initialsEl = document.getElementById('profileInitials');
+    const posSec = document.getElementById('avatarPositionSection');
+    
+    // Parse position: format is either "50% 50%" (legacy) or "scale,panX,panY" (new)
+    const position = user.avatar_position || user.avatarPosition || '1.00,0%,0%';
+    let pZoom = 1.0;
+    let pX = 0;
+    let pY = 0;
+    
+    if (position.includes(',')) {
+      const [scale, x, y] = position.split(',');
+      pZoom = parseFloat(scale) || 1.0;
+      pX = parseInt(x) || 0;
+      pY = parseInt(y) || 0;
+    } else {
+      // Legacy format conversion
+      pZoom = 1.0;
+      pX = 0;
+      pY = 0;
+    }
+
+    if (avatarEl && initialsEl) {
+      const avatarUrl = user.avatar_url || user.avatarUrl;
+      if (avatarUrl) {
+        let transformStr = '';
+        let objPosStr = 'object-position: center;';
+        if (position.includes(',')) {
+          transformStr = `transform: scale(${pZoom}) translate(${pX}%, ${pY}%); transform-origin: center center;`;
+          objPosStr = '';
+        } else {
+          objPosStr = `object-position: ${position};`;
+        }
+        avatarEl.style.backgroundImage = '';
+        avatarEl.style.position = 'relative';
+        avatarEl.style.overflow = 'hidden';
+        avatarEl.style.display = 'flex';
+        avatarEl.style.alignItems = 'center';
+        avatarEl.style.justifyContent = 'center';
+        avatarEl.innerHTML = `<img id="profileAvatarImg" src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover; ${objPosStr} ${transformStr}">`;
+        initialsEl.style.display = 'none';
+        if (posSec) posSec.classList.remove('hidden');
+      } else {
+        avatarEl.innerHTML = '<span id="profileInitials">?</span>';
+        const newInitialsEl = document.getElementById('profileInitials');
+        avatarEl.style.backgroundImage = '';
+        if (newInitialsEl) {
+          newInitialsEl.textContent = ASDFL.getInitials(user.name);
+          newInitialsEl.style.display = 'block';
+        }
+        if (posSec) posSec.classList.add('hidden');
+      }
+    }
+    
+    // Bind position to sliders
+    const sliderZoom = document.getElementById('sliderZoom');
+    const sliderX = document.getElementById('sliderPosX');
+    const sliderY = document.getElementById('sliderPosY');
+    const valZoom = document.getElementById('valZoom');
+    const valX = document.getElementById('valPosX');
+    const valY = document.getElementById('valPosY');
+    
+    if (sliderZoom && sliderX && sliderY && valZoom && valX && valY) {
+      sliderZoom.value = pZoom;
+      sliderX.value = pX;
+      sliderY.value = pY;
+      valZoom.textContent = pZoom.toFixed(2) + 'x';
+      valX.textContent = (pX >= 0 ? '+' : '') + pX + '%';
+      valY.textContent = (pY >= 0 ? '+' : '') + pY + '%';
+    }
+
+    // Settings fields defaults
     document.getElementById('editName').value = user.name;
     document.getElementById('editEmail').value = user.email;
 
@@ -184,7 +503,7 @@
       groupClassSection.classList.toggle('hidden', user.role === 'Öğretmen');
     }
 
-    if (user.role === 'Mezun') {
+    if (user.role === 'Mezun' || user.role === 'Admin') {
       document.querySelectorAll('.role-mezun').forEach(el => el.classList.remove('hidden'));
     } else if (user.role === 'Öğrenci') {
       document.querySelectorAll('.role-ogrenci').forEach(el => el.classList.remove('hidden'));
@@ -192,9 +511,17 @@
       document.querySelectorAll('.role-ogretmen').forEach(el => el.classList.remove('hidden'));
     }
 
+    let profileData = {};
+
     if(ASDFL.supabase) {
       const { data } = await ASDFL.supabase.from('profiles').select('*').eq('id', user.id).single();
       if(data) {
+        profileData = data;
+        
+        // Sync local current user object just in case
+        if (data.avatar_url) ASDFL.currentUser.avatar_url = data.avatar_url;
+        if (data.avatar_position) ASDFL.currentUser.avatar_position = data.avatar_position;
+
         document.getElementById('editCity').value = data.city || '';
         document.getElementById('editJob').value = data.job || '';
         document.getElementById('editCompany').value = data.company || '';
@@ -206,25 +533,258 @@
         document.getElementById('editPhone').value = data.phone || '';
         document.getElementById('editSharePhone').checked = !!data.share_phone;
         document.getElementById('editShareEmail').checked = !!data.share_email;
+        
+        document.getElementById('editBio').value = data.bio || '';
+        document.getElementById('editUniversity').value = data.university || '';
+        document.getElementById('editStudentUniversity').value = data.university || '';
+        document.getElementById('editLinkedin').value = data.linkedin_url || '';
+        document.getElementById('editGithub').value = data.github_url || '';
+        document.getElementById('editInstagram').value = data.instagram_url || '';
       }
       await loadContactRequests();
     } else {
-      document.getElementById('editCity').value = user.city || '';
-      document.getElementById('editJob').value = user.job || '';
-      document.getElementById('editCompany').value = user.company || '';
-      document.getElementById('editClassSection').value = user.classSection || '';
-      document.getElementById('editGradYear').value = user.gradYear || '';
-      document.getElementById('editGrade').value = user.grade || '9. Sınıf';
-      document.getElementById('editBranch').value = user.branch || '';
-      document.getElementById('editTeachingYear').value = user.teachingYear || '';
-      document.getElementById('editPhone').value = user.phone || '';
-      document.getElementById('editSharePhone').checked = !!user.sharePhone;
-      document.getElementById('editShareEmail').checked = !!user.shareEmail;
+      // Local Fallback loading
+      profileData = {
+        city: user.city || '',
+        job: user.job || '',
+        company: user.company || '',
+        class_section: user.classSection || '',
+        grad_year: user.gradYear || '',
+        grade: user.grade || '9. Sınıf',
+        branch: user.branch || '',
+        teaching_year: user.teachingYear || '',
+        phone: user.phone || '',
+        share_phone: user.sharePhone,
+        share_email: user.shareEmail,
+        bio: user.bio || '',
+        university: user.university || '',
+        linkedin_url: user.linkedin_url || '',
+        github_url: user.github_url || '',
+        instagram_url: user.instagram_url || '',
+        avatar_url: user.avatar_url || user.avatarUrl || '',
+        avatar_position: user.avatar_position || user.avatarPosition || '50% 50%'
+      };
+
+      document.getElementById('editCity').value = profileData.city;
+      document.getElementById('editJob').value = profileData.job;
+      document.getElementById('editCompany').value = profileData.company;
+      document.getElementById('editClassSection').value = profileData.class_section;
+      document.getElementById('editGradYear').value = profileData.grad_year;
+      document.getElementById('editGrade').value = profileData.grade;
+      document.getElementById('editBranch').value = profileData.branch;
+      document.getElementById('editTeachingYear').value = profileData.teaching_year;
+      document.getElementById('editPhone').value = profileData.phone;
+      document.getElementById('editSharePhone').checked = !!profileData.share_phone;
+      document.getElementById('editShareEmail').checked = !!profileData.share_email;
+
+      document.getElementById('editBio').value = profileData.bio;
+      document.getElementById('editUniversity').value = profileData.university;
+      document.getElementById('editStudentUniversity').value = profileData.university;
+      document.getElementById('editLinkedin').value = profileData.linkedin_url;
+      document.getElementById('editGithub').value = profileData.github_url;
+      document.getElementById('editInstagram').value = profileData.instagram_url;
+
       document.getElementById('contactRequestsList').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem">Çevrimdışı modda iletişim talepleri devre dışıdır.</p>';
+    }
+
+    // Populate Social tab components
+    document.getElementById('social-city').textContent = profileData.city || 'Belirtilmemiş';
+    document.getElementById('social-uni').textContent = profileData.university || 'Belirtilmemiş';
+    
+    let jobText = 'Belirtilmemiş';
+    if (profileData.job) {
+      jobText = profileData.job + (profileData.company ? `, ${profileData.company}` : '');
+    }
+    document.getElementById('social-job').textContent = jobText;
+    document.getElementById('social-email').textContent = user.email;
+
+    // Bio
+    const bioText = profileData.bio || 'Kendiniz hakkında henüz bilgi girmediniz. Ayarlar sekmesinden doldurabilirsiniz.';
+    const bioEl = document.getElementById('social-bio');
+    if (bioEl) {
+      bioEl.textContent = bioText;
+      if (!profileData.bio) {
+        bioEl.style.fontStyle = 'italic';
+        bioEl.style.color = 'var(--text-muted)';
+      } else {
+        bioEl.style.fontStyle = 'normal';
+        bioEl.style.color = 'var(--text-secondary)';
+      }
+    }
+
+    // Social URLs links
+    const linkedinEl = document.getElementById('social-linkedin');
+    const githubEl = document.getElementById('social-github');
+    if (linkedinEl) {
+      if (profileData.linkedin_url) {
+        linkedinEl.href = profileData.linkedin_url;
+        linkedinEl.style.pointerEvents = 'auto';
+        linkedinEl.style.opacity = '1';
+      } else {
+        linkedinEl.href = '#';
+        linkedinEl.style.pointerEvents = 'none';
+        linkedinEl.style.opacity = '0.3';
+      }
+    }
+    if (githubEl) {
+      if (profileData.github_url) {
+        githubEl.href = profileData.github_url;
+        githubEl.style.pointerEvents = 'auto';
+        githubEl.style.opacity = '1';
+      } else {
+        githubEl.href = '#';
+        githubEl.style.pointerEvents = 'none';
+        githubEl.style.opacity = '0.3';
+      }
+    }
+    const instagramEl = document.getElementById('social-instagram');
+    if (instagramEl) {
+      if (profileData.instagram_url) {
+        instagramEl.href = profileData.instagram_url;
+        instagramEl.style.pointerEvents = 'auto';
+        instagramEl.style.opacity = '1';
+      } else {
+        instagramEl.href = '#';
+        instagramEl.style.pointerEvents = 'none';
+        instagramEl.style.opacity = '0.3';
+      }
+    }
+
+    // Populate dynamic academic & mentor summary
+    const academicDiv = document.getElementById('social-academic-details');
+    if (academicDiv) {
+      let academicHTML = '';
+      if (user.role === 'Mezun' || user.role === 'Admin') {
+        academicHTML = `
+          <div style="display:flex; justify-content:space-between; padding: 0.25rem 0; border-bottom:1px dashed rgba(255,255,255,0.03)">
+            <span style="color:var(--text-muted)">Üyelik Türü:</span>
+            <span class="badge badge-gold" style="font-weight:600">Mezun</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding: 0.25rem 0; border-bottom:1px dashed rgba(255,255,255,0.03)">
+            <span style="color:var(--text-muted)">Mezuniyet Yılı:</span>
+            <strong style="color:var(--text-primary)">${profileData.grad_year || 'Belirtilmemiş'}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding: 0.25rem 0; border-bottom:1px dashed rgba(255,255,255,0.03)">
+            <span style="color:var(--text-muted)">Şube:</span>
+            <strong style="color:var(--text-primary)">${profileData.class_section || 'Belirtilmemiş'}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding: 0.25rem 0;">
+            <span style="color:var(--text-muted)">Mentörlük Durumu:</span>
+            <span class="badge ${profileData.mentor ? 'badge-teal' : 'badge-red'}" style="font-weight:600">${profileData.mentor ? 'Aktif Mentör' : 'Mentör Değil'}</span>
+          </div>
+        `;
+      } else if (user.role === 'Öğrenci') {
+        academicHTML = `
+          <div style="display:flex; justify-content:space-between; padding: 0.25rem 0; border-bottom:1px dashed rgba(255,255,255,0.03)">
+            <span style="color:var(--text-muted)">Üyelik Türü:</span>
+            <span class="badge badge-blue" style="font-weight:600">Aktif Öğrenci</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding: 0.25rem 0; border-bottom:1px dashed rgba(255,255,255,0.03)">
+            <span style="color:var(--text-muted)">Sınıfı:</span>
+            <strong style="color:var(--text-primary)">${profileData.grade || 'Belirtilmemiş'}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding: 0.25rem 0;">
+            <span style="color:var(--text-muted)">Şube:</span>
+            <strong style="color:var(--text-primary)">${profileData.class_section || 'Belirtilmemiş'}</strong>
+          </div>
+        `;
+      } else if (user.role === 'Öğretmen') {
+        academicHTML = `
+          <div style="display:flex; justify-content:space-between; padding: 0.25rem 0; border-bottom:1px dashed rgba(255,255,255,0.03)">
+            <span style="color:var(--text-muted)">Üyelik Türü:</span>
+            <span class="badge badge-teal" style="font-weight:600">Öğretmen</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding: 0.25rem 0; border-bottom:1px dashed rgba(255,255,255,0.03)">
+            <span style="color:var(--text-muted)">Branşı:</span>
+            <strong style="color:var(--text-primary)">${profileData.branch || 'Belirtilmemiş'}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding: 0.25rem 0;">
+            <span style="color:var(--text-muted)">Göreve Başlangıç:</span>
+            <strong style="color:var(--text-primary)">${profileData.teaching_year || 'Belirtilmemiş'}</strong>
+          </div>
+        `;
+      }
+      academicDiv.innerHTML = academicHTML;
     }
     
     ASDFL.initReveal();
     setTimeout(() => lucide.createIcons(), 10);
+  }
+
+  window.handleAvatarUpload = async function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      ASDFL.toast('Dosya boyutu 2MB\'tan küçük olmalıdır.', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      let base64 = e.target.result;
+      
+      // Compress image slightly using Canvas
+      const img = new Image();
+      img.src = base64;
+      img.onload = async function() {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const max = 300; // max size for avatar
+        if (width > max || height > max) {
+          if (width > height) {
+            height = Math.round((height * max) / width);
+            width = max;
+          } else {
+            width = Math.round((width * max) / height);
+            height = max;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.75);
+
+        // Save
+        await saveAvatar(compressedBase64);
+      };
+    };
+    reader.readAsDataURL(file);
+  };
+
+  async function saveAvatar(avatarData) {
+    ASDFL.toast('Profil fotoğrafı yükleniyor...', 'info');
+    if (ASDFL.supabase && ASDFL.currentUser) {
+      const { error } = await ASDFL.supabase
+        .from('profiles')
+        .update({ avatar_url: avatarData })
+        .eq('id', ASDFL.currentUser.id);
+
+      if (error) {
+        ASDFL.toast('Fotoğraf kaydedilemedi: ' + error.message, 'error');
+        return;
+      }
+      
+      await ASDFL.supabase.auth.updateUser({
+        data: { avatar_url: avatarData }
+      });
+    } else if (ASDFL.currentUser) {
+      // Local fallback
+      ASDFL.currentUser.avatarUrl = avatarData;
+      const stored = localStorage.getItem('asdfl_alumni');
+      if (stored) {
+        let alumni = JSON.parse(stored);
+        alumni = alumni.map(m => m.id === ASDFL.currentUser.id ? { ...m, avatar_url: avatarData } : m);
+        localStorage.setItem('asdfl_alumni', JSON.stringify(alumni));
+      }
+      localStorage.setItem('asdfl_user', JSON.stringify(ASDFL.currentUser));
+    }
+
+    ASDFL.currentUser.avatar_url = avatarData;
+    await loadProfile();
+    ASDFL.toast('Profil fotoğrafı başarıyla güncellendi!', 'success');
   }
 
   async function loadContactRequests() {
@@ -243,6 +803,16 @@
     }
 
     const pendingRequests = data.filter(r => r.status === 'Pending');
+
+    const badge = document.getElementById('requestsCountBadge');
+    if (badge) {
+      if (pendingRequests.length > 0) {
+        badge.textContent = pendingRequests.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
 
     if (pendingRequests.length === 0) {
       el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1.5rem">Bekleyen herhangi bir iletişim talebiniz bulunmamaktadır.</p>';
@@ -285,6 +855,22 @@
     }
   };
 
+  window.updateAvatarPositionPreview = function() {
+    const zoom = document.getElementById('sliderZoom').value;
+    const x = document.getElementById('sliderPosX').value;
+    const y = document.getElementById('sliderPosY').value;
+    
+    document.getElementById('valZoom').textContent = parseFloat(zoom).toFixed(2) + 'x';
+    document.getElementById('valPosX').textContent = (parseInt(x) >= 0 ? '+' : '') + x + '%';
+    document.getElementById('valPosY').textContent = (parseInt(y) >= 0 ? '+' : '') + y + '%';
+    
+    const imgEl = document.getElementById('profileAvatarImg');
+    if (imgEl) {
+      imgEl.style.transform = `scale(${zoom}) translate(${x}%, ${y}%)`;
+      imgEl.style.transformOrigin = 'center center';
+    }
+  };
+
   window.saveProfile = async function() {
     if(!ASDFL.currentUser) return;
     
@@ -307,6 +893,19 @@
     const sharePhone = document.getElementById('editSharePhone').checked;
     const shareEmail = document.getElementById('editShareEmail').checked;
 
+    const bio = document.getElementById('editBio').value;
+    const university = (ASDFL.currentUser.role === 'Öğrenci')
+      ? document.getElementById('editStudentUniversity').value
+      : document.getElementById('editUniversity').value;
+    const linkedin_url = document.getElementById('editLinkedin').value;
+    const github_url = document.getElementById('editGithub').value;
+    const instagram_url = document.getElementById('editInstagram').value;
+
+    const zoom = document.getElementById('sliderZoom') ? document.getElementById('sliderZoom').value : 1.0;
+    const posX = document.getElementById('sliderPosX') ? document.getElementById('sliderPosX').value : 0;
+    const posY = document.getElementById('sliderPosY') ? document.getElementById('sliderPosY').value : 0;
+    const avatarPosition = `${zoom},${posX}%,${posY}%`;
+
     if (ASDFL.supabase) {
       const { error } = await ASDFL.supabase
         .from('profiles')
@@ -322,7 +921,13 @@
           teaching_year: teachingYear,
           phone, 
           share_phone: sharePhone, 
-          share_email: shareEmail 
+          share_email: shareEmail,
+          bio,
+          university,
+          linkedin_url,
+          github_url,
+          instagram_url,
+          avatar_position: avatarPosition
         })
         .eq('id', ASDFL.currentUser.id);
 
@@ -334,13 +939,31 @@
       }
       
       await ASDFL.supabase.auth.updateUser({
-        data: { name, city, job, company, classSection, gradYear, grade, branch, teachingYear, phone, sharePhone, shareEmail }
+        data: { 
+          name, city, job, company, classSection, gradYear, grade, branch, teachingYear, phone, sharePhone, shareEmail,
+          bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition
+        }
       });
     } else {
+      // Local fallback
       const updatedUser = {
         ...ASDFL.currentUser,
-        name, city, job, company, classSection, gradYear, grade, branch, teachingYear, phone, sharePhone, shareEmail
+        name, city, job, company, classSection, gradYear, grade, branch, teachingYear, phone, sharePhone, shareEmail,
+        bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition
       };
+      
+      // Update in local array
+      const stored = localStorage.getItem('asdfl_alumni');
+      if (stored) {
+        let alumni = JSON.parse(stored);
+        alumni = alumni.map(m => m.id === ASDFL.currentUser.id ? { 
+          ...m, 
+          name, city, job, company, class_section: classSection, grad_year: gradYear, grade, branch, teaching_year: teachingYear, phone, share_phone: sharePhone, share_email: shareEmail,
+          bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition
+        } : m);
+        localStorage.setItem('asdfl_alumni', JSON.stringify(alumni));
+      }
+      
       localStorage.setItem('asdfl_user', JSON.stringify(updatedUser));
     }
 
@@ -356,14 +979,24 @@
     ASDFL.currentUser.phone = phone;
     ASDFL.currentUser.sharePhone = sharePhone;
     ASDFL.currentUser.shareEmail = shareEmail;
+    
+    ASDFL.currentUser.bio = bio;
+    ASDFL.currentUser.university = university;
+    ASDFL.currentUser.linkedin_url = linkedin_url;
+    ASDFL.currentUser.github_url = github_url;
+    ASDFL.currentUser.instagram_url = instagram_url;
+    ASDFL.currentUser.avatar_position = avatarPosition;
 
-    document.getElementById('profileInitials').textContent = ASDFL.getInitials(name);
     document.getElementById('profileName').textContent = name;
     document.getElementById('profileRole').textContent = ASDFL.currentUser.role + (gradYear ? ' · ' + gradYear + ' Mezunu' : '');
 
+    await loadProfile();
     ASDFL.toast('Profil başarıyla güncellendi!', 'success');
     btn.textContent = 'Değişiklikleri Kaydet';
     btn.disabled = false;
+    
+    // Switch to profile overview to let them see changes
+    switchProfileTab('social');
   };
 </script>
 </body>

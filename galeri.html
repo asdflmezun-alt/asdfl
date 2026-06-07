@@ -201,6 +201,20 @@
         <label class="form-label">Yaşadığı Şehir</label>
         <select class="form-select" id="regCity"><option value="" disabled selected>Şehir Seçin</option></select>
       </div>
+      <div class="form-group">
+        <label class="form-label">Mezun Olduğu Üniversite</label>
+        <div class="searchable-select-wrapper" id="wrapper-regUniversity">
+          <input type="text" class="form-input searchable-select-trigger" id="regUniversity" readonly placeholder="Seçmek için tıklayın veya arayın..." autocomplete="off">
+          <div class="searchable-select-dropdown" style="display:none;">
+            <div class="searchable-select-search-container">
+              <input type="text" class="searchable-select-search-input" placeholder="Üniversite Ara..." autocomplete="off">
+            </div>
+            <ul class="searchable-select-items">
+              <!-- Dinamik olarak doldurulur -->
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Öğrenci Alanları -->

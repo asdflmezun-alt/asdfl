@@ -135,23 +135,46 @@ document.addEventListener('DOMContentLoaded', async () => {
   function populateFilters() {
     const years = [...new Set(allAlumni.map(a => a.grad_year).filter(Boolean))].sort((a,b) => b-a);
     const cities = [...new Set(allAlumni.map(a => a.city).filter(Boolean))].sort();
+    const universities = [...new Set(allAlumni.map(a => a.university).filter(Boolean))].sort();
+    
     const yf = document.getElementById('yearFilter');
     const cf = document.getElementById('cityFilter');
-    if(yf) years.forEach(y => { const o=document.createElement('option'); o.value=y; o.textContent=y+' Mezunu'; yf.appendChild(o); });
-    if(cf) cities.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; cf.appendChild(o); });
+    const uf = document.getElementById('universityFilter');
+    
+    if(yf) {
+      yf.innerHTML = '<option value="all">Tüm Yıllar</option>';
+      years.forEach(y => { const o=document.createElement('option'); o.value=y; o.textContent=y+' Mezunu'; yf.appendChild(o); });
+    }
+    if(cf) {
+      cf.innerHTML = '<option value="all">Tüm Şehirler</option>';
+      cities.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; cf.appendChild(o); });
+    }
+    if(uf) {
+      uf.innerHTML = '<option value="all">Tüm Üniversiteler</option>';
+      universities.forEach(u => { const o=document.createElement('option'); o.value=u; o.textContent=u; uf.appendChild(o); });
+    }
   }
 
   window.filterAlumni = function() {
-    const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const search = document.getElementById('searchInput')?.value.toLocaleLowerCase('tr') || '';
     const year = document.getElementById('yearFilter')?.value || 'all';
     const city = document.getElementById('cityFilter')?.value || 'all';
+    const university = document.getElementById('universityFilter')?.value || 'all';
     const mentorOnly = document.getElementById('mentorOnly')?.checked || false;
+    
     let filtered = allAlumni.filter(a => {
-      const matchSearch = !search || (a.name && a.name.toLowerCase().includes(search)) || (a.job && a.job.toLowerCase().includes(search));
+      const matchSearch = !search || 
+        (a.name && a.name.toLocaleLowerCase('tr').includes(search)) || 
+        (a.job && a.job.toLocaleLowerCase('tr').includes(search)) ||
+        (a.company && a.company.toLocaleLowerCase('tr').includes(search)) ||
+        (a.university && a.university.toLocaleLowerCase('tr').includes(search));
+        
       const matchYear = year === 'all' || a.grad_year == year;
       const matchCity = city === 'all' || a.city === city;
+      const matchUniversity = university === 'all' || a.university === university;
       const matchMentor = !mentorOnly || a.mentor;
-      return matchSearch && matchYear && matchCity && matchMentor;
+      
+      return matchSearch && matchYear && matchCity && matchUniversity && matchMentor;
     });
     renderAlumniGrid(filtered);
   };
@@ -168,16 +191,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>`;
       return;
     }
-    grid.innerHTML = list.map(a => `
+    grid.innerHTML = list.map(a => {
+      let jobCompanyText = '';
+      if (a.job) {
+        jobCompanyText = a.job + (a.company ? ` @ ${a.company}` : '');
+      } else if (a.company) {
+        jobCompanyText = a.company;
+      }
+      
+      return `
       <div class="card alumni-card-full lift reveal">
         <div class="ac-header">
-          <div class="avatar avatar-lg">${a.initials}</div>
+          ${ASDFL.getAvatarHTML(a, 'avatar avatar-lg')}
           <div class="ac-info">
             <strong>${a.name}</strong>
             <span>${a.grad_year || 'Bilinmiyor'} Mezunu</span>
           </div>
         </div>
-        ${a.job ? `<div class="ac-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.job}</div>` : ''}
+        ${jobCompanyText ? `<div class="ac-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${jobCompanyText}</div>` : ''}
+        ${a.university ? `<div class="ac-job"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.university}</div>` : ''}
         ${a.city ? `<div class="ac-job"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.city}</div>` : ''}
         ${a.bio ? `<div style="font-size:.82rem;color:var(--text-muted);line-height:1.5">${a.bio}</div>` : ''}
         
@@ -191,7 +223,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           <button class="btn btn-ghost btn-sm" onclick="ASDFL.toast('Profil görüntüleme yakında!','info')">Profili Gör</button>
           ${a.mentor ? `<button class="btn btn-secondary btn-sm" onclick="openMentorshipRequestModal('${a.id}', '${a.name}')">Bağlantı Kur</button>` : ''}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
     ASDFL.initReveal();
     setTimeout(() => lucide.createIcons(), 10);
   }
@@ -223,19 +256,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const grid = document.getElementById('mentorGrid');
     if(!grid) return;
     const mentors = allAlumni.filter(a => a.mentor);
-    grid.innerHTML = mentors.map(a => `
+    grid.innerHTML = mentors.map(a => {
+      let jobCompanyText = '';
+      if (a.job) {
+        jobCompanyText = a.job + (a.company ? ` @ ${a.company}` : '');
+      } else if (a.company) {
+        jobCompanyText = a.company;
+      }
+      
+      return `
       <div class="card mentor-card lift reveal">
         <div class="mc-avatar">
-          <div class="avatar avatar-xl">${a.initials}</div>
+          ${ASDFL.getAvatarHTML(a, 'avatar avatar-xl')}
           <div class="mc-badge"><i data-lucide="star" style="width:1em;height:1em"></i></div>
         </div>
         <h4>${a.name}</h4>
         <span class="mc-year">${a.grad_year || 'Bilinmiyor'} Mezunu</span>
-        ${a.job ? `<div class="mc-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.job}</div>` : ''}
+        ${jobCompanyText ? `<div class="mc-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${jobCompanyText}</div>` : ''}
+        ${a.university ? `<div class="mc-job" style="font-size:.8rem;color:var(--text-secondary);"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.university}</div>` : ''}
         ${a.city ? `<div class="mc-city"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.city}</div>` : ''}
         ${a.bio ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">${a.bio}</div>` : ''}
         <button class="btn btn-primary btn-sm" style="margin-top:1rem;width:100%" onclick="openMentorshipRequestModal('${a.id}', '${a.name}')">Bağlantı Kur</button>
-      </div>`).join('');
+      </div>`;
+    }).join('');
     ASDFL.initReveal();
     setTimeout(() => lucide.createIcons(), 10);
   }
@@ -298,23 +341,32 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    grid.innerHTML = students.map(a => `
+    grid.innerHTML = students.map(a => {
+      let jobCompanyText = '';
+      if (a.job) {
+        jobCompanyText = a.job + (a.company ? ` @ ${a.company}` : '');
+      } else if (a.company) {
+        jobCompanyText = a.company;
+      }
+      
+      return `
       <div class="card p-card" style="margin-bottom:1rem">
         <div class="p-header">
-          <div class="avatar">${a.initials}</div>
+          ${ASDFL.getAvatarHTML(a, 'avatar')}
           <div class="p-info">
             <strong>${a.name}</strong>
             <span>${a.grad_year} Mezunu ${a.class_section ? '- ' + a.class_section + ' Şubesi' : ''}</span>
           </div>
         </div>
         <div class="p-body">
-          ${a.job ? `<div class="p-detail"><i data-lucide="briefcase" style="width:1em;height:1em"></i> ${a.job}</div>` : ''}
+          ${jobCompanyText ? `<div class="p-detail"><i data-lucide="briefcase" style="width:1em;height:1em"></i> ${jobCompanyText}</div>` : ''}
+          ${a.university ? `<div class="p-detail"><i data-lucide="graduation-cap" style="width:1em;height:1em"></i> ${a.university}</div>` : ''}
           ${a.city ? `<div class="p-detail"><i data-lucide="map-pin" style="width:1em;height:1em"></i> ${a.city}</div>` : ''}
           
           ${getContactHTML(a)}
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
     
     setTimeout(() => lucide.createIcons(), 10);
   }

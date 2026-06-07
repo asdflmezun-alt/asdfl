@@ -144,7 +144,7 @@ RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.profiles (
     id, role, name, email, grad_year, job, city, grade, branch, teaching_year, class_section,
-    phone, share_phone, share_email
+    phone, share_phone, share_email, university
   )
   VALUES (
     NEW.id,
@@ -160,7 +160,8 @@ BEGIN
     NEW.raw_user_meta_data->>'classSection',
     NEW.raw_user_meta_data->>'phone',
     COALESCE((NEW.raw_user_meta_data->>'sharePhone')::boolean, false),
-    COALESCE((NEW.raw_user_meta_data->>'shareEmail')::boolean, false)
+    COALESCE((NEW.raw_user_meta_data->>'shareEmail')::boolean, false),
+    NEW.raw_user_meta_data->>'university'
   );
   RETURN NEW;
 END;

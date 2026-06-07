@@ -27,9 +27,10 @@
       loginPrompt.classList.toggle('hidden', isLoggedIn);
     }
     if (isLoggedIn && composeBox) {
-      const initials = ASDFL.getInitials(ASDFL.currentUser.name);
       const composeAvatar = document.getElementById('composeAvatar');
-      if (composeAvatar) composeAvatar.textContent = initials;
+      if (composeAvatar) {
+        ASDFL.setAvatarElement(composeAvatar, ASDFL.currentUser);
+      }
     }
 
     await loadMyProfile();
@@ -133,7 +134,7 @@
       .from('posts')
       .select(`
         id, content, likes_count, created_at, target_year, target_section,
-        profiles!author_id (id, name, job, grad_year, class_section),
+        profiles!author_id (id, name, job, grad_year, class_section, avatar_url, avatar_position),
         post_comments(id)
       `)
       .order('created_at', { ascending: false })
@@ -245,7 +246,7 @@
     return `
       <div class="post-card" id="post-${post.id}">
         <div class="post-header">
-          <div class="post-avatar">${initials}</div>
+          ${ASDFL.getAvatarHTML({ initials, avatar_url: author?.avatar_url, avatar_position: author?.avatar_position, name }, 'post-avatar')}
           <div class="post-meta">
             <strong class="post-author" style="display:inline-block">${name} ${feelingHtml}</strong>
             <span class="post-submeta">${meta}</span>
@@ -275,7 +276,7 @@
         <div class="comments-section hidden" id="comments-section-${post.id}">
           <div class="comments-list" id="comments-list-${post.id}"></div>
           <div class="comment-compose">
-            <div class="comment-avatar" style="width:30px;height:30px;font-size:0.7rem">${ASDFL.currentUser ? ASDFL.getInitials(ASDFL.currentUser.name) : '?'}</div>
+            ${ASDFL.getAvatarHTML(ASDFL.currentUser, 'comment-avatar', 'width:30px;height:30px;font-size:0.7rem')}
             <input type="text" class="comment-input" placeholder="Yorum yaz ve Enter'a bas..." id="comment-input-${post.id}" onkeydown="if(event.key==='Enter')window.submitCommentAction('${post.id}')">
             <button class="btn btn-primary btn-sm" style="padding:0.35rem 0.85rem;font-size:0.8rem;border-radius:var(--radius-full)" onclick="window.submitCommentAction('${post.id}')">Gönder</button>
           </div>
@@ -417,7 +418,7 @@
     list.innerHTML = comments.map(c => {
       return `
         <div class="comment-item">
-          <div class="comment-avatar">${c.initials}</div>
+          ${ASDFL.getAvatarHTML({ initials: c.initials, avatar_url: c.authorAvatarUrl, avatar_position: c.authorAvatarPosition, name: c.authorName }, 'comment-avatar')}
           <div class="comment-content-area">
             <div class="comment-author-row">
               <strong class="comment-author-name">${c.authorName}</strong>
@@ -437,7 +438,7 @@
     if (ASDFL.supabase) {
       const { data, error } = await ASDFL.supabase
         .from('post_comments')
-        .select('*, profiles!author_id(name, grad_year, class_section, job)')
+        .select('*, profiles!author_id(name, grad_year, class_section, job, avatar_url, avatar_position)')
         .eq('post_id', postId)
         .order('created_at', { ascending: true });
         
@@ -451,6 +452,8 @@
         content: c.content,
         created_at: c.created_at,
         authorName: c.profiles?.name || 'Anonim',
+        authorAvatarUrl: c.profiles?.avatar_url || '',
+        authorAvatarPosition: c.profiles?.avatar_position || '',
         authorMeta: [
           c.profiles?.job,
           c.profiles?.grad_year ? c.profiles.grad_year + ' Mezunu' : null
@@ -500,7 +503,7 @@
           author_id: ASDFL.currentUser.id,
           content: content
         })
-        .select('*, profiles!author_id(name, grad_year, class_section, job)')
+        .select('*, profiles!author_id(name, grad_year, class_section, job, avatar_url, avatar_position)')
         .single();
         
       if (error) {
@@ -514,6 +517,8 @@
         content: data.content,
         created_at: data.created_at,
         authorName: data.profiles?.name || 'Anonim',
+        authorAvatarUrl: data.profiles?.avatar_url || '',
+        authorAvatarPosition: data.profiles?.avatar_position || '',
         authorMeta: [
           data.profiles?.job,
           data.profiles?.grad_year ? data.profiles.grad_year + ' Mezunu' : null
@@ -529,6 +534,8 @@
         content: content,
         created_at: new Date().toISOString(),
         authorName: ASDFL.currentUser.name,
+        authorAvatarUrl: ASDFL.currentUser.avatar_url || ASDFL.currentUser.avatarUrl || '',
+        authorAvatarPosition: ASDFL.currentUser.avatar_position || '50% 50%',
         authorMeta: [
           ASDFL.currentUser.job,
           ASDFL.currentUser.gradYear ? ASDFL.currentUser.gradYear + ' Mezunu' : null

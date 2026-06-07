@@ -161,6 +161,56 @@
 .mentor-card .mc-job { font-size: .82rem; color: var(--text-secondary); margin: .4rem 0; }
 .mentor-card .mc-city { font-size: .78rem; color: var(--text-muted); }
 
+/* Classes Tab Member Cards Styling */
+.p-card {
+  padding: 1.25rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.75rem !important;
+}
+
+.p-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 1.25rem !important;
+}
+
+.p-info strong {
+  display: block !important;
+  color: var(--text-primary) !important;
+  font-size: 1.05rem !important;
+  font-family: 'Outfit', sans-serif !important;
+}
+
+.p-info span {
+  font-size: 0.8rem !important;
+  color: var(--gold-500) !important;
+  font-weight: 600 !important;
+}
+
+.p-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.35rem !important;
+  border-top: 1px solid var(--glass-border) !important;
+  padding-top: 0.75rem !important;
+  margin-top: 0.25rem !important;
+}
+
+.p-detail {
+  font-size: 0.85rem !important;
+  color: var(--text-secondary) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.p-detail i, .p-detail svg {
+  color: var(--gold-500) !important;
+  flex-shrink: 0 !important;
+}
+
 @media (max-width: 600px) {
   .filters-bar { flex-direction: column; align-items: stretch; }
+  .p-header { gap: 0.75rem !important; }
 }

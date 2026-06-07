@@ -23,11 +23,11 @@ const ASDFL = {
     // Fallback to local storage
     try {
       let localAlumni = JSON.parse(localStorage.getItem('asdfl_alumni') || '[]');
-      if (localAlumni.length === 0) {
+      if (localAlumni.length === 0 || !localAlumni[0].avatar_url) {
         localAlumni = [
-          { id: '1', name: 'Alika Yıldız', email: 'alika@example.com', phone: '0555 123 45 67', role: 'Admin', grad_year: 2012, mentor: true },
-          { id: '2', name: 'Burak Yılmaz', email: 'burak@example.com', phone: '0532 987 65 43', role: 'Mezun', grad_year: 2008, mentor: false },
-          { id: '3', name: 'Ceren Demir', email: 'ceren@example.com', phone: '0544 555 66 77', role: 'Öğrenci', grad_year: 2026, mentor: false }
+          { id: '1', name: 'Alika Yıldız', email: 'alika@example.com', phone: '0555 123 45 67', role: 'Admin', grad_year: 2012, mentor: true, job: 'Kıdemli Yazılım Mühendisi', company: 'Google', university: 'ORTA DOĞU TEKNİK ÜNİVERSİTESİ', city: 'İstanbul', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80' },
+          { id: '2', name: 'Burak Yılmaz', email: 'burak@example.com', phone: '0532 987 65 43', role: 'Mezun', grad_year: 2008, mentor: true, job: 'Veri Bilimci', company: 'TÜBİTAK', university: 'BOĞAZİÇİ ÜNİVERSİTESİ', city: 'Ankara', avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&h=200&q=80' },
+          { id: '3', name: 'Ceren Demir', email: 'ceren@example.com', phone: '0544 555 66 77', role: 'Öğrenci', grad_year: 2026, mentor: false, job: 'Öğrenci', company: '', university: 'HACETTEPE ÜNİVERSİTESİ', city: 'Afyon', avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&h=200&q=80' }
         ];
         localStorage.setItem('asdfl_alumni', JSON.stringify(localAlumni));
       }
@@ -48,7 +48,7 @@ const ASDFL = {
 
   async fetchPosts() {
     if (!this.supabase) return [];
-    const { data, error } = await this.supabase.from('posts').select('*, profiles!author_id(name, role, avatar_url, grad_year)').order('created_at', { ascending: false });
+    const { data, error } = await this.supabase.from('posts').select('*, profiles!author_id(name, role, avatar_url, avatar_position, grad_year)').order('created_at', { ascending: false });
     if (error) { console.error('Error fetching posts:', error); return []; }
     return data.map(p => ({
       ...p,
@@ -59,10 +59,47 @@ const ASDFL = {
   },
 
   async fetchScholarships() {
-    if (!this.supabase) return [];
-    const { data, error } = await this.supabase.from('scholarships').select('*').order('created_at', { ascending: false });
-    if (error) { console.error('Error fetching scholarships:', error); return []; }
-    return data;
+    if (this.supabase) {
+      try {
+        const { data, error } = await this.supabase.from('scholarships').select('*').order('created_at', { ascending: false });
+        if (!error && data) return data;
+        console.warn('Supabase fetch scholarships error, falling back to LocalStorage:', error);
+      } catch (err) {
+        console.warn('Exception fetching scholarships from Supabase, falling back to LocalStorage:', err);
+      }
+    }
+
+    // Fallback to local storage
+    try {
+      let localScholarships = JSON.parse(localStorage.getItem('asdfl_scholarships') || '[]');
+      if (localScholarships.length === 0) {
+        localScholarships = [
+          {
+            id: 's1',
+            title: 'ASDFL Mezunları Yüksek Öğrenim Bursu',
+            amount: '₺3.000 / Ay',
+            deadline: new Date(Date.now() + 3600000 * 24 * 30).toISOString(),
+            description: 'Üniversitede eğitimine devam eden ve maddi desteğe ihtiyaç duyan başarılı ASDFL mezunu öğrencilerine yöneliktir.',
+            sponsor: 'Dernek Yönetimi',
+            active: true
+          },
+          {
+            id: 's2',
+            title: 'Dr. Ahmet Yılmaz Başarı Bursu',
+            amount: '₺4.500 / Ay',
+            deadline: new Date(Date.now() + 3600000 * 24 * 15).toISOString(),
+            description: 'Tıp, Diş Hekimliği veya Sağlık Bilimleri fakültelerinde okuyan, derslerinde üstün başarı gösteren öğrencilere özel destektir.',
+            sponsor: 'Ahmet Yılmaz (1998 Mezunu)',
+            active: true
+          }
+        ];
+        localStorage.setItem('asdfl_scholarships', JSON.stringify(localScholarships));
+      }
+      return localScholarships;
+    } catch (e) {
+      console.warn('Error reading scholarships from localStorage:', e);
+      return [];
+    }
   },
 
   async fetchGallery() {
@@ -183,7 +220,7 @@ const ASDFL = {
       try {
         const { data, error } = await this.supabase
           .from('mentorships')
-          .select('*, mentor:profiles!mentor_id(name, email, role, grad_year, job, city), student:profiles!student_id(name, email, role, grad_year, grade, city)');
+          .select('*, mentor:profiles!mentor_id(name, email, role, grad_year, job, city, avatar_url, avatar_position), student:profiles!student_id(name, email, role, grad_year, grade, city, avatar_url, avatar_position)');
         if (!error && data) return data;
         console.warn('Supabase fetch mentorships error, falling back to LocalStorage:', error);
       } catch (err) {
@@ -320,7 +357,7 @@ const ASDFL = {
       try {
         const { data, error } = await this.supabase
           .from('mentorship_appointments')
-          .select('*, mentor:profiles!mentor_id(name), student:profiles!student_id(name)');
+          .select('*, mentor:profiles!mentor_id(name, avatar_url, avatar_position), student:profiles!student_id(name, avatar_url, avatar_position)');
         if (!error && data) return data;
         console.warn('Supabase fetch appointments error, falling back to LocalStorage:', error);
       } catch (err) {
@@ -476,7 +513,7 @@ const ASDFL = {
     if (this.supabase) {
       const { data, error } = await this.supabase
         .from('job_postings')
-        .select('*, profiles!employer_id(name, role, grad_year, city, job, company)')
+        .select('*, profiles!employer_id(name, role, grad_year, city, job, company, avatar_url, avatar_position)')
         .order('created_at', { ascending: false });
       if (error) { console.error('Error fetching job postings:', error); return []; }
       return data.map(jp => ({
@@ -484,6 +521,8 @@ const ASDFL = {
         employerName: jp.profiles?.name || 'Mezun',
         employerRole: jp.profiles?.role || 'Mezun',
         employerYear: jp.profiles?.grad_year,
+        employerAvatarUrl: jp.profiles?.avatar_url || '',
+        employerAvatarPosition: jp.profiles?.avatar_position || '',
         initials: this.getInitials(jp.profiles?.name || 'M')
       }));
     } else {
@@ -532,7 +571,7 @@ const ASDFL = {
       if (!this.currentUser) return [];
       const { data, error } = await this.supabase
         .from('job_applications')
-        .select('*, job_postings(*), profiles!applicant_id(name, role, grad_year, email, phone)')
+        .select('*, job_postings(*), profiles!applicant_id(name, role, grad_year, email, phone, avatar_url, avatar_position)')
         .order('created_at', { ascending: false });
       if (error) { console.error('Error fetching applications:', error); return []; }
       return data.map(app => ({
@@ -545,6 +584,8 @@ const ASDFL = {
         applicantYear: app.profiles?.grad_year,
         applicantEmail: app.profiles?.email,
         applicantPhone: app.profiles?.phone,
+        applicantAvatarUrl: app.profiles?.avatar_url || '',
+        applicantAvatarPosition: app.profiles?.avatar_position || '',
         initials: this.getInitials(app.profiles?.name || 'U')
       }));
     } else {
@@ -573,7 +614,7 @@ const ASDFL = {
     if (this.supabase) {
       const { data, error } = await this.supabase
         .from('internship_requests')
-        .select('*, profiles!student_id(name, role, grad_year, city, grade, class_section)')
+        .select('*, profiles!student_id(name, role, grad_year, city, grade, class_section, avatar_url, avatar_position)')
         .order('created_at', { ascending: false });
       if (error) { console.error('Error fetching internship requests:', error); return []; }
       return data.map(ir => ({
@@ -582,6 +623,8 @@ const ASDFL = {
         studentRole: ir.profiles?.role || 'Öğrenci',
         studentGrade: ir.profiles?.grade,
         studentClassSection: ir.profiles?.class_section,
+        studentAvatarUrl: ir.profiles?.avatar_url || '',
+        studentAvatarPosition: ir.profiles?.avatar_position || '',
         initials: this.getInitials(ir.profiles?.name || 'Ö')
       }));
     } else {
@@ -892,13 +935,85 @@ const ASDFL = {
     if(m) m.classList.remove('open');
   },
 
+  getAvatarHTML(user, sizeClass = '', extraStyle = '') {
+    if (!user) return `<div class="${sizeClass}" style="${extraStyle}">?</div>`;
+    const avatarUrl = user.avatar_url || user.avatarUrl;
+    const initials = user.initials || this.getInitials(user.name || 'U');
+    const position = user.avatar_position || user.avatarPosition || '50% 50%';
+    
+    const isAdminPage = window.location.pathname.includes('yonetim.html');
+    let finalClass = sizeClass;
+    if (!isAdminPage && sizeClass.includes('avatar') && !sizeClass.includes('profile-avatar')) {
+      finalClass = 'photo-frame ' + sizeClass;
+    }
+    
+    if (avatarUrl) {
+      let transformStr = '';
+      let objPosStr = 'object-position: center;';
+      if (!isAdminPage && position.includes(',')) {
+        const [scale, x, y] = position.split(',');
+        transformStr = `transform: scale(${scale}) translate(${x}, ${y}); transform-origin: center center;`;
+        objPosStr = '';
+      } else if (!position.includes(',')) {
+        objPosStr = `object-position: ${position};`;
+      }
+      return `
+        <div class="${finalClass}" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; ${extraStyle}">
+          <img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover; ${objPosStr} ${transformStr}">
+        </div>
+      `;
+    }
+    return `<div class="${finalClass}" style="display: flex; align-items: center; justify-content: center; ${extraStyle}">${initials}</div>`;
+  },
+
+  setAvatarElement(element, user) {
+    if (!element) return;
+    const avatarUrl = user?.avatar_url || user?.avatarUrl;
+    const position = user?.avatar_position || user?.avatarPosition || '50% 50%';
+    
+    const isAdminPage = window.location.pathname.includes('yonetim.html');
+    if (!isAdminPage && !element.classList.contains('profile-avatar')) {
+      element.classList.add('photo-frame');
+    }
+
+    if (avatarUrl) {
+      element.style.backgroundImage = '';
+      element.style.position = 'relative';
+      element.style.overflow = 'hidden';
+      element.style.display = 'flex';
+      element.style.alignItems = 'center';
+      element.style.justifyContent = 'center';
+      element.textContent = '';
+      
+      let transformStr = '';
+      let objPosStr = 'object-position: center;';
+      if (!isAdminPage && position.includes(',')) {
+        const [scale, x, y] = position.split(',');
+        transformStr = `transform: scale(${scale}) translate(${x}, ${y}); transform-origin: center center;`;
+        objPosStr = '';
+      } else if (!position.includes(',')) {
+        objPosStr = `object-position: ${position};`;
+      }
+      
+      element.innerHTML = `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover; ${objPosStr} ${transformStr}">`;
+    } else {
+      element.style.backgroundImage = '';
+      element.style.display = 'flex';
+      element.style.alignItems = 'center';
+      element.style.justifyContent = 'center';
+      element.textContent = user ? (user.initials || this.getInitials(user.name)) : '?';
+    }
+  },
+
   formatDate(dateStr) {
+    if (!dateStr) return '';
     const d = new Date(dateStr);
     return d.toLocaleDateString('tr-TR', { day:'numeric', month:'long', year:'numeric' });
   },
 
   getInitials(name) {
-    return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    if (!name) return 'U';
+    return name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2);
   },
 
   // Scroll reveal
@@ -1007,14 +1122,22 @@ const ASDFL = {
     const { data: { session } } = await this.supabase.auth.getSession();
     if (session) {
       let dbRole = session.user.user_metadata?.role || 'Kullanıcı';
+      let dbAvatarUrl = session.user.user_metadata?.avatar_url || '';
+      let dbAvatarPosition = session.user.user_metadata?.avatar_position || '50% 50%';
       try {
         const { data: profile } = await this.supabase
           .from('profiles')
-          .select('role')
+          .select('role, avatar_url, avatar_position')
           .eq('id', session.user.id)
           .single();
         if (profile?.role) {
           dbRole = profile.role;
+        }
+        if (profile?.avatar_url) {
+          dbAvatarUrl = profile.avatar_url;
+        }
+        if (profile?.avatar_position) {
+          dbAvatarPosition = profile.avatar_position;
         }
       } catch (e) {
         console.error('Error fetching live role:', e);
@@ -1025,7 +1148,9 @@ const ASDFL = {
         id: session.user.id,
         name: session.user.user_metadata?.name || session.user.email.split('@')[0],
         email: session.user.email,
-        role: dbRole  // always use fresh DB role, not stale metadata
+        role: dbRole,  // always use fresh DB role, not stale metadata
+        avatar_url: dbAvatarUrl,
+        avatar_position: dbAvatarPosition
       };
     } else {
       this.currentUser = null;
@@ -1039,14 +1164,22 @@ const ASDFL = {
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         if (session) {
           let dbRole = session.user.user_metadata?.role || 'Kullanıcı';
+          let dbAvatarUrl = session.user.user_metadata?.avatar_url || '';
+          let dbAvatarPosition = session.user.user_metadata?.avatar_position || '50% 50%';
           try {
             const { data: profile } = await this.supabase
               .from('profiles')
-              .select('role')
+              .select('role, avatar_url, avatar_position')
               .eq('id', session.user.id)
               .single();
             if (profile?.role) {
               dbRole = profile.role;
+            }
+            if (profile?.avatar_url) {
+              dbAvatarUrl = profile.avatar_url;
+            }
+            if (profile?.avatar_position) {
+              dbAvatarPosition = profile.avatar_position;
             }
           } catch (e) {
             console.error('Error fetching live role on change:', e);
@@ -1057,7 +1190,9 @@ const ASDFL = {
             id: session.user.id,
             name: session.user.user_metadata?.name || session.user.email.split('@')[0],
             email: session.user.email,
-            role: dbRole  // always use fresh DB role, not stale metadata
+            role: dbRole,  // always use fresh DB role, not stale metadata
+            avatar_url: dbAvatarUrl,
+            avatar_position: dbAvatarPosition
           };
         }
       } else if (event === 'SIGNED_OUT') {
@@ -1075,10 +1210,14 @@ const ASDFL = {
 
     if (this.currentUser) {
       const initials = this.getInitials(this.currentUser.name);
+      const avatarUrl = this.currentUser.avatar_url || this.currentUser.avatarUrl;
+      const avatarHTML = avatarUrl 
+        ? `<div class="profile-avatar" style="background-image: url(${avatarUrl}); background-size: cover; background-position: center; border: 1.5px solid var(--gold-500);"></div>`
+        : `<div class="profile-avatar">${initials}</div>`;
       navCta.innerHTML = `
         <div class="user-profile" onclick="this.classList.toggle('open')">
           <button class="profile-btn">
-            <div class="profile-avatar">${initials}</div>
+            ${avatarHTML}
             <span style="display:none;@media(min-width:768px){display:inline}">${this.currentUser.name}</span>
             <i data-lucide="chevron-down" style="width:14px;height:14px"></i>
           </button>
@@ -1163,6 +1302,7 @@ const ASDFL = {
     const job = document.getElementById('regJob')?.value;
     const company = document.getElementById('regCompany')?.value || '';
     const city = document.getElementById('regCity')?.value;
+    const university = document.getElementById('regUniversity')?.value || '';
     const grade = document.getElementById('regGrade')?.value;
     const branch = document.getElementById('regBranch')?.value;
     const teachingYear = document.getElementById('regTeachingYear')?.value;
@@ -1190,7 +1330,7 @@ const ASDFL = {
     };
     
     if (role === 'Mezun') {
-      metadata.gradYear = gradYear; metadata.job = job; metadata.city = city; metadata.company = company;
+      metadata.gradYear = gradYear; metadata.job = job; metadata.city = city; metadata.company = company; metadata.university = university;
     } else if (role === 'Öğrenci') {
       metadata.grade = grade;
     } else if (role === 'Öğretmen') {
@@ -1208,8 +1348,26 @@ const ASDFL = {
         return;
       }
     } else {
-      localStorage.setItem('asdfl_user', JSON.stringify({ email, ...metadata }));
-      this.currentUser = { email, ...metadata };
+      const newUser = {
+        id: Math.random().toString(36).substring(2),
+        email,
+        ...metadata,
+        mentor: false,
+        grad_year: gradYear ? parseInt(gradYear) : null,
+        class_section: classSection,
+        university: university
+      };
+      localStorage.setItem('asdfl_user', JSON.stringify(newUser));
+      this.currentUser = newUser;
+      
+      // Also add to local alumni list for immediate directory visibility
+      try {
+        const localAlumni = JSON.parse(localStorage.getItem('asdfl_alumni') || '[]');
+        localAlumni.push(newUser);
+        localStorage.setItem('asdfl_alumni', JSON.stringify(localAlumni));
+      } catch (e) {
+        console.warn('Could not add to local alumni list:', e);
+      }
     }
     
     this.closeModal('registerModal');
@@ -1304,6 +1462,134 @@ const ASDFL = {
     document.querySelectorAll('#regCompany, #editCompany').forEach(el => el.setAttribute('list', 'companiesDatalist'));
   },
 
+  async ensureUniversitiesLoaded() {
+    if (window.TURKISH_UNIVERSITIES) return;
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'js/universities.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Universities script failed to load'));
+      document.head.appendChild(script);
+    });
+  },
+
+  async setupSearchableDropdowns() {
+    const dropdownWrappers = document.querySelectorAll('.searchable-select-wrapper');
+    if (dropdownWrappers.length === 0) return;
+
+    try {
+      await this.ensureUniversitiesLoaded();
+    } catch (e) {
+      console.warn('Could not load universities list:', e);
+    }
+
+    const unis = window.TURKISH_UNIVERSITIES || [];
+    
+    dropdownWrappers.forEach(wrapper => {
+      const triggerInput = wrapper.querySelector('.searchable-select-trigger');
+      const dropdown = wrapper.querySelector('.searchable-select-dropdown');
+      const searchInput = wrapper.querySelector('.searchable-select-search-input');
+      const itemsList = wrapper.querySelector('.searchable-select-items');
+      
+      if (!triggerInput || !dropdown || !searchInput || !itemsList) return;
+      
+      // Prevent double binding
+      if (wrapper.dataset.bound === 'true') return;
+      wrapper.dataset.bound = 'true';
+
+      function renderList(query = '') {
+        const uppercaseQuery = query.toLocaleUpperCase('tr');
+        
+        let filtered = unis;
+        if (uppercaseQuery) {
+          filtered = unis.filter(uni => 
+            uni.toLocaleUpperCase('tr').includes(uppercaseQuery)
+          );
+        }
+        
+        let html = '';
+        
+        // Show "Add custom" option if the query doesn't match any university exactly
+        const exactMatch = unis.some(uni => uni.toLocaleUpperCase('tr') === uppercaseQuery);
+        if (uppercaseQuery && !exactMatch) {
+          html += `<li class="searchable-select-item custom-add" data-value="${query.replace(/"/g, '&quot;')}"><i data-lucide="plus" style="width:12px;height:12px;display:inline-block;margin-right:4px;"></i> Ekle: "${query}"</li>`;
+        }
+        
+        if (filtered.length === 0 && !uppercaseQuery) {
+          html += '<li class="searchable-select-item no-results">Liste yüklenemedi veya boş.</li>';
+        } else if (filtered.length === 0 && uppercaseQuery) {
+          if (exactMatch) {
+            html += '<li class="searchable-select-item no-results">Sonuç bulunamadı.</li>';
+          }
+        } else {
+          filtered.forEach(uni => {
+            html += `<li class="searchable-select-item" data-value="${uni.replace(/"/g, '&quot;')}">${uni}</li>`;
+          });
+        }
+        
+        itemsList.innerHTML = html;
+        
+        if (window.lucide) {
+          lucide.createIcons({
+            attrs: {
+              class: 'lucide-icon'
+            }
+          });
+        }
+        
+        itemsList.querySelectorAll('.searchable-select-item').forEach(item => {
+          if (item.classList.contains('no-results')) return;
+          
+          item.onclick = function(e) {
+            e.stopPropagation();
+            const val = this.getAttribute('data-value');
+            triggerInput.value = val;
+            closeDropdown();
+            triggerInput.dispatchEvent(new Event('change'));
+          };
+        });
+      }
+      
+      function openDropdown() {
+        document.querySelectorAll('.searchable-select-dropdown').forEach(el => {
+          if (el !== dropdown) el.style.display = 'none';
+        });
+        
+        dropdown.style.display = 'flex';
+        searchInput.value = '';
+        renderList('');
+        setTimeout(() => searchInput.focus(), 50);
+      }
+      
+      function closeDropdown() {
+        dropdown.style.display = 'none';
+      }
+      
+      triggerInput.onclick = function(e) {
+        e.stopPropagation();
+        openDropdown();
+      };
+      
+      searchInput.oninput = function() {
+        renderList(this.value);
+      };
+      
+      dropdown.onclick = function(e) {
+        e.stopPropagation();
+      };
+    });
+    
+    // Close dropdowns when clicking outside
+    if (!window.searchableDropdownOutsideClickBound) {
+      window.searchableDropdownOutsideClickBound = true;
+      document.addEventListener('click', () => {
+        document.querySelectorAll('.searchable-select-dropdown').forEach(el => {
+          el.style.display = 'none';
+        });
+      });
+    }
+  },
+
   init() {
     // Dynamically inject the hidden utility style to bypass aggressive browser caching globally!
     const style = document.createElement('style');
@@ -1323,6 +1609,7 @@ const ASDFL = {
     this.checkAuth();
     this.initCities();
     this.initAutocomplete();
+    this.setupSearchableDropdowns();
   }
 };
 

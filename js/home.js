@@ -60,15 +60,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     const mentors = allAlumni.filter(a => a.mentor).slice(0, 4);
-    el.innerHTML = mentors.map(a => `
+    el.innerHTML = mentors.map(a => {
+      let jobCompanyText = '';
+      if (a.job) {
+        jobCompanyText = a.job + (a.company ? ` @ ${a.company}` : '');
+      } else if (a.company) {
+        jobCompanyText = a.company;
+      }
+      
+      return `
       <div class="card alumni-card reveal lift">
-        <div class="avatar avatar-lg" style="margin:0 auto 1rem">${a.initials}</div>
+        ${ASDFL.getAvatarHTML(a, 'avatar avatar-lg', 'margin:0 auto 1rem')}
         <h4>${a.name}</h4>
         <span class="year-badge">${a.grad_year || 'Bilinmiyor'} Mezunu</span>
-        <p style="font-size:.82rem">${a.job || 'Meslek Belirtilmemiş'}${a.company ? ' · ' + a.company : ''}</p>
-        <p style="font-size:.78rem;color:var(--text-muted);margin-top:.25rem"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.city || 'Şehir Belirtilmemiş'}</p>
+        ${jobCompanyText ? `<p style="font-size:.82rem;margin-bottom:0.25rem;"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${jobCompanyText}</p>` : ''}
+        ${a.university ? `<p style="font-size:.78rem;color:var(--text-secondary);margin-top:.25rem;margin-bottom:0.25rem;"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.university}</p>` : ''}
+        <p style="font-size:.78rem;color:var(--text-muted);margin-top:.25rem;"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.city || 'Şehir Belirtilmemiş'}</p>
         <span class="badge badge-teal mentor-tag"><i data-lucide="sparkles" style="width:1em;height:1em"></i> Mentör</span>
-      </div>`).join('');
+      </div>`;
+    }).join('');
     ASDFL.initReveal();
     setTimeout(() => lucide.createIcons(), 10);
   }
@@ -98,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return `
       <div class="card feed-card reveal">
         <div class="feed-header">
-          <div class="avatar">${p.initials}</div>
+          ${ASDFL.getAvatarHTML({ initials: p.initials, avatar_url: p.profiles?.avatar_url, avatar_position: p.profiles?.avatar_position, name: p.author }, 'post-avatar')}
           <div class="info">
             <strong>${p.author}</strong>
             <span>${p.authorYear || 'Bilinmiyor'} Mezunu · ${timeStr}</span>

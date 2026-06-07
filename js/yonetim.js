@@ -68,7 +68,7 @@ async function loadAdminData() {
         ASDFL.supabase.from('profiles').select('*').order('name'),
         ASDFL.supabase.from('events').select('*').order('date', { ascending: false }),
         ASDFL.supabase.from('scholarships').select('*').order('created_at', { ascending: false }),
-        ASDFL.supabase.from('applications').select('*, profiles(name, role, grad_year, email, phone)').order('created_at', { ascending: false })
+        ASDFL.supabase.from('applications').select('*, profiles(name, role, grad_year, email, phone, avatar_url)').order('created_at', { ascending: false })
       ]);
 
       allMembers = membersRes.data || [];
@@ -254,7 +254,7 @@ function renderDashboardOverview() {
       memberListEl.innerHTML = recentMembers.map(m => `
         <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem;background:rgba(255,255,255,0.01);border:1px solid var(--glass-border);border-radius:var(--radius-md)">
           <div style="display:flex;align-items:center;gap:.75rem">
-            <div class="avatar" style="width:36px;height:36px;font-size:.85rem">${ASDFL.getInitials(m.name)}</div>
+            ${ASDFL.getAvatarHTML(m, 'avatar', 'width:36px;height:36px;font-size:.85rem')}
             <div>
               <strong style="font-size:.88rem;color:var(--text-primary);display:block">${m.name}</strong>
               <span style="font-size:.75rem;color:var(--text-muted)">${m.role} ${m.grad_year ? '- ' + m.grad_year : ''}</span>
@@ -317,7 +317,7 @@ function renderMembersTable(list) {
     <tr>
       <td>
         <div style="display:flex;align-items:center;gap:.75rem">
-          <div class="avatar" style="width:34px;height:34px;font-size:.8rem">${ASDFL.getInitials(m.name)}</div>
+          ${ASDFL.getAvatarHTML(m, 'avatar', 'width:34px;height:34px;font-size:.8rem')}
           <div>
             <strong style="color:var(--text-primary);display:block">${m.name}</strong>
             <span style="font-size:.75rem;color:var(--text-muted)">${m.grad_year ? m.grad_year + ' Mezunu' : 'Üye'} ${m.class_section ? '- ' + m.class_section + ' Şubesi' : ''}</span>
@@ -728,7 +728,7 @@ function renderScholarshipsTable() {
         <tr>
           <td>
             <div style="display:flex;align-items:center;gap:0.5rem">
-              <div class="avatar avatar-sm">${ASDFL.getInitials(studentName)}</div>
+              ${ASDFL.getAvatarHTML({ initials: ASDFL.getInitials(studentName), name: studentName, avatar_url: a.profiles?.avatar_url }, 'avatar avatar-sm')}
               <div>
                 <strong style="color:var(--text-primary);display:block">${studentName}</strong>
                 <span style="font-size:0.75rem;color:var(--text-muted);">${studentEmail}</span>

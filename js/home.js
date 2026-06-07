@@ -3,10 +3,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   await ASDFL.waitForAuth();
 
   // Fetch all required data in parallel (only fetch alumni and posts if logged in)
-  const [events, alumni, posts] = await Promise.all([
+  const [events, alumni, posts, logoAnnouncements] = await Promise.all([
     ASDFL.fetchEvents(),
     ASDFL.currentUser ? ASDFL.fetchAlumni() : Promise.resolve([]),
-    ASDFL.currentUser ? ASDFL.fetchPosts() : Promise.resolve([])
+    ASDFL.currentUser ? ASDFL.fetchPosts() : Promise.resolve([]),
+    ASDFL.fetchLogoAnnouncements()
   ]);
 
   // Render upcoming events
@@ -163,8 +164,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     ASDFL.closeModal('loginModal');
   };
 
+  function renderLogoAnnouncements(announcements) {
+    if (!announcements) return;
+    announcements.forEach(announce => {
+      const cardId = announce.id;
+      const titleEl = document.getElementById(`logoAnnounceTitle${cardId}`);
+      const subEl = document.getElementById(`logoAnnounceSub${cardId}`);
+      const iconEl = document.getElementById(`logoAnnounceIcon${cardId}`);
+      if (titleEl) titleEl.textContent = announce.title;
+      if (subEl) subEl.textContent = announce.subtitle;
+      if (iconEl && announce.icon) {
+        iconEl.innerHTML = `<i data-lucide="${announce.icon}" style="width:1.2rem;height:1.2rem"></i>`;
+      }
+    });
+    setTimeout(() => lucide.createIcons(), 10);
+  }
+
   renderHomeEvents(events);
   renderFeaturedAlumni(alumni);
   renderHomeFeed(posts);
+  renderLogoAnnouncements(logoAnnouncements);
   createParticles();
 });

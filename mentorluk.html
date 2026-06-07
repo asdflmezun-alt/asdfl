@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mentörlük Portalı | ASDFL Mezunlar Derneği</title>
+<meta name="description" content="ASDFL Mezunlar Derneği mentörlük yönetim portalı. Görüşmeleri planlayın, randevularınızı takip edin.">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/animations.css">
+<link rel="stylesheet" href="css/mentor.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<nav class="navbar" id="navbar">
+  <a href="index.html" class="nav-brand"><div class="logo-icon"><i data-lucide="microscope" style="width:1em;height:1em"></i></div><div>ASDFL<span class="sub">Mezunlar Derneği</span></div></a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="index.html"><i data-lucide="home" style="width:1.2rem;height:1.2rem"></i> Ana Sayfa</a></li>
+    <li><a href="mezunlar.html"><i data-lucide="users" style="width:1.2rem;height:1.2rem"></i> Mezunlar</a></li>
+    <li><a href="topluluk.html"><i data-lucide="message-circle" style="width:1.2rem;height:1.2rem"></i> Topluluk</a></li>
+    <li><a href="etkinlikler.html"><i data-lucide="megaphone" style="width:1.2rem;height:1.2rem"></i> Etkinlikler</a></li>
+    <li><a href="galeri.html"><i data-lucide="image" style="width:1.2rem;height:1.2rem"></i> Galeri</a></li>
+    <li><a href="burs-mentorluk.html"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i> Burs &amp; Mentörlük</a></li>
+  </ul>
+  <div class="nav-cta">
+    <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+  </div>
+</nav>
+
+<section class="section" style="padding-top:8rem; min-height: 80vh;">
+  <div class="container" style="max-width:1200px">
+    
+    <!-- Auth Blocker (Visible when user is anonymous) -->
+    <div id="mentorAuthBlock" style="text-align:center; padding: 4rem 2rem; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); backdrop-filter: blur(12px);">
+      <div style="font-size: 4rem; color: var(--gold-500); margin-bottom: 1.5rem;"><i data-lucide="lock"></i></div>
+      <h2 style="margin-bottom: 0.5rem;">Üye Girişi Gerekli</h2>
+      <p style="color: var(--text-muted); margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
+        Mentörlük portalını (başvuruları takip etme, randevu oluşturma ve takvim planlama) görüntülemek için üye girişi yapmalısınız.
+      </p>
+      <button class="btn btn-primary" onclick="ASDFL.openModal('loginModal')">Giriş Yap / Üye Ol</button>
+    </div>
+
+    <!-- Active Portal Wrapper (Visible only when authenticated) -->
+    <div id="mentorActiveWrapper" style="display:none;">
+      
+      <!-- Top Title Bar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <span class="badge badge-gold" id="portalRoleBadge" style="font-size:0.75rem;"><i data-lucide="sparkles" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> Danışan Paneli</span>
+          <h1 style="margin-top: 0.5rem; font-size: 2rem;" id="portalUserName">Hoş Geldiniz</h1>
+          <p style="color:var(--text-muted); font-size: .88rem; margin-top: 0.25rem;">Görüşmelerinizi planlayın ve mentörlük sürecinizi koordine edin.</p>
+        </div>
+      </div>
+
+      <!-- Main Portal Layout -->
+      <div class="mentor-portal-grid">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="card" style="padding: 1rem; align-self: start; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+          <nav style="display:flex; flex-direction:column; gap: 0.5rem;">
+            <button class="portal-nav-btn active" id="btn-tab-overview" onclick="switchPortalTab('overview')">
+              <i data-lucide="layout-dashboard" style="width:1.2rem;height:1.2rem"></i> Genel Bakış
+            </button>
+            <button class="portal-nav-btn" id="btn-tab-requests" onclick="switchPortalTab('requests')">
+              <i data-lucide="clipboard-list" style="width:1.2rem;height:1.2rem"></i> Talepler &amp; Başvurular
+            </button>
+            <button class="portal-nav-btn" id="btn-tab-connections" onclick="switchPortalTab('connections')">
+              <i data-lucide="users" style="width:1.2rem;height:1.2rem"></i> Bağlantılarım
+            </button>
+            <button class="portal-nav-btn" id="btn-tab-calendar" onclick="switchPortalTab('calendar')">
+              <i data-lucide="calendar" style="width:1.2rem;height:1.2rem"></i> Görüşme Takvimi
+            </button>
+          </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main style="min-width: 0;">
+          
+          <!-- 1. OVERVIEW TAB -->
+          <div id="tab-overview" class="portal-tab-content active">
+            <div class="grid-3" style="margin-bottom: 2rem;">
+              <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+                <div style="font-size: 2rem; color: var(--gold-500); background: rgba(244,168,54,0.06); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="users"></i></div>
+                <div>
+                  <h3 id="statConnectionsCount" style="margin: 0; font-size: 1.5rem;">0</h3>
+                  <p style="color:var(--text-muted); font-size: 0.8rem; margin: 0;">Aktif Bağlantı</p>
+                </div>
+              </div>
+              <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+                <div style="font-size: 2rem; color: var(--teal-500); background: rgba(45,206,137,0.06); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="calendar-days"></i></div>
+                <div>
+                  <h3 id="statAppointmentsCount" style="margin: 0; font-size: 1.5rem;">0</h3>
+                  <p style="color:var(--text-muted); font-size: 0.8rem; margin: 0;">Gelecek Randevu</p>
+                </div>
+              </div>
+              <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+                <div style="font-size: 2rem; color: var(--gold-500); background: rgba(244,168,54,0.06); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="clock"></i></div>
+                <div>
+                  <h3 id="statPendingRequestsCount" style="margin: 0; font-size: 1.5rem;">0</h3>
+                  <p style="color:var(--text-muted); font-size: 0.8rem; margin: 0;">Bekleyen Talep</p>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; @media(max-width: 768px){grid-template-columns: 1fr;}">
+              <!-- Upcoming meetings card -->
+              <div class="card" style="padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+                <h3 style="font-size: 1.1rem; margin-bottom: 1rem; font-weight:600;"><i data-lucide="clock" style="display:inline-block; vertical-align:middle; margin-top:-2px; margin-right:4px;"></i> Yaklaşan Görüşmeler</h3>
+                <div id="overviewUpcomingList" class="appointment-list">
+                  <p style="color: var(--text-muted); font-size:0.85rem;">Yakın zamanda planlanmış randevunuz bulunmamaktadır.</p>
+                </div>
+              </div>
+
+              <!-- Quick notifications card -->
+              <div class="card" style="padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+                <h3 style="font-size: 1.1rem; margin-bottom: 1rem; font-weight:600;"><i data-lucide="sparkles" style="display:inline-block; vertical-align:middle; margin-top:-2px; margin-right:4px;"></i> Son İstekler / Hareketler</h3>
+                <div id="overviewNotificationsList" style="display:flex; flex-direction:column; gap:0.75rem;">
+                  <p style="color: var(--text-muted); font-size:0.85rem;">Henüz yeni bir talep bulunmamaktadır.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. REQUESTS TAB -->
+          <div id="tab-requests" class="portal-tab-content">
+            <div class="card" style="padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+              <h3 id="requestsTitle" style="font-size: 1.2rem; margin-bottom: 0.5rem; font-weight:600;">Başvurularım</h3>
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;" id="requestsSubtitle">Mentörlük almak için gönderdiğiniz başvuruları buradan inceleyebilirsiniz.</p>
+              
+              <div id="requestsListContainer" style="display:flex; flex-direction:column; gap: 1rem;">
+                <!-- Table or cards rendered dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. CONNECTIONS TAB -->
+          <div id="tab-connections" class="portal-tab-content">
+            <div class="card" style="padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+              <h3 id="connectionsTitle" style="font-size: 1.2rem; margin-bottom: 0.5rem; font-weight:600;">Aktif Bağlantılarım</h3>
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;" id="connectionsSubtitle">Eşleştiğiniz ve mentörlük süreci aktif olan kullanıcılar.</p>
+              
+              <div class="grid-2" id="connectionsGridContainer" style="gap: 1rem;">
+                <!-- Connections cards rendered here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. CALENDAR TAB -->
+          <div id="tab-calendar" class="portal-tab-content">
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; @media(max-width: 992px){grid-template-columns: 1fr;}">
+              
+              <!-- Left side: Calendar Grid & Daily Events list -->
+              <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <!-- Month Grid -->
+                <div class="calendar-wrapper">
+                  <div class="calendar-header">
+                    <button class="calendar-nav-btn" id="btnPrevMonth"><i data-lucide="chevron-left" style="width:1.1rem;height:1.1rem"></i></button>
+                    <h3 id="calendarMonthTitle">Haziran 2026</h3>
+                    <button class="calendar-nav-btn" id="btnNextMonth"><i data-lucide="chevron-right" style="width:1.1rem;height:1.1rem"></i></button>
+                  </div>
+                  <div class="calendar-weekdays">
+                    <div>Pzt</div><div>Sal</div><div>Çar</div><div>Per</div><div>Cum</div><div>Cmt</div><div>Paz</div>
+                  </div>
+                  <div class="calendar-days" id="calendarDaysGrid">
+                    <!-- Days loaded dynamically -->
+                  </div>
+                </div>
+
+                <!-- Selected Day appointments list -->
+                <div class="card" style="padding: 1.25rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+                  <h4 style="font-size: 1rem; margin-bottom: 1rem; color:var(--text-primary);" id="selectedDateTitle">Seçilen Gün Randevuları</h4>
+                  <div id="selectedDayAppointments" class="appointment-list">
+                    <p style="color: var(--text-muted); font-size:0.85rem;">Randevu görmek için takvimden bir güne tıklayın.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right side: Booking Form -->
+              <div class="card" style="padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border); align-self: start;">
+                <h3 id="scheduleFormTitle" style="font-size: 1.15rem; margin-bottom: 0.5rem; font-weight:600;"><i data-lucide="plus" style="display:inline-block; vertical-align:middle; margin-top:-2px; margin-right:4px;"></i> Randevu Planla</h3>
+                <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 1.25rem;">Öğrencinizle çevrimiçi veya yüz yüze bir rehberlik randevusu oluşturun.</p>
+                
+                <form id="appointmentForm" onsubmit="event.preventDefault(); submitScheduleAppointment();">
+                  <div class="form-group">
+                    <label class="form-label" id="scheduleUserLabel">Öğrenci Seçin</label>
+                    <select class="form-select" id="appTargetUser" required>
+                      <option value="" disabled selected>Lütfen bağlantı seçin</option>
+                    </select>
+                  </div>
+
+                  <div class="grid-2">
+                    <div class="form-group">
+                      <label class="form-label">Tarih</label>
+                      <input type="date" class="form-input" id="appDate" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Saat</label>
+                      <input type="time" class="form-input" id="appTime" required>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Süre (Dakika)</label>
+                    <select class="form-select" id="appDuration">
+                      <option value="30">30 Dakika</option>
+                      <option value="45" selected>45 Dakika</option>
+                      <option value="60">60 Dakika</option>
+                      <option value="90">90 Dakika</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Randevu Notları / Konu</label>
+                    <textarea class="form-textarea" placeholder="Randevu konusu veya toplantı linki (Zoom/Meet)..." id="appNotes" style="min-height: 80px;" required></textarea>
+                  </div>
+
+                  <button class="btn btn-primary" type="submit" style="width: 100%; margin-top: 0.5rem;">
+                    Randevu Planla
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+
+        </main>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="loginModal" onclick="if(event.target===this)ASDFL.closeModal('loginModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="ASDFL.closeModal('loginModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2.5rem;margin-bottom:.5rem"><i data-lucide="microscope" style="width:1em;height:1em"></i></div>
+      <h3>ASDFL'ye Hoş Geldin</h3>
+      <p style="font-size:.9rem;margin-top:.25rem">E-posta ve şifrenizle giriş yapın</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">E-posta</label>
+      <input type="email" class="form-input" placeholder="ornek@email.com" id="loginEmail">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Şifre</label>
+      <input type="password" class="form-input" placeholder="••••••••" id="loginPass">
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="ASDFL.handleLogin('loginEmail', 'loginPass')">Giriş Yap</button>
+    <div class="divider"></div>
+    <p style="text-align:center;font-size:.88rem">Henüz üye değil misin? <a href="javascript:void(0)" onclick="ASDFL.closeModal('loginModal');ASDFL.openModal('registerModal')">Kayıt Ol</a></p>
+  </div>
+</div>
+
+<!-- REGISTER MODAL -->
+<div class="modal-overlay" id="registerModal" onclick="if(event.target===this)ASDFL.closeModal('registerModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="ASDFL.closeModal('registerModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2.5rem;margin-bottom:.5rem"><i data-lucide="user-plus" style="width:1em;height:1em"></i></div>
+      <h3>Aileye Katıl</h3>
+      <p style="font-size:.9rem;margin-top:.25rem">Mezun, öğrenci veya öğretmen olarak kayıt ol</p>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Üyelik Rolü</label>
+      <select class="form-select" id="regRole" onchange="toggleRegFields(this.value)">
+        <option value="Mezun">Mezun</option>
+        <option value="Öğrenci">Aktif Öğrenci</option>
+        <option value="Öğretmen">Öğretmen / İdari Kadro</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Ad Soyad</label>
+      <input type="text" class="form-input" placeholder="Adınız Soyadınız" id="regName">
+    </div>
+
+    <!-- Mezun Alanları -->
+    <div id="mezunFields">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Mezuniyet Yılı</label>
+          <input type="number" class="form-input" placeholder="Örn: 2015" id="regGradYear">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şube</label>
+          <input type="text" class="form-input" placeholder="Örn: A" id="regClassSectionAlumni" maxlength="2">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Meslek</label>
+          <input type="text" class="form-input" placeholder="Örn: Doktor" id="regJob">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Çalıştığı Kurum / Şirket</label>
+          <input type="text" class="form-input" placeholder="Örn: Google" id="regCompany">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Yaşadığı Şehir</label>
+        <select class="form-select" id="regCity"><option value="" disabled selected>Şehir Seçin</option></select>
+      </div>
+    </div>
+
+    <!-- Öğrenci Alanları -->
+    <div id="ogrenciFields" class="hidden">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Sınıf</label>
+          <select class="form-select" id="regGrade">
+            <option value="9. Sınıf">9. Sınıf</option>
+            <option value="10. Sınıf">10. Sınıf</option>
+            <option value="11. Sınıf">11. Sınıf</option>
+            <option value="12. Sınıf">12. Sınıf</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şube</label>
+          <input type="text" class="form-input" placeholder="Örn: A" id="regClassSectionStudent" maxlength="2">
+        </div>
+      </div>
+    </div>
+
+    <!-- Öğretmen Alanları -->
+    <div id="ogretmenFields" class="hidden">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Branş</label>
+          <input type="text" class="form-input" placeholder="Örn: Matematik" id="regBranch">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Görev Yılı</label>
+          <input type="number" class="form-input" placeholder="Örn: 2010" id="regTeachingYear">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:1rem">
+      <label class="form-label">Telefon Numarası</label>
+      <input type="tel" class="form-input" placeholder="0555 555 55 55" id="regPhone">
+    </div>
+    <div class="form-group" style="margin-top:1rem">
+      <label class="form-label">E-posta</label>
+      <input type="email" class="form-input" placeholder="ornek@email.com" id="regEmail">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Şifre</label>
+      <input type="password" class="form-input" placeholder="••••••••" id="regPass">
+    </div>
+    <div class="form-group" style="margin-top:1rem; display: flex; flex-direction: column; gap: 0.5rem; text-align: left;">
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
+        <input type="checkbox" id="regSharePhone" style="accent-color: var(--gold-500);"> Telefon numaramı diğer mezunlarla paylaş
+      </label>
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
+        <input type="checkbox" id="regShareEmail" style="accent-color: var(--gold-500);"> E-posta adresimi diğer mezunlarla paylaş
+      </label>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="ASDFL.handleRegister()">Kayıt Ol</button>
+    <div class="divider"></div>
+    <p style="text-align:center;font-size:.88rem">Zaten üye misin? <a href="javascript:void(0)" onclick="ASDFL.closeModal('registerModal');ASDFL.openModal('loginModal')">Giriş Yap</a></p>
+  </div>
+</div>
+
+<footer class="footer"><div class="container">
+  <div class="footer-grid">
+    <div class="footer-brand"><div class="nav-brand" style="margin-bottom:.5rem"><div class="logo-icon" style="width:38px;height:38px;font-size:1.1rem"><i data-lucide="microscope" style="width:1em;height:1em"></i></div><div>ASDFL<span class="sub">Mezunlar Derneği</span></div></div><p>Afyon Süleyman Demirel Fen Lisesi mezunlarını buluşturan platform.</p></div>
+    <div class="footer-col"><h5>Sayfalar</h5><ul class="footer-links"><li><a href="index.html">Ana Sayfa</a></li><li><a href="mezunlar.html">Mezunlar</a></li><li><a href="etkinlikler.html">Etkinlikler</a></li><li><a href="galeri.html">Galeri</a></li></ul></div>
+    <div class="footer-col"><h5>Destek</h5><ul class="footer-links"><li><a href="burs-mentorluk.html#basvuru">Burs Başvurusu</a></li>
+          <li><a href="kariyer.html">Kariyer Ağı</a></li><li><a href="burs-mentorluk.html#mentor">Mentör Ol</a></li><li><a href="burs-mentorluk.html#bagis">Bağış Yap</a></li></ul></div>
+    <div class="footer-col"><h5>İletişim</h5><ul class="footer-links"><li><a href="mailto:info@asdfl.org">info@asdfl.org</a></li></ul></div>
+  </div>
+  <div class="footer-bottom"><span>© 2025 ASDFL Mezunlar Derneği</span><span>💛 ASDFL ruhuyla yapıldı</span></div>
+</div></footer>
+
+<script>
+function toggleRegFields(role) {
+  document.getElementById('mezunFields').classList.toggle('hidden', role !== 'Mezun');
+  document.getElementById('ogrenciFields').classList.toggle('hidden', role !== 'Öğrenci');
+  document.getElementById('ogretmenFields').classList.toggle('hidden', role !== 'Öğretmen');
+}
+</script>
+
+<div class="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/app.js"></script>
+<script src="js/mentorluk.js"></script>
+</body>
+</html>

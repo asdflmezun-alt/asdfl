@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ${a.city ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.25rem">${a.city}</div>` : ''}
         ${a.bio ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">${a.bio}</div>` : ''}
         <button class="btn btn-primary btn-sm" style="margin-top:1rem;width:100%"
-          onclick="ASDFL.toast('Mentörlük talebi gönderildi!','success')">Bağlantı Kur</button>
+          onclick="openMentorshipRequestModal('${a.id}', '${a.name}')">Bağlantı Kur</button>
       </div>`).join('');
     ASDFL.initReveal();
     setTimeout(() => lucide.createIcons(), 10);
@@ -147,6 +147,41 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('mOlSpecialty').value = '';
     }
   };
+
+
+  window.openMentorshipRequestModal = function(mentorId, mentorName) {
+    if (!ASDFL.currentUser) {
+      ASDFL.toast('Mentörlük başvurusu yapmak için giriş yapmalısınız.', 'warning');
+      ASDFL.openModal('loginModal');
+      return;
+    }
+    document.getElementById('mReqMentorId').value = mentorId;
+    document.getElementById('mReqMentorName').value = mentorName;
+    document.getElementById('mReqNotes').value = '';
+    ASDFL.openModal('mentorshipRequestModal');
+  };
+
+  window.submitSpecificMentorRequest = async function() {
+    const mentorId = document.getElementById('mReqMentorId').value;
+    const notes = document.getElementById('mReqNotes').value;
+
+    if (!notes.trim()) {
+      ASDFL.toast('Lütfen kendinizi açıklayan kısa bir not yazın.', 'warning');
+      return;
+    }
+
+    const success = await ASDFL.createMentorshipRequest(mentorId, notes);
+    if (success) {
+      ASDFL.closeModal('mentorshipRequestModal');
+    }
+  };
+
+  // Show portal link box if logged in
+  if (ASDFL.currentUser) {
+    const portalBox = document.getElementById('mentorshipPortalLinkBox');
+    if (portalBox) portalBox.style.display = 'block';
+  }
+
 
   renderBursList(scholarships);
   renderBursMentors(alumni);

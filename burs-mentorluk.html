@@ -150,6 +150,17 @@
       </div>
     </div>
 
+    <!-- Logged in users dashboard link -->
+    <div id="mentorshipPortalLinkBox" style="display:none; margin-top: 2rem; text-align: center;">
+      <div class="card reveal" style="padding: 1.5rem; display: inline-flex; align-items: center; gap: 1.5rem; border-color: rgba(244,168,54,0.3); background: rgba(244, 168, 54, 0.03);">
+        <div style="text-align: left;">
+          <h4 style="color: var(--gold-400); margin: 0; font-size: 1.1rem;"><i data-lucide="sparkles" style="display:inline-block; vertical-align:middle; margin-top:-2px; margin-right: 4px; width: 1.1em; height: 1.1em;"></i> Mentörlük Portalınız Hazır!</h4>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">Başvurularınızı yönetmek, mentörünüzle iletişim kurmak ve randevuları planlamak için portala gidin.</p>
+        </div>
+        <a href="mentorluk.html" class="btn btn-primary btn-sm" style="white-space: nowrap;">Mentörlük Portalı <i data-lucide="arrow-right" style="width:1em;height:1em"></i></a>
+      </div>
+    </div>
+
     <div style="margin-top:3rem">
       <h3 style="margin-bottom:1.5rem;font-size:1.1rem">🌟 Öne Çıkan Mentörler</h3>
       <div class="grid-4" id="bursMentorGrid"></div>
@@ -245,6 +256,24 @@
     <div class="form-group"><label class="form-label">Uzmanlık</label><input class="form-input" placeholder="Yapay Zeka, Tıp, Kariyer..." id="mOlSpecialty"></div>
     <div class="form-group"><label class="form-label">Haftada kaç saat ayırabilirsiniz?</label><select class="form-select" id="mOlHours"><option>1-2 saat</option><option>3-5 saat</option><option>5+ saat</option></select></div>
     <button class="btn btn-primary" style="width:100%" onclick="submitMentorRegister()">Başvur</button>
+  </div>
+</div>
+
+<!-- MENTÖRLÜK BAŞVURU MODAL -->
+<div class="modal-overlay" id="mentorshipRequestModal" onclick="if(event.target===this)ASDFL.closeModal('mentorshipRequestModal')">
+  <div class="modal" style="max-width:500px">
+    <button class="modal-close" onclick="ASDFL.closeModal('mentorshipRequestModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <h3 style="margin-bottom:1.5rem"><i data-lucide="sparkles" style="width:1em;height:1em"></i> Mentörlük Başvurusu</h3>
+    <input type="hidden" id="mReqMentorId">
+    <div class="form-group">
+      <label class="form-label">Seçilen Mentör</label>
+      <input class="form-input" id="mReqMentorName" readonly style="opacity:0.8;background:rgba(255,255,255,0.05)">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Başvuru Notu / Beklentileriniz</label>
+      <textarea class="form-textarea" placeholder="Kendinizden bahsedin ve bu mentörlük sürecinden beklentilerinizi, hedeflerinizi yazın..." id="mReqNotes" style="min-height:120px"></textarea>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="submitSpecificMentorRequest()">Başvuruyu Gönder</button>
   </div>
 </div>
 

@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <div class="ac-actions">
           <button class="btn btn-ghost btn-sm" onclick="ASDFL.toast('Profil görüntüleme yakında!','info')">Profili Gör</button>
-          ${a.mentor ? `<button class="btn btn-secondary btn-sm" onclick="ASDFL.toast('Mentörlük talebi gönderildi!','success')">Mentör Ol</button>` : ''}
+          ${a.mentor ? `<button class="btn btn-secondary btn-sm" onclick="openMentorshipRequestModal('${a.id}', '${a.name}')">Bağlantı Kur</button>` : ''}
         </div>
       </div>`).join('');
     ASDFL.initReveal();
@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ${a.job ? `<div class="mc-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.job}</div>` : ''}
         ${a.city ? `<div class="mc-city"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.city}</div>` : ''}
         ${a.bio ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">${a.bio}</div>` : ''}
-        <button class="btn btn-primary btn-sm" style="margin-top:1rem;width:100%" onclick="ASDFL.toast('Mentörlük talebi gönderildi!','success')">Bağlantı Kur</button>
+        <button class="btn btn-primary btn-sm" style="margin-top:1rem;width:100%" onclick="openMentorshipRequestModal('${a.id}', '${a.name}')">Bağlantı Kur</button>
       </div>`).join('');
     ASDFL.initReveal();
     setTimeout(() => lucide.createIcons(), 10);
@@ -318,6 +318,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     setTimeout(() => lucide.createIcons(), 10);
   }
+
+  window.openMentorshipRequestModal = function(mentorId, mentorName) {
+    if (!ASDFL.currentUser) {
+      ASDFL.toast('Mentörlük başvurusu yapmak için giriş yapmalısınız.', 'warning');
+      ASDFL.openModal('loginModal');
+      return;
+    }
+    document.getElementById('mReqMentorId').value = mentorId;
+    document.getElementById('mReqMentorName').value = mentorName;
+    document.getElementById('mReqNotes').value = '';
+    ASDFL.openModal('mentorshipRequestModal');
+  };
+
+  window.submitSpecificMentorRequest = async function() {
+    const mentorId = document.getElementById('mReqMentorId').value;
+    const notes = document.getElementById('mReqNotes').value;
+
+    if (!notes.trim()) {
+      ASDFL.toast('Lütfen kendinizi açıklayan kısa bir not yazın.', 'warning');
+      return;
+    }
+
+    const success = await ASDFL.createMentorshipRequest(mentorId, notes);
+    if (success) {
+      ASDFL.closeModal('mentorshipRequestModal');
+    }
+  };
 
   populateFilters();
   filterAlumni();

@@ -8,10 +8,34 @@ const ASDFL = {
 
   // ---- Supabase API Fetchers ----
   async fetchAlumni() {
-    if (!this.supabase) return [];
-    const { data, error } = await this.supabase.from('profiles').select('*').order('created_at', { ascending: false });
-    if (error) { console.error('Error fetching alumni:', error); return []; }
-    return data.map(d => ({ ...d, initials: this.getInitials(d.name) }));
+    if (this.supabase) {
+      try {
+        const { data, error } = await this.supabase.from('profiles').select('*').order('created_at', { ascending: false });
+        if (!error && data) {
+          return data.map(d => ({ ...d, initials: this.getInitials(d.name) }));
+        }
+        console.warn('Supabase fetch alumni error, falling back to LocalStorage:', error);
+      } catch (err) {
+        console.warn('Exception fetching alumni from Supabase, falling back to LocalStorage:', err);
+      }
+    }
+
+    // Fallback to local storage
+    try {
+      let localAlumni = JSON.parse(localStorage.getItem('asdfl_alumni') || '[]');
+      if (localAlumni.length === 0) {
+        localAlumni = [
+          { id: '1', name: 'Alika Yıldız', email: 'alika@example.com', phone: '0555 123 45 67', role: 'Admin', grad_year: 2012, mentor: true },
+          { id: '2', name: 'Burak Yılmaz', email: 'burak@example.com', phone: '0532 987 65 43', role: 'Mezun', grad_year: 2008, mentor: false },
+          { id: '3', name: 'Ceren Demir', email: 'ceren@example.com', phone: '0544 555 66 77', role: 'Öğrenci', grad_year: 2026, mentor: false }
+        ];
+        localStorage.setItem('asdfl_alumni', JSON.stringify(localAlumni));
+      }
+      return localAlumni.map(d => ({ ...d, initials: this.getInitials(d.name) }));
+    } catch (e) {
+      console.warn('Error reading alumni from localStorage:', e);
+      return [];
+    }
   },
 
   async fetchEvents() {
@@ -47,6 +71,405 @@ const ASDFL = {
     if (error) { console.error('Error fetching gallery:', error); return []; }
     return data;
   },
+
+  async fetchLogoAnnouncements() {
+    if (this.supabase) {
+      try {
+        const { data, error } = await this.supabase
+          .from('logo_announcements')
+          .select('*')
+          .order('id', { ascending: true });
+        if (!error && data && data.length > 0) {
+          return data;
+        }
+        console.warn('Supabase fetch logo announcements returned empty or error, falling back to LocalStorage:', error);
+      } catch (err) {
+        console.warn('Exception fetching logo announcements from Supabase, falling back to LocalStorage:', err);
+      }
+    }
+    
+    // Fallback/Local storage mode
+    let localAnnouncements = [];
+    try {
+      const stored = localStorage.getItem('asdfl_logo_announcements');
+      if (stored) {
+        localAnnouncements = JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn('Error parsing logo announcements from localStorage:', e);
+      localAnnouncements = [];
+    }
+
+    if (!localAnnouncements || !Array.isArray(localAnnouncements) || localAnnouncements.length === 0) {
+      localAnnouncements = [
+        { id: 1, title: '2025 Mezunları', subtitle: '128 yeni mezun', icon: 'graduation-cap' },
+        { id: 2, title: 'Burs Başvurusu', subtitle: 'Son 5 gün!', icon: 'award' },
+        { id: 3, title: 'Yaz Turnuvası', subtitle: '20 Temmuz 2025', icon: 'calendar' }
+      ];
+      try {
+        localStorage.setItem('asdfl_logo_announcements', JSON.stringify(localAnnouncements));
+      } catch (e) {
+        console.warn('Error saving default logo announcements to localStorage:', e);
+      }
+    }
+    return localAnnouncements;
+  },
+
+  async updateLogoAnnouncement(id, title, subtitle, icon) {
+    let supabaseSuccess = false;
+    let dbErrorMsg = '';
+
+    if (this.supabase) {
+      try {
+        const { error } = await this.supabase
+          .from('logo_announcements')
+          .update({ title, subtitle, icon })
+          .eq('id', id);
+        if (!error) {
+          supabaseSuccess = true;
+        } else {
+          console.warn('Error updating logo announcement in Supabase, will fall back to LocalStorage:', error);
+          dbErrorMsg = error.message;
+        }
+      } catch (err) {
+        console.warn('Exception updating logo announcement in Supabase, will fall back to LocalStorage:', err);
+        dbErrorMsg = err.message;
+      }
+    }
+    
+    // Always sync with LocalStorage
+    let localAnnouncements = [];
+    try {
+      localAnnouncements = JSON.parse(localStorage.getItem('asdfl_logo_announcements') || '[]');
+    } catch (e) {
+      console.warn('Error reading logo announcements from localStorage:', e);
+      localAnnouncements = [];
+    }
+    if (localAnnouncements.length === 0) {
+      localAnnouncements = [
+        { id: 1, title: '2025 Mezunları', subtitle: '128 yeni mezun', icon: 'graduation-cap' },
+        { id: 2, title: 'Burs Başvurusu', subtitle: 'Son 5 gün!', icon: 'award' },
+        { id: 3, title: 'Yaz Turnuvası', subtitle: '20 Temmuz 2025', icon: 'calendar' }
+      ];
+    }
+    localAnnouncements = localAnnouncements.map(item => item.id == id ? { ...item, title, subtitle, icon } : item);
+    
+    let localSuccess = false;
+    try {
+      localStorage.setItem('asdfl_logo_announcements', JSON.stringify(localAnnouncements));
+      localSuccess = true;
+    } catch (e) {
+      console.warn('Error writing updated logo announcements to localStorage:', e);
+    }
+    
+    if (this.supabase && !supabaseSuccess) {
+      // If we have Supabase but DB update failed, show warning but return true since local storage worked
+      this.toast('Duyuru yerel olarak güncellendi! (Supabase Tablosu Eksik: Lütfen SQL şemasını kurun)', 'warning');
+      return true;
+    }
+
+    if (localSuccess || supabaseSuccess) {
+      this.toast('Logo duyurusu güncellendi!', 'success');
+      return true;
+    }
+    
+    this.toast('Duyuru güncellenemedi.', 'error');
+    return false;
+  },
+
+  // ---- Mentorship Portal API ----
+  async fetchMentorships() {
+    if (this.supabase) {
+      try {
+        const { data, error } = await this.supabase
+          .from('mentorships')
+          .select('*, mentor:profiles!mentor_id(name, email, role, grad_year, job, city), student:profiles!student_id(name, email, role, grad_year, grade, city)');
+        if (!error && data) return data;
+        console.warn('Supabase fetch mentorships error, falling back to LocalStorage:', error);
+      } catch (err) {
+        console.warn('Exception fetching mentorships from Supabase, falling back to LocalStorage:', err);
+      }
+    }
+
+    // Local fallback
+    try {
+      let localMentorships = JSON.parse(localStorage.getItem('asdfl_mentorships') || '[]');
+      if (localMentorships.length === 0) {
+        // Seed some mock data
+        localMentorships = [
+          {
+            id: 'm1',
+            mentor_id: '1', // Alika Yıldız (Admin/Mentor)
+            student_id: '3', // Ceren Demir (Student)
+            status: 'Pending',
+            notes: 'Mühendislik kariyeri ve üniversite hazırlığı konusunda destek istiyorum.',
+            created_at: new Date().toISOString(),
+            mentor: { name: 'Alika Yıldız', email: 'alika@example.com', role: 'Admin', grad_year: 2012, job: 'Yazılım Geliştirici', city: 'İstanbul' },
+            student: { name: 'Ceren Demir', email: 'ceren@example.com', role: 'Öğrenci', grade: '12. Sınıf', city: 'Afyon' }
+          }
+        ];
+        localStorage.setItem('asdfl_mentorships', JSON.stringify(localMentorships));
+      }
+      return localMentorships;
+    } catch (e) {
+      console.warn('Error reading mentorships from localStorage:', e);
+      return [];
+    }
+  },
+
+  async createMentorshipRequest(mentorId, notes) {
+    if (!this.currentUser) {
+      this.toast('Talep göndermek için giriş yapmalısınız.', 'warning');
+      return false;
+    }
+    
+    if (this.supabase) {
+      try {
+        const { error } = await this.supabase
+          .from('mentorships')
+          .insert({
+            mentor_id: mentorId,
+            student_id: this.currentUser.id,
+            status: 'Pending',
+            notes: notes
+          });
+        if (!error) {
+          this.toast('Mentörlük başvurusu gönderildi! 🌟', 'success');
+          return true;
+        }
+        console.warn('Supabase insert mentorship error, falling back to LocalStorage:', error);
+      } catch (err) {
+        console.warn('Exception inserting mentorship in Supabase, falling back to LocalStorage:', err);
+      }
+    }
+
+    // Local storage fallback
+    try {
+      let localMentorships = JSON.parse(localStorage.getItem('asdfl_mentorships') || '[]');
+      if (localMentorships.some(m => m.mentor_id === mentorId && m.student_id === this.currentUser.id)) {
+        this.toast('Bu mentöre zaten başvurmuşsunuz.', 'warning');
+        return false;
+      }
+
+      // Find mentor name
+      let mentorName = 'Seçilen Mentör';
+      let mentorDetails = { name: mentorName };
+      try {
+        const alumni = JSON.parse(localStorage.getItem('asdfl_alumni') || '[]');
+        const m = alumni.find(a => a.id === mentorId);
+        if (m) {
+          mentorName = m.name;
+          mentorDetails = { name: m.name, email: m.email, role: m.role, grad_year: m.grad_year, job: m.job, city: m.city };
+        }
+      } catch(e) {}
+
+      const newRequest = {
+        id: Math.random().toString(36).substring(2),
+        mentor_id: mentorId,
+        student_id: this.currentUser.id,
+        status: 'Pending',
+        notes: notes,
+        created_at: new Date().toISOString(),
+        mentor: mentorDetails,
+        student: { name: this.currentUser.name, email: this.currentUser.email, role: this.currentUser.role, grade: this.currentUser.grade || '12. Sınıf', city: this.currentUser.city || 'Afyon' }
+      };
+
+      localMentorships.unshift(newRequest);
+      localStorage.setItem('asdfl_mentorships', JSON.stringify(localMentorships));
+      this.toast('Mentörlük başvurusu gönderildi! (Yerel)', 'success');
+      return true;
+    } catch (e) {
+      console.warn('Error saving mentorship request locally:', e);
+      this.toast('Başvuru gönderilirken bir hata oluştu.', 'error');
+      return false;
+    }
+  },
+
+  async updateMentorshipStatus(relationshipId, status) {
+    if (this.supabase) {
+      try {
+        const { error } = await this.supabase
+          .from('mentorships')
+          .update({ status: status })
+          .eq('id', relationshipId);
+        if (!error) {
+          this.toast('Talep güncellendi!', 'success');
+          return true;
+        }
+        console.warn('Supabase update mentorship error, falling back to LocalStorage:', error);
+      } catch (err) {
+        console.warn('Exception updating mentorship in Supabase, falling back to LocalStorage:', err);
+      }
+    }
+
+    // Local storage fallback
+    try {
+      let localMentorships = JSON.parse(localStorage.getItem('asdfl_mentorships') || '[]');
+      localMentorships = localMentorships.map(m => m.id === relationshipId ? { ...m, status: status } : m);
+      localStorage.setItem('asdfl_mentorships', JSON.stringify(localMentorships));
+      this.toast('Talep güncellendi! (Yerel)', 'success');
+      return true;
+    } catch (e) {
+      console.warn('Error updating mentorship status locally:', e);
+      return false;
+    }
+  },
+
+  async fetchMentorshipAppointments() {
+    if (this.supabase) {
+      try {
+        const { data, error } = await this.supabase
+          .from('mentorship_appointments')
+          .select('*, mentor:profiles!mentor_id(name), student:profiles!student_id(name)');
+        if (!error && data) return data;
+        console.warn('Supabase fetch appointments error, falling back to LocalStorage:', error);
+      } catch (err) {
+        console.warn('Exception fetching appointments from Supabase, falling back to LocalStorage:', err);
+      }
+    }
+
+    // Local storage fallback
+    try {
+      let localApps = JSON.parse(localStorage.getItem('asdfl_mentorship_appointments') || '[]');
+      if (localApps.length === 0) {
+        // Seed some mock appointments for current month
+        const today = new Date();
+        const dateString = (dayOffset) => {
+          const d = new Date();
+          d.setDate(today.getDate() + dayOffset);
+          return d.toISOString().split('T')[0];
+        };
+
+        localApps = [
+          {
+            id: 'a1',
+            mentor_id: '1', // Alika Yıldız
+            student_id: '3', // Ceren Demir
+            appointment_date: dateString(2), // 2 gün sonra
+            appointment_time: '14:30',
+            duration: 45,
+            status: 'Scheduled',
+            notes: 'İlk tanışma görüşmesi ve hedeflerin belirlenmesi.',
+            mentor: { name: 'Alika Yıldız' },
+            student: { name: 'Ceren Demir' }
+          },
+          {
+            id: 'a2',
+            mentor_id: '1', // Alika Yıldız
+            student_id: '3', // Ceren Demir
+            appointment_date: dateString(-3), // 3 gün önce
+            appointment_time: '16:00',
+            duration: 60,
+            status: 'Completed',
+            notes: 'CV incelemesi yapıldı, staj arayışları planlandı.',
+            mentor: { name: 'Alika Yıldız' },
+            student: { name: 'Ceren Demir' }
+          }
+        ];
+        localStorage.setItem('asdfl_mentorship_appointments', JSON.stringify(localApps));
+      }
+      return localApps;
+    } catch (e) {
+      console.warn('Error reading appointments from localStorage:', e);
+      return [];
+    }
+  },
+
+  async createAppointment(mentorId, studentId, date, time, duration, notes) {
+    if (this.supabase) {
+      try {
+        const { error } = await this.supabase
+          .from('mentorship_appointments')
+          .insert({
+            mentor_id: mentorId,
+            student_id: studentId,
+            appointment_date: date,
+            appointment_time: time,
+            duration: parseInt(duration),
+            notes: notes,
+            status: 'Scheduled'
+          });
+        if (!error) {
+          this.toast('Randevu oluşturuldu! 🗓️', 'success');
+          return true;
+        }
+        console.warn('Supabase insert appointment error, falling back to LocalStorage:', error);
+      } catch (err) {
+        console.warn('Exception inserting appointment in Supabase, falling back to LocalStorage:', err);
+      }
+    }
+
+    // Local storage fallback
+    try {
+      let localApps = JSON.parse(localStorage.getItem('asdfl_mentorship_appointments') || '[]');
+      
+      // Get mentor and student names
+      let mentorName = 'Mentör';
+      let studentName = 'Öğrenci';
+      try {
+        const alumni = JSON.parse(localStorage.getItem('asdfl_alumni') || '[]');
+        const m = alumni.find(a => a.id === mentorId);
+        if (m) mentorName = m.name;
+        
+        const s = alumni.find(a => a.id === studentId);
+        if (s) studentName = s.name;
+        else if (this.currentUser && this.currentUser.id === studentId) studentName = this.currentUser.name;
+      } catch(e) {}
+
+      const newApp = {
+        id: Math.random().toString(36).substring(2),
+        mentor_id: mentorId,
+        student_id: studentId,
+        appointment_date: date,
+        appointment_time: time,
+        duration: parseInt(duration),
+        notes: notes,
+        status: 'Scheduled',
+        mentor: { name: mentorName },
+        student: { name: studentName }
+      };
+
+      localApps.unshift(newApp);
+      localStorage.setItem('asdfl_mentorship_appointments', JSON.stringify(localApps));
+      this.toast('Randevu başarıyla oluşturuldu! (Yerel)', 'success');
+      return true;
+    } catch (e) {
+      console.warn('Error saving appointment locally:', e);
+      this.toast('Randevu oluşturulurken hata oluştu.', 'error');
+      return false;
+    }
+  },
+
+  async updateAppointmentStatus(appointmentId, status) {
+    if (this.supabase) {
+      try {
+        const { error } = await this.supabase
+          .from('mentorship_appointments')
+          .update({ status: status })
+          .eq('id', appointmentId);
+        if (!error) {
+          this.toast('Randevu durumu güncellendi!', 'success');
+          return true;
+        }
+        console.warn('Supabase update appointment error, falling back to LocalStorage:', error);
+      } catch (err) {
+        console.warn('Exception updating appointment in Supabase, falling back to LocalStorage:', err);
+      }
+    }
+
+    // Local storage fallback
+    try {
+      let localApps = JSON.parse(localStorage.getItem('asdfl_mentorship_appointments') || '[]');
+      localApps = localApps.map(a => a.id === appointmentId ? { ...a, status: status } : a);
+      localStorage.setItem('asdfl_mentorship_appointments', JSON.stringify(localApps));
+      this.toast('Randevu durumu güncellendi! (Yerel)', 'success');
+      return true;
+    } catch (e) {
+      console.warn('Error updating appointment status locally:', e);
+      return false;
+    }
+  },
+
 
   // ---- Career Network API ----
   async fetchJobPostings() {
@@ -683,11 +1106,21 @@ const ASDFL = {
       if (existingAdminLink) {
         existingAdminLink.parentElement.remove();
       }
+      const existingMentorLink = navLinks.querySelector('a[href="mentorluk.html"]');
+      if (existingMentorLink) {
+        existingMentorLink.parentElement.remove();
+      }
       
-      if (this.currentUser && this.currentUser.role === 'Admin') {
-        const li = document.createElement('li');
-        li.innerHTML = '<a href="yonetim.html"><i data-lucide="shield-check" style="width:1.2rem;height:1.2rem"></i> Yönetim</a>';
-        navLinks.appendChild(li);
+      if (this.currentUser) {
+        const liMentor = document.createElement('li');
+        liMentor.innerHTML = '<a href="mentorluk.html"><i data-lucide="sparkles" style="width:1.2rem;height:1.2rem"></i> Mentörlük Paneli</a>';
+        navLinks.appendChild(liMentor);
+
+        if (this.currentUser.role === 'Admin') {
+          const liAdmin = document.createElement('li');
+          liAdmin.innerHTML = '<a href="yonetim.html"><i data-lucide="shield-check" style="width:1.2rem;height:1.2rem"></i> Yönetim</a>';
+          navLinks.appendChild(liAdmin);
+        }
       }
     }
 
@@ -797,9 +1230,17 @@ const ASDFL = {
         return;
       }
     } else {
-      let user = { role: 'Kullanıcı', name: email.split('@')[0], email: email };
+      let user = { id: Math.random().toString(36).substring(2), role: 'Kullanıcı', name: email.split('@')[0], email: email };
       if (email === 'admin@admin.com' && pass === 'admin') {
-        user = { role: 'Admin', name: 'Sistem Yöneticisi', email: 'admin@admin.com' };
+        user = { id: '1', role: 'Admin', name: 'Sistem Yöneticisi', email: 'admin@admin.com', mentor: true };
+      } else {
+        try {
+          const alumni = JSON.parse(localStorage.getItem('asdfl_alumni') || '[]');
+          const matched = alumni.find(a => a.email.toLowerCase() === email.toLowerCase());
+          if (matched) {
+            user = { ...matched };
+          }
+        } catch(e) {}
       }
       localStorage.setItem('asdfl_user', JSON.stringify(user));
       this.currentUser = user;

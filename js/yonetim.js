@@ -4,10 +4,19 @@ let allMembers = [];
 let allEvents = [];
 let allScholarships = [];
 let allApplications = [];
+let allAnnouncements = [];
 
 let currentTab = 'dashboard';
 let currentAppFilter = 'ALL';
 let currentAppStatusFilter = 'Pending';
+
+function safeSetItem(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn('safeSetItem failed for key "' + key + '":', e);
+  }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   await ASDFL.waitForAuth();
@@ -54,6 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadAdminData() {
   if (ASDFL.supabase) {
     try {
+      // Fetch core tables in parallel
       const [membersRes, eventsRes, scholarshipsRes, appsRes] = await Promise.all([
         ASDFL.supabase.from('profiles').select('*').order('name'),
         ASDFL.supabase.from('events').select('*').order('date', { ascending: false }),
@@ -65,6 +75,14 @@ async function loadAdminData() {
       allEvents = eventsRes.data || [];
       allScholarships = scholarshipsRes.data || [];
       allApplications = appsRes.data || [];
+
+      // Fetch logo announcements separately to prevent table-not-found errors from crashing the main panel
+      try {
+        allAnnouncements = await ASDFL.fetchLogoAnnouncements();
+      } catch (annError) {
+        console.error('Error loading logo announcements inside loadAdminData:', annError);
+        allAnnouncements = [];
+      }
     } catch (err) {
       console.error('Error loading admin data:', err);
       ASDFL.toast('Supabase verileri yüklenirken hata oluştu.', 'error');
@@ -78,39 +96,63 @@ async function loadAdminData() {
 // Fallback when Supabase is offline
 function loadOfflineFallbackData() {
   // Members mock
-  allMembers = JSON.parse(localStorage.getItem('asdfl_alumni') || '[]');
-  if (allMembers.length === 0) {
+  try {
+    const stored = localStorage.getItem('asdfl_alumni');
+    allMembers = stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.error('Error parsing members mock:', e);
+    allMembers = [];
+  }
+  if (!allMembers || !Array.isArray(allMembers) || allMembers.length === 0) {
     allMembers = [
       { id: '1', name: 'Alika Yıldız', email: 'alika@example.com', phone: '0555 123 45 67', role: 'Admin', grad_year: 2012, mentor: true, initials: 'AY' },
       { id: '2', name: 'Burak Yılmaz', email: 'burak@example.com', phone: '0532 987 65 43', role: 'Mezun', grad_year: 2008, mentor: false, initials: 'BY' },
       { id: '3', name: 'Ceren Demir', email: 'ceren@example.com', phone: '0544 555 66 77', role: 'Öğrenci', grad_year: 2026, mentor: false, initials: 'CD' }
     ];
-    localStorage.setItem('asdfl_alumni', JSON.stringify(allMembers));
+    safeSetItem('asdfl_alumni', JSON.stringify(allMembers));
   }
 
   // Events mock
-  allEvents = JSON.parse(localStorage.getItem('asdfl_events') || '[]');
-  if (allEvents.length === 0) {
+  try {
+    const stored = localStorage.getItem('asdfl_events');
+    allEvents = stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.error('Error parsing events mock:', e);
+    allEvents = [];
+  }
+  if (!allEvents || !Array.isArray(allEvents) || allEvents.length === 0) {
     allEvents = [
       { id: '1', title: 'ASDFL Geleneksel Pilav Günü', desc: 'Tüm mezunlarımızı bekliyoruz.', date: '2026-06-15', location: 'Okul Bahçesi', type: 'etkinlik' },
       { id: '2', title: '2026-2027 Burs Başvuruları Başladı', desc: 'Burs başvuruları aktif.', date: '2026-05-15', location: 'Online', type: 'duyuru' }
     ];
-    localStorage.setItem('asdfl_events', JSON.stringify(allEvents));
+    safeSetItem('asdfl_events', JSON.stringify(allEvents));
   }
 
   // Scholarships mock
-  allScholarships = JSON.parse(localStorage.getItem('asdfl_scholarships') || '[]');
-  if (allScholarships.length === 0) {
+  try {
+    const stored = localStorage.getItem('asdfl_scholarships');
+    allScholarships = stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.error('Error parsing scholarships mock:', e);
+    allScholarships = [];
+  }
+  if (!allScholarships || !Array.isArray(allScholarships) || allScholarships.length === 0) {
     allScholarships = [
       { id: '1', sponsor: 'İstanbul ASDFL Mezunları', title: 'Mühendislik Başarı Bursu', amount: '2.000 ₺ / Ay', deadline: '2026-09-01', active: true },
       { id: '2', sponsor: 'Tıp Mezunları Platformu', title: 'Sağlık Bilimleri Bursu', amount: '2.500 ₺ / Ay', deadline: '2026-09-15', active: true }
     ];
-    localStorage.setItem('asdfl_scholarships', JSON.stringify(allScholarships));
+    safeSetItem('asdfl_scholarships', JSON.stringify(allScholarships));
   }
 
   // Applications mock
-  allApplications = JSON.parse(localStorage.getItem('asdfl_applications') || '[]');
-  if (allApplications.length === 0) {
+  try {
+    const stored = localStorage.getItem('asdfl_applications');
+    allApplications = stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.error('Error parsing applications mock:', e);
+    allApplications = [];
+  }
+  if (!allApplications || !Array.isArray(allApplications) || allApplications.length === 0) {
     allApplications = [
       {
         id: '1',
@@ -123,7 +165,24 @@ function loadOfflineFallbackData() {
         profiles: { name: 'Ceren Demir', role: 'Öğrenci', grad_year: 2026, email: 'ceren@example.com', phone: '0544 555 66 77' }
       }
     ];
-    localStorage.setItem('asdfl_applications', JSON.stringify(allApplications));
+    safeSetItem('asdfl_applications', JSON.stringify(allApplications));
+  }
+
+  // Logo Announcements mock
+  try {
+    const stored = localStorage.getItem('asdfl_logo_announcements');
+    allAnnouncements = stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.error('Error parsing logo announcements mock:', e);
+    allAnnouncements = [];
+  }
+  if (!allAnnouncements || !Array.isArray(allAnnouncements) || allAnnouncements.length === 0) {
+    allAnnouncements = [
+      { id: 1, title: '2025 Mezunları', subtitle: '128 yeni mezun', icon: 'graduation-cap' },
+      { id: 2, title: 'Burs Başvurusu', subtitle: 'Son 5 gün!', icon: 'award' },
+      { id: 3, title: 'Yaz Turnuvası', subtitle: '20 Temmuz 2025', icon: 'calendar' }
+    ];
+    safeSetItem('asdfl_logo_announcements', JSON.stringify(allAnnouncements));
   }
 }
 
@@ -141,9 +200,16 @@ function renderAllPanels() {
     renderScholarshipsTable();
   } else if (currentTab === 'applications') {
     renderApplicationsList();
+  } else if (currentTab === 'announcements') {
+    renderAnnouncementsPanel();
   }
 
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => {
+    lucide.createIcons();
+    if (typeof ASDFL !== 'undefined' && ASDFL.initReveal) {
+      ASDFL.initReveal();
+    }
+  }, 10);
 }
 
 // Render counters and badges
@@ -296,7 +362,7 @@ window.updateMemberRole = async function(memberId, newRole) {
   } else {
     // Local fallback update
     allMembers = allMembers.map(m => m.id === memberId ? { ...m, role: newRole } : m);
-    localStorage.setItem('asdfl_alumni', JSON.stringify(allMembers));
+    safeSetItem('asdfl_alumni', JSON.stringify(allMembers));
     ASDFL.toast('Kullanıcı rolü güncellendi! (Local)', 'success');
     updateStats();
   }
@@ -314,7 +380,7 @@ window.toggleMemberMentor = async function(memberId, isMentor) {
   } else {
     // Local fallback update
     allMembers = allMembers.map(m => m.id === memberId ? { ...m, mentor: isMentor } : m);
-    localStorage.setItem('asdfl_alumni', JSON.stringify(allMembers));
+    safeSetItem('asdfl_alumni', JSON.stringify(allMembers));
     ASDFL.toast('Mentörlük durumu güncellendi! (Local)', 'success');
     updateStats();
   }
@@ -339,7 +405,7 @@ window.deleteMember = async function(memberId) {
   } else {
     // Local fallback
     allMembers = allMembers.filter(m => m.id !== memberId);
-    localStorage.setItem('asdfl_alumni', JSON.stringify(allMembers));
+    safeSetItem('asdfl_alumni', JSON.stringify(allMembers));
     ASDFL.toast('Üye silindi! (Local)', 'success');
     filterMembersList();
   }
@@ -446,7 +512,7 @@ window.saveEventFromModal = async function() {
       allEvents.push({ id: Math.random().toString(), ...eventData });
       ASDFL.toast('Yeni etkinlik yayınlandı! (Local)', 'success');
     }
-    localStorage.setItem('asdfl_events', JSON.stringify(allEvents));
+    safeSetItem('asdfl_events', JSON.stringify(allEvents));
     ASDFL.closeModal('adminEventModal');
     renderAllPanels();
   }
@@ -464,7 +530,7 @@ window.deleteEvent = async function(id) {
     }
   } else {
     allEvents = allEvents.filter(e => e.id != id);
-    localStorage.setItem('asdfl_events', JSON.stringify(allEvents));
+    safeSetItem('asdfl_events', JSON.stringify(allEvents));
     ASDFL.toast('Etkinlik silindi! (Local)', 'success');
     renderAllPanels();
   }
@@ -473,34 +539,486 @@ window.deleteEvent = async function(id) {
 
 // ---------------- SCHOLARSHIPS TAB MANAGEMENT ----------------
 
+let currentBursSubTab = 'programs';
+let bursAppSearchQuery = '';
+let bursAppProgramFilter = 'ALL';
+let bursAppGpaFilter = 'ALL';
+
+let bursRecSearchQuery = '';
+let bursRecProgramFilter = 'ALL';
+let bursRecGpaFilter = 'ALL';
+
+window.switchBursSubTab = function(subTabName) {
+  currentBursSubTab = subTabName;
+  document.querySelectorAll('.burs-subtab-content').forEach(el => el.style.display = 'none');
+  const targetSubTab = document.getElementById(`burs-subtab-${subTabName}`);
+  if (targetSubTab) targetSubTab.style.display = 'block';
+
+  document.querySelectorAll('[id^="btn-burs-"]').forEach(btn => btn.classList.remove('active'));
+  const targetBtn = document.getElementById(`btn-burs-${subTabName}`);
+  if (targetBtn) targetBtn.classList.add('active');
+
+  renderScholarshipsTable();
+};
+
+function updateBursProgramFilters() {
+  const appFilterEl = document.getElementById('bursAppProgramFilter');
+  const recFilterEl = document.getElementById('bursRecProgramFilter');
+  if (!appFilterEl && !recFilterEl) return;
+
+  const currentAppVal = appFilterEl ? appFilterEl.value : 'ALL';
+  const currentRecVal = recFilterEl ? recFilterEl.value : 'ALL';
+
+  const optionsHTML = `
+    <option value="ALL">Tüm Programlar</option>
+    ${allScholarships.map(s => `<option value="${s.title}">${s.title}</option>`).join('')}
+  `;
+
+  if (appFilterEl) {
+    appFilterEl.innerHTML = optionsHTML;
+    appFilterEl.value = currentAppVal;
+  }
+  if (recFilterEl) {
+    recFilterEl.innerHTML = optionsHTML;
+    recFilterEl.value = currentRecVal;
+  }
+}
+
+window.handleBursAppFilterChange = function() {
+  bursAppSearchQuery = document.getElementById('bursAppSearchInput')?.value || '';
+  bursAppProgramFilter = document.getElementById('bursAppProgramFilter')?.value || 'ALL';
+  bursAppGpaFilter = document.getElementById('bursAppGpaFilter')?.value || 'ALL';
+  renderScholarshipsTable();
+};
+
+window.handleBursRecFilterChange = function() {
+  bursRecSearchQuery = document.getElementById('bursRecSearchInput')?.value || '';
+  bursRecProgramFilter = document.getElementById('bursRecProgramFilter')?.value || 'ALL';
+  bursRecGpaFilter = document.getElementById('bursRecGpaFilter')?.value || 'ALL';
+  renderScholarshipsTable();
+};
+
 function renderScholarshipsTable() {
   const tbody = document.getElementById('adminScholarshipsTableBody');
   const countEl = document.getElementById('scholarshipsCount');
   if (!tbody) return;
 
-  if (countEl) countEl.textContent = `${allScholarships.length} burs programı`;
+  // Dynamically populate program dropdown filters
+  updateBursProgramFilters();
 
-  if (allScholarships.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Henüz burs programı eklenmemiş.</td></tr>';
-    return;
+  // 1. Calculate and update stats counters
+  const pendingApps = allApplications.filter(a => a.type === 'Burs' && a.status === 'Pending');
+  const approvedApps = allApplications.filter(a => a.type === 'Burs' && a.status === 'Approved');
+
+  let totalFund = 0;
+  approvedApps.forEach(a => {
+    // Find matching program to get quantity
+    const prog = allScholarships.find(s => s.title === a.title);
+    const amountStr = prog ? prog.amount : (a.details?.amount || '0');
+    // Extract numbers to sum
+    const cleaned = amountStr.replace(/[^0-9]/g, '');
+    const val = parseInt(cleaned) || 0;
+    totalFund += val;
+  });
+
+  const statPrograms = document.getElementById('statBursProgramsCount');
+  if (statPrograms) statPrograms.textContent = allScholarships.length;
+
+  const statPending = document.getElementById('statBursPendingCount');
+  if (statPending) statPending.textContent = pendingApps.length;
+
+  const statRecipients = document.getElementById('statBursRecipientsCount');
+  if (statRecipients) statRecipients.textContent = approvedApps.length;
+
+  const statTotal = document.getElementById('statBursTotalFunded');
+  if (statTotal) statTotal.textContent = totalFund.toLocaleString('tr-TR') + ' ₺';
+
+  const pendingBadge = document.getElementById('bursPendingBadge');
+  if (pendingBadge) {
+    if (pendingApps.length > 0) {
+      pendingBadge.textContent = pendingApps.length;
+      pendingBadge.style.display = 'inline-block';
+    } else {
+      pendingBadge.style.display = 'none';
+    }
   }
 
-  tbody.innerHTML = allScholarships.map(b => `
-    <tr>
-      <td><span class="badge badge-gold">${b.sponsor}</span></td>
-      <td><strong style="color:var(--text-primary)">${b.title}</strong></td>
-      <td><strong>${b.amount}</strong></td>
-      <td>${ASDFL.formatDate(b.deadline)}</td>
-      <td><span class="badge ${b.active ? 'badge-teal' : 'badge-red'}">${b.active ? 'Açık' : 'Kapalı'}</span></td>
-      <td style="text-align:right;display:flex;gap:.5rem;justify-content:flex-end">
-        <button class="btn btn-ghost btn-sm" onclick="openEditScholarshipModal('${b.id}')" style="padding:.25rem"><i data-lucide="edit" style="width:1.1rem;height:1.1rem"></i></button>
-        <button class="btn btn-ghost btn-sm" onclick="deleteScholarship('${b.id}')" style="color:var(--text-red);padding:.25rem"><i data-lucide="trash-2" style="width:1.1rem;height:1.1rem"></i></button>
-      </td>
-    </tr>
-  `).join('');
+  // Filter lists based on state query values
+  const filteredPending = pendingApps.filter(a => {
+    const studentName = a.profiles?.name || a.details?.name || '';
+    const studentEmail = a.profiles?.email || a.details?.email || '';
+    const matchSearch = !bursAppSearchQuery || 
+      studentName.toLowerCase().includes(bursAppSearchQuery.toLowerCase()) ||
+      studentEmail.toLowerCase().includes(bursAppSearchQuery.toLowerCase()) ||
+      a.title.toLowerCase().includes(bursAppSearchQuery.toLowerCase());
+      
+    const matchProgram = bursAppProgramFilter === 'ALL' || a.title === bursAppProgramFilter;
+    
+    let matchGpa = true;
+    if (bursAppGpaFilter !== 'ALL') {
+      const gpaVal = parseFloat(a.details?.gpa) || 0;
+      matchGpa = gpaVal >= parseFloat(bursAppGpaFilter);
+    }
+    
+    return matchSearch && matchProgram && matchGpa;
+  });
+
+  const filteredRecipients = approvedApps.filter(a => {
+    const studentName = a.profiles?.name || a.details?.name || '';
+    const studentEmail = a.profiles?.email || a.details?.email || '';
+    const matchSearch = !bursRecSearchQuery || 
+      studentName.toLowerCase().includes(bursRecSearchQuery.toLowerCase()) ||
+      studentEmail.toLowerCase().includes(bursRecSearchQuery.toLowerCase()) ||
+      a.title.toLowerCase().includes(bursRecSearchQuery.toLowerCase());
+      
+    const matchProgram = bursRecProgramFilter === 'ALL' || a.title === bursRecProgramFilter;
+    
+    let matchGpa = true;
+    if (bursRecGpaFilter !== 'ALL') {
+      const gpaVal = parseFloat(a.details?.gpa) || 0;
+      matchGpa = gpaVal >= parseFloat(bursRecGpaFilter);
+    }
+    
+    return matchSearch && matchProgram && matchGpa;
+  });
+
+  // 2. Render active sub-tab
+  if (currentBursSubTab === 'programs') {
+    if (countEl) countEl.textContent = `${allScholarships.length} burs programı`;
+
+    if (allScholarships.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Henüz burs programı eklenmemiş.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = allScholarships.map(b => `
+      <tr>
+        <td><span class="badge badge-gold">${b.sponsor}</span></td>
+        <td><strong style="color:var(--text-primary)">${b.title}</strong></td>
+        <td><strong>${b.amount}</strong></td>
+        <td>${ASDFL.formatDate(b.deadline)}</td>
+        <td><span class="badge ${b.active ? 'badge-teal' : 'badge-red'}">${b.active ? 'Açık' : 'Kapalı'}</span></td>
+        <td style="text-align:right;">
+          <div style="display:flex;gap:.35rem;justify-content:flex-end">
+            <button class="btn btn-ghost btn-sm" onclick="openEditScholarshipModal('${b.id}')" style="padding:.25rem"><i data-lucide="edit" style="width:1.1rem;height:1.1rem"></i></button>
+            <button class="btn btn-ghost btn-sm" onclick="deleteScholarship('${b.id}')" style="color:var(--text-red);padding:.25rem"><i data-lucide="trash-2" style="width:1.1rem;height:1.1rem"></i></button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  } 
+  
+  else if (currentBursSubTab === 'applications') {
+    const appsTbody = document.getElementById('bursApplicationsTableBody');
+    if (!appsTbody) return;
+
+    if (filteredPending.length === 0) {
+      appsTbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem;">Kriterlere uygun burs başvurusu bulunmamaktadır.</td></tr>';
+      return;
+    }
+
+    appsTbody.innerHTML = filteredPending.map(a => {
+      const studentName = a.profiles?.name || a.details?.name || 'Öğrenci';
+      const studentGPA = a.details?.gpa || 'Belirtilmemiş';
+      const studentGrade = a.details?.grade || 'Belirtilmemiş';
+      const studentEmail = a.profiles?.email || a.details?.email || '-';
+      const dateFormatted = ASDFL.formatDate(a.created_at);
+
+      return `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <div class="avatar avatar-sm">${ASDFL.getInitials(studentName)}</div>
+              <div>
+                <strong style="color:var(--text-primary);display:block">${studentName}</strong>
+                <span style="font-size:0.75rem;color:var(--text-muted);">${studentEmail}</span>
+              </div>
+            </div>
+          </td>
+          <td><strong style="color:var(--text-primary)">${a.title}</strong></td>
+          <td><span class="badge badge-gold" style="font-weight:600">${studentGPA}</span></td>
+          <td><span style="font-size:0.85rem">${studentGrade}</span></td>
+          <td><span style="font-size:0.85rem">${dateFormatted}</span></td>
+          <td><span class="badge badge-gold">Bekliyor</span></td>
+          <td style="text-align:right;">
+            <div style="display:flex;gap:.35rem;justify-content:flex-end">
+              <button class="btn btn-ghost btn-sm" onclick="openBursApplicationDetails('${a.id}')" title="Detayları İncele" style="padding:0.25rem;"><i data-lucide="eye" style="width:1.1rem;height:1.1rem;color:var(--gold-500)"></i></button>
+              <button class="btn btn-primary btn-sm" onclick="updateApplicationStatus('${a.id}', 'Approved')" style="padding:0.25rem 0.5rem;font-size:0.75rem;"><i data-lucide="check" style="width:1rem;height:1rem;display:inline-block;vertical-align:middle;margin-right:2px"></i> Onayla</button>
+              <button class="btn btn-secondary btn-sm" onclick="updateApplicationStatus('${a.id}', 'Rejected')" style="color:var(--text-red);border-color:rgba(235,94,85,0.3);padding:0.25rem 0.5rem;font-size:0.75rem;"><i data-lucide="x" style="width:1rem;height:1rem;display:inline-block;vertical-align:middle;margin-right:2px"></i> Reddet</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } 
+  
+  else if (currentBursSubTab === 'recipients') {
+    const recsTbody = document.getElementById('bursRecipientsTableBody');
+    if (!recsTbody) return;
+
+    if (filteredRecipients.length === 0) {
+      recsTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Kriterlere uygun aktif bursiyer bulunmamaktadır.</td></tr>';
+      return;
+    }
+
+    recsTbody.innerHTML = filteredRecipients.map(a => {
+      const studentName = a.profiles?.name || a.details?.name || 'Öğrenci';
+      const studentEmail = a.profiles?.email || a.details?.email || '-';
+      const studentPhone = a.profiles?.phone || '-';
+      const dateFormatted = ASDFL.formatDate(a.created_at);
+
+      // Find matching scholarship program for details
+      const prog = allScholarships.find(s => s.title === a.title);
+      const sponsor = prog ? prog.sponsor : 'Sponsor';
+      const amount = prog ? prog.amount : 'Miktar';
+
+      return `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <div class="avatar avatar-sm">${ASDFL.getInitials(studentName)}</div>
+              <div>
+                <strong style="color:var(--text-primary);display:block">${studentName}</strong>
+                <span style="font-size:0.75rem;color:var(--text-muted);">${a.details?.gpa ? `Not Ort: ${a.details.gpa}` : ''}</span>
+              </div>
+            </div>
+          </td>
+          <td><strong style="color:var(--text-primary)">${a.title}</strong></td>
+          <td>
+            <span class="badge badge-gold" style="display:inline-block;margin-bottom:0.15rem">${sponsor}</span>
+            <span style="display:block;font-size:0.8rem;color:var(--text-secondary);font-weight:600">${amount}</span>
+          </td>
+          <td>
+            <div style="font-size:0.85rem;color:var(--text-secondary)">${studentEmail}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">${studentPhone}</div>
+          </td>
+          <td><span style="font-size:0.85rem">${dateFormatted}</span></td>
+          <td style="text-align:right;">
+            <div style="display:flex;gap:.35rem;justify-content:flex-end;align-items:center">
+              <button class="btn btn-ghost btn-sm" onclick="openBursApplicationDetails('${a.id}')" title="Detayları İncele" style="padding:0.25rem;"><i data-lucide="eye" style="width:1.1rem;height:1.1rem;color:var(--gold-500)"></i></button>
+              <button class="btn btn-secondary btn-sm" onclick="stopScholarship('${a.id}')" style="color:var(--text-red);border-color:rgba(235,94,85,0.3);padding:0.25rem 0.5rem;font-size:0.75rem;"><i data-lucide="slash" style="width:1rem;height:1rem;display:inline-block;vertical-align:middle;margin-right:2px"></i> Bursu Durdur</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
 
   setTimeout(() => lucide.createIcons(), 10);
 }
+
+window.stopScholarship = async function(appId) {
+  if (confirm('Seçilen öğrencinin bursunu durdurmak (başvuruyu iptal etmek) istediğinize emin misiniz?')) {
+    await updateApplicationStatus(appId, 'Rejected');
+  }
+};
+
+window.openBursApplicationDetails = function(appId) {
+  const app = allApplications.find(a => a.id == appId);
+  if (!app) {
+    ASDFL.toast('Başvuru bulunamadı.', 'error');
+    return;
+  }
+
+  const studentName = app.profiles?.name || app.details?.name || 'Öğrenci';
+  const studentEmail = app.profiles?.email || app.details?.email || '-';
+  const studentPhone = app.profiles?.phone || '-';
+  const studentGPA = app.details?.gpa || 'Belirtilmemiş';
+  const studentGrade = app.details?.grade || 'Belirtilmemiş';
+  const studentBio = app.details?.bio || 'Kendini tanıtım açıklaması yazılmamış.';
+  const dateFormatted = ASDFL.formatDate(app.created_at);
+
+  const prog = allScholarships.find(s => s.title === app.title);
+  const sponsor = prog ? prog.sponsor : 'Belirtilmemiş';
+  const amount = prog ? prog.amount : 'Belirtilmemiş';
+
+  let statusBadge = '';
+  let actionButtonsHTML = '';
+
+  if (app.status === 'Pending') {
+    statusBadge = '<span class="badge badge-gold" style="font-size:0.85rem;padding:0.3rem 0.6rem">İncelemede / Bekliyor</span>';
+    actionButtonsHTML = `
+      <button class="btn btn-secondary" style="color:var(--text-red);border-color:rgba(235,94,85,0.3);flex:1" onclick="updateApplicationStatusAndReload('${app.id}', 'Rejected')"><i data-lucide="x" style="width:1.1em;height:1.1em;display:inline-block;vertical-align:middle;margin-right:4px"></i> Başvuruyu Reddet</button>
+      <button class="btn btn-primary" style="flex:1" onclick="updateApplicationStatusAndReload('${app.id}', 'Approved')"><i data-lucide="check" style="width:1.1em;height:1.1em;display:inline-block;vertical-align:middle;margin-right:4px"></i> Başvuruyu Onayla</button>
+    `;
+  } else if (app.status === 'Approved') {
+    statusBadge = '<span class="badge badge-teal" style="font-size:0.85rem;padding:0.3rem 0.6rem">Aktif Burs Alıyor</span>';
+    actionButtonsHTML = `
+      <button class="btn btn-secondary" style="color:var(--gold-500);border-color:rgba(244,168,54,0.3);flex:1" onclick="updateApplicationStatusAndReload('${app.id}', 'Pending')"><i data-lucide="refresh-cw" style="width:1.1em;height:1.1em;display:inline-block;vertical-align:middle;margin-right:4px"></i> Beklemeye Al</button>
+      <button class="btn btn-secondary" style="color:var(--text-red);border-color:rgba(235,94,85,0.3);flex:1" onclick="updateApplicationStatusAndReload('${app.id}', 'Rejected')"><i data-lucide="slash" style="width:1.1em;height:1.1em;display:inline-block;vertical-align:middle;margin-right:4px"></i> Bursu Durdur</button>
+    `;
+  } else if (app.status === 'Rejected') {
+    statusBadge = '<span class="badge badge-red" style="font-size:0.85rem;padding:0.3rem 0.6rem">Reddedildi</span>';
+    actionButtonsHTML = `
+      <button class="btn btn-secondary" style="color:var(--gold-500);border-color:rgba(244,168,54,0.3);flex:1" onclick="updateApplicationStatusAndReload('${app.id}', 'Pending')"><i data-lucide="refresh-cw" style="width:1.1em;height:1.1em;display:inline-block;vertical-align:middle;margin-right:4px"></i> Yeniden Değerlendir</button>
+      <button class="btn btn-primary" style="flex:1" onclick="updateApplicationStatusAndReload('${app.id}', 'Approved')"><i data-lucide="check" style="width:1.1em;height:1.1em;display:inline-block;vertical-align:middle;margin-right:4px"></i> Bursu Onayla</button>
+    `;
+  }
+
+  const contentDiv = document.getElementById('bursDetailModalContent');
+  if (!contentDiv) return;
+
+  contentDiv.innerHTML = `
+    <!-- Student Header -->
+    <div style="display:flex; align-items:center; gap:1rem; padding-bottom:1.25rem; border-bottom:1px solid var(--glass-border); margin-bottom:1.25rem;">
+      <div class="avatar" style="width:60px; height:60px; font-size:1.4rem;">${ASDFL.getInitials(studentName)}</div>
+      <div>
+        <h4 style="font-size:1.25rem; color:var(--text-primary); margin:0 0 0.25rem 0; font-family:'Outfit',sans-serif; font-weight:600;">${studentName}</h4>
+        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+          <span style="font-size:0.85rem; color:var(--text-muted);">${studentEmail}</span>
+          <span style="color:var(--glass-border)">•</span>
+          <span style="font-size:0.85rem; color:var(--text-muted);">${studentPhone}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Application Details Grid -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.25rem;">
+      <div class="card" style="padding:0.75rem 1rem; background:rgba(255,255,255,0.02); border:1px solid var(--glass-border)">
+        <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:block; margin-bottom:0.25rem">Eğitim Bilgileri</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem">
+          <span style="font-size:0.85rem; color:var(--text-secondary)">Sınıf:</span>
+          <strong style="font-size:0.85rem; color:var(--text-primary)">${studentGrade}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center">
+          <span style="font-size:0.85rem; color:var(--text-secondary)">Not Ortalaması (GPA):</span>
+          <span class="badge badge-gold" style="font-weight:600">${studentGPA}</span>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0.75rem 1rem; background:rgba(255,255,255,0.02); border:1px solid var(--glass-border)">
+        <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:block; margin-bottom:0.25rem">Başvuru Tarihi & Durumu</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem">
+          <span style="font-size:0.85rem; color:var(--text-secondary)">Tarih:</span>
+          <strong style="font-size:0.85rem; color:var(--text-primary)">${dateFormatted}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center">
+          <span style="font-size:0.85rem; color:var(--text-secondary)">Durum:</span>
+          <div>${statusBadge}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scholarship Info -->
+    <div class="card" style="padding:0.75rem 1rem; background:rgba(244,168,54,0.03); border:1px solid rgba(244,168,54,0.15); border-radius:var(--radius-md); margin-bottom:1.25rem">
+      <span style="font-size:0.7rem; color:var(--gold-500); font-weight:600; text-transform:uppercase; display:block; margin-bottom:0.25rem">Tercih Edilen Burs Programı</span>
+      <h5 style="margin:0 0 0.25rem 0; font-size:1rem; color:var(--text-primary);">${app.title}</h5>
+      <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+        <span style="color:var(--text-muted)">Sponsor: <strong style="color:var(--text-secondary)">${sponsor}</strong></span>
+        <span style="color:var(--gold-500); font-weight:600;">Destek Miktarı: ${amount}</span>
+      </div>
+    </div>
+
+    <!-- Statement of Need / Description -->
+    <div style="margin-bottom:1.5rem">
+      <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:block; margin-bottom:0.5rem">Başvuru Gerekçesi / Açıklama</span>
+      <div style="padding:1rem; background:rgba(255,255,255,0.01); border-radius:var(--radius-md); border:1px solid var(--glass-border); position:relative; overflow:hidden">
+        <i data-lucide="quote" style="position:absolute; right:10px; bottom:10px; width:40px; height:40px; color:rgba(255,255,255,0.02); pointer-events:none;"></i>
+        <p style="margin:0; font-size:0.9rem; line-height:1.5; color:var(--text-secondary); white-space:pre-wrap; font-style:italic;">"${studentBio}"</p>
+      </div>
+    </div>
+
+    <!-- Modal Actions -->
+    <div style="display:flex; gap:0.5rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--glass-border);">
+      ${actionButtonsHTML}
+    </div>
+  `;
+
+  ASDFL.openModal('adminBursApplicationDetailsModal');
+  setTimeout(() => lucide.createIcons(), 10);
+};
+
+window.updateApplicationStatusAndReload = async function(appId, newStatus) {
+  ASDFL.closeModal('adminBursApplicationDetailsModal');
+  await updateApplicationStatus(appId, newStatus);
+};
+
+window.exportBursToCSV = function(type) {
+  let filename = '';
+  let csvContent = '\uFEFF';
+
+  if (type === 'applications') {
+    filename = 'burs_basvurular.csv';
+    csvContent += 'Basvuran Adi,E-posta,Not Ortalamasi (GPA),Sinif,Burs Programi,Basvuru Tarihi,Durum,Gerekce\n';
+    
+    const pendingApps = allApplications.filter(a => a.type === 'Burs' && a.status === 'Pending');
+    const filtered = pendingApps.filter(a => {
+      const studentName = a.profiles?.name || a.details?.name || '';
+      const studentEmail = a.profiles?.email || a.details?.email || '';
+      const matchSearch = !bursAppSearchQuery || 
+        studentName.toLowerCase().includes(bursAppSearchQuery.toLowerCase()) ||
+        studentEmail.toLowerCase().includes(bursAppSearchQuery.toLowerCase()) ||
+        a.title.toLowerCase().includes(bursAppSearchQuery.toLowerCase());
+      const matchProgram = bursAppProgramFilter === 'ALL' || a.title === bursAppProgramFilter;
+      let matchGpa = true;
+      if (bursAppGpaFilter !== 'ALL') {
+        const gpaVal = parseFloat(a.details?.gpa) || 0;
+        matchGpa = gpaVal >= parseFloat(bursAppGpaFilter);
+      }
+      return matchSearch && matchProgram && matchGpa;
+    });
+
+    filtered.forEach(a => {
+      const name = (a.profiles?.name || a.details?.name || 'Ogrenci').replace(/"/g, '""');
+      const email = (a.profiles?.email || a.details?.email || '-').replace(/"/g, '""');
+      const gpa = a.details?.gpa || 'Belirtilmemis';
+      const grade = a.details?.grade || 'Belirtilmemis';
+      const program = a.title.replace(/"/g, '""');
+      const date = ASDFL.formatDate(a.created_at);
+      const status = 'Bekliyor';
+      const bio = (a.details?.bio || '').replace(/"/g, '""').replace(/\n/g, ' ');
+
+      csvContent += `"${name}","${email}","${gpa}","${grade}","${program}","${date}","${status}","${bio}"\n`;
+    });
+  } else if (type === 'recipients') {
+    filename = 'burs_bursiyerler.csv';
+    csvContent += 'Bursiyer Adi,E-posta,Telefon,Not Ortalamasi (GPA),Sinif,Burs Programi,Sponsor,Aylik Destek,Baslangic Tarihi\n';
+
+    const approvedApps = allApplications.filter(a => a.type === 'Burs' && a.status === 'Approved');
+    const filtered = approvedApps.filter(a => {
+      const studentName = a.profiles?.name || a.details?.name || '';
+      const studentEmail = a.profiles?.email || a.details?.email || '';
+      const matchSearch = !bursRecSearchQuery || 
+        studentName.toLowerCase().includes(bursRecSearchQuery.toLowerCase()) ||
+        studentEmail.toLowerCase().includes(bursRecSearchQuery.toLowerCase()) ||
+        a.title.toLowerCase().includes(bursRecSearchQuery.toLowerCase());
+      const matchProgram = bursRecProgramFilter === 'ALL' || a.title === bursRecProgramFilter;
+      let matchGpa = true;
+      if (bursRecGpaFilter !== 'ALL') {
+        const gpaVal = parseFloat(a.details?.gpa) || 0;
+        matchGpa = gpaVal >= parseFloat(bursRecGpaFilter);
+      }
+      return matchSearch && matchProgram && matchGpa;
+    });
+
+    filtered.forEach(a => {
+      const name = (a.profiles?.name || a.details?.name || 'Ogrenci').replace(/"/g, '""');
+      const email = (a.profiles?.email || a.details?.email || '-').replace(/"/g, '""');
+      const phone = (a.profiles?.phone || '-').replace(/"/g, '""');
+      const gpa = a.details?.gpa || 'Belirtilmemis';
+      const grade = a.details?.grade || 'Belirtilmemis';
+      const program = a.title.replace(/"/g, '""');
+
+      const prog = allScholarships.find(s => s.title === a.title);
+      const sponsor = (prog ? prog.sponsor : 'Sponsor').replace(/"/g, '""');
+      const amount = (prog ? prog.amount : 'Miktar').replace(/"/g, '""');
+      const date = ASDFL.formatDate(a.created_at);
+
+      csvContent += `"${name}","${email}","${phone}","${gpa}","${grade}","${program}","${sponsor}","${amount}","${date}"\n`;
+    });
+  }
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  ASDFL.toast('Liste dışa aktarıldı!', 'success');
+};
 
 window.openAddScholarshipModal = function() {
   document.getElementById('adminScholarshipModalTitle').innerHTML = '<i data-lucide="plus"></i> Yeni Burs Programı';
@@ -571,7 +1089,7 @@ window.saveScholarshipFromModal = async function() {
       allScholarships.push({ id: Math.random().toString(), ...bursData });
       ASDFL.toast('Yeni burs programı yayında! (Local)', 'success');
     }
-    localStorage.setItem('asdfl_scholarships', JSON.stringify(allScholarships));
+    safeSetItem('asdfl_scholarships', JSON.stringify(allScholarships));
     ASDFL.closeModal('adminScholarshipModal');
     renderAllPanels();
   }
@@ -589,7 +1107,7 @@ window.deleteScholarship = async function(id) {
     }
   } else {
     allScholarships = allScholarships.filter(b => b.id != id);
-    localStorage.setItem('asdfl_scholarships', JSON.stringify(allScholarships));
+    safeSetItem('asdfl_scholarships', JSON.stringify(allScholarships));
     ASDFL.toast('Burs programı silindi! (Local)', 'success');
     renderAllPanels();
   }
@@ -676,7 +1194,7 @@ function renderApplicationsList() {
     `;
 
     return `
-      <div class="app-card reveal">
+      <div class="app-card">
         <div class="app-card-header">
           <div>
             <span class="badge ${typeBadges[a.type]}">${typeLabels[a.type]}</span>
@@ -719,16 +1237,127 @@ window.updateApplicationStatus = async function(appId, newStatus) {
   } else {
     // Local fallback
     allApplications = allApplications.map(a => a.id == appId ? { ...a, status: newStatus } : a);
-    localStorage.setItem('asdfl_applications', JSON.stringify(allApplications));
+    safeSetItem('asdfl_applications', JSON.stringify(allApplications));
     
     // Automatically turn user to mentor locally if registration approved
     const app = allApplications.find(a => a.id == appId);
     if (app && app.type === 'MentorlukKaydi' && newStatus === 'Approved') {
       allMembers = allMembers.map(m => m.id === app.user_id ? { ...m, mentor: true } : m);
-      localStorage.setItem('asdfl_alumni', JSON.stringify(allMembers));
+      safeSetItem('asdfl_alumni', JSON.stringify(allMembers));
     }
 
     ASDFL.toast('Başvuru durumu güncellendi! (Local)', 'success');
     renderAllPanels();
+  }
+};
+
+// ---------------- LOGO ANNOUNCEMENTS TAB MANAGEMENT ----------------
+
+function renderAnnouncementsPanel() {
+  const container = document.getElementById('adminAnnouncementsContainer');
+  if (!container) return;
+
+  if (allAnnouncements.length === 0) {
+    container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:3rem; color:var(--text-muted);">Duyuru kartları yüklenemedi.</div>';
+    return;
+  }
+
+  container.innerHTML = allAnnouncements.map(a => {
+    return `
+      <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.75rem;">
+          <h3 style="font-size:1.1rem;font-family:'Outfit',sans-serif;font-weight:600;margin:0;color:var(--gold-400)">Duyuru Kartı #${a.id}</h3>
+          <span style="font-size:0.75rem; color:var(--text-muted)">Ana Sayfa Konumu: Kart ${a.id}</span>
+        </div>
+
+        <!-- Canlı Glassmorphic Kart Önizlemesi -->
+        <div style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius: var(--radius-md); display: flex; justify-content: center; align-items: center; min-height: 100px;">
+          <div class="floating-card" style="position: static; transform: none; animation: none; backdrop-filter: blur(10px); background: rgba(19, 34, 54, 0.9); border: 1px solid rgba(244, 168, 54, 0.2); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1.2rem; border-radius: var(--radius-lg); color: var(--text-primary); font-size: 0.85rem; font-weight: 500;">
+            <div class="fc-icon" style="font-size: 1.4rem; display: flex; align-items: center; justify-content: center; color: var(--gold-400);" id="previewIconBox-${a.id}">
+              <i data-lucide="${a.icon}" style="width:1.2rem;height:1.2rem"></i>
+            </div>
+            <div>
+              <strong id="previewTitle-${a.id}" style="color: var(--text-primary); font-size: 0.85rem; font-weight: 600; display: block;">${a.title}</strong>
+              <small id="previewSub-${a.id}" style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 1px;">${a.subtitle}</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Düzenleme -->
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Başlık</label>
+          <input type="text" class="form-input" id="announceTitle-${a.id}" value="${a.title}" oninput="updateAnnouncementPreview(${a.id})">
+        </div>
+
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Detay / Alt Başlık</label>
+          <input type="text" class="form-input" id="announceSub-${a.id}" value="${a.subtitle}" oninput="updateAnnouncementPreview(${a.id})">
+        </div>
+
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Lucide İkon Adı</label>
+          <div style="display:flex; gap:0.5rem">
+            <input type="text" class="form-input" id="announceIcon-${a.id}" value="${a.icon}" oninput="updateAnnouncementPreview(${a.id})" placeholder="Örn: graduation-cap, award, calendar, bell">
+          </div>
+          <small style="color:var(--text-muted); font-size:0.75rem; display:block; margin-top:0.25rem">Lucide sitesindeki ikon isimlerini (küçük harflerle ve aralarda tire ile) girin.</small>
+        </div>
+
+        <button class="btn btn-primary btn-sm" style="margin-top:0.5rem; width:100%" id="btnSaveAnnounce-${a.id}" onclick="saveAnnouncementFromAdmin(${a.id})">
+          <i data-lucide="save" style="width:1em;height:1em"></i> Kartı Kaydet
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  setTimeout(() => lucide.createIcons(), 10);
+}
+
+// Canlı Önizleme Güncelleme
+window.updateAnnouncementPreview = function(id) {
+  const title = document.getElementById(`announceTitle-${id}`).value;
+  const subtitle = document.getElementById(`announceSub-${id}`).value;
+  const icon = document.getElementById(`announceIcon-${id}`).value;
+
+  const previewTitle = document.getElementById(`previewTitle-${id}`);
+  const previewSub = document.getElementById(`previewSub-${id}`);
+  const previewIconBox = document.getElementById(`previewIconBox-${id}`);
+
+  if (previewTitle) previewTitle.textContent = title;
+  if (previewSub) previewSub.textContent = subtitle;
+  if (previewIconBox && icon) {
+    previewIconBox.innerHTML = `<i data-lucide="${icon}" style="width:1.2rem;height:1.2rem"></i>`;
+    lucide.createIcons();
+  }
+};
+
+window.saveAnnouncementFromAdmin = async function(id) {
+  const title = document.getElementById(`announceTitle-${id}`).value.trim();
+  const subtitle = document.getElementById(`announceSub-${id}`).value.trim();
+  const icon = document.getElementById(`announceIcon-${id}`).value.trim();
+
+  if (!title || !subtitle || !icon) {
+    ASDFL.toast('Lütfen tüm alanları doldurun.', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById(`btnSaveAnnounce-${id}`);
+  let oldHTML = '';
+  if (btn) {
+    oldHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;margin-right:6px"></span> Kaydediliyor...';
+  }
+
+  const success = await ASDFL.updateLogoAnnouncement(id, title, subtitle, icon);
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = oldHTML;
+  }
+
+  if (success) {
+    // Reload local data
+    await loadAdminData();
+    renderAnnouncementsPanel();
   }
 };

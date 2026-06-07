@@ -54,6 +54,7 @@
           <button class="admin-tab-btn" id="btn-tab-events" onclick="switchAdminTab('events', this)"><i data-lucide="calendar" style="width:1.2rem;height:1.2rem"></i> Etkinlikler &amp; Duyurular</button>
           <button class="admin-tab-btn" id="btn-tab-burs" onclick="switchAdminTab('burs', this)"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i> Burs Programları</button>
           <button class="admin-tab-btn" id="btn-tab-applications" onclick="switchAdminTab('applications', this)"><i data-lucide="clipboard-check" style="width:1.2rem;height:1.2rem"></i> Başvurular <span class="badge badge-gold" id="pendingAppsBadge" style="margin-left:auto; display:none; padding:.2rem .4rem; font-size:.7rem">0</span></button>
+          <button class="admin-tab-btn" id="btn-tab-announcements" onclick="switchAdminTab('announcements', this)"><i data-lucide="bell" style="width:1.2rem;height:1.2rem"></i> Logo Duyuruları</button>
         </nav>
       </aside>
 
@@ -166,25 +167,137 @@
 
         <!-- 4. SCHOLARSHIPS TAB -->
         <div id="tab-burs" class="admin-panel-tab" style="display:none">
-          <div class="admin-actions-row">
-            <div style="font-family:'Outfit',sans-serif;font-weight:600" id="scholarshipsCount">0 burs programı</div>
-            <button class="btn btn-primary btn-sm" onclick="openAddScholarshipModal()"><i data-lucide="plus" style="width:1em;height:1em"></i> Yeni Burs Programı Ekle</button>
+          <!-- Stats Row -->
+          <div class="grid-4" style="margin-bottom: 2rem; gap: 1rem;">
+            <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+              <div style="font-size: 1.5rem; color: var(--gold-500); background: rgba(244,168,54,0.06); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="award"></i></div>
+              <div>
+                <h3 id="statBursProgramsCount" style="margin: 0; font-size: 1.25rem; color:var(--text-primary);">0</h3>
+                <p style="color:var(--text-muted); font-size: 0.75rem; margin: 0; font-weight:550;">Burs Programı</p>
+              </div>
+            </div>
+            <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+              <div style="font-size: 1.5rem; color: var(--gold-500); background: rgba(244,168,54,0.06); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="clipboard-list"></i></div>
+              <div>
+                <h3 id="statBursPendingCount" style="margin: 0; font-size: 1.25rem; color:var(--text-primary);">0</h3>
+                <p style="color:var(--text-muted); font-size: 0.75rem; margin: 0; font-weight:550;">Bekleyen Başvuru</p>
+              </div>
+            </div>
+            <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+              <div style="font-size: 1.5rem; color: var(--teal-500); background: rgba(45,206,137,0.06); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="users"></i></div>
+              <div>
+                <h3 id="statBursRecipientsCount" style="margin: 0; font-size: 1.25rem; color:var(--text-primary);">0</h3>
+                <p style="color:var(--text-muted); font-size: 0.75rem; margin: 0; font-weight:550;">Aktif Bursiyer</p>
+              </div>
+            </div>
+            <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+              <div style="font-size: 1.5rem; color: var(--gold-500); background: rgba(244,168,54,0.06); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="wallet"></i></div>
+              <div>
+                <h3 id="statBursTotalFunded" style="margin: 0; font-size: 1.15rem; color:var(--text-primary);">0 ₺</h3>
+                <p style="color:var(--text-muted); font-size: 0.75rem; margin: 0; font-weight:550;">Aylık Burs Hacmi</p>
+              </div>
+            </div>
           </div>
 
-          <div class="admin-table-container">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>Sponsor</th>
-                  <th>Burs Başlığı</th>
-                  <th>Miktar</th>
-                  <th>Son Tarih</th>
-                  <th>Durum</th>
-                  <th style="text-align:right">İşlemler</th>
-                </tr>
-              </thead>
-              <tbody id="adminScholarshipsTableBody"></tbody>
-            </table>
+          <!-- Sub Navigation -->
+          <div class="mezun-tabs" style="margin-bottom: 1.5rem; justify-content: flex-start; gap: 0.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;">
+            <button class="mezun-tab active" id="btn-burs-programs" onclick="switchBursSubTab('programs')" style="padding: 0.5rem 1rem; font-size: 0.85rem;"><i data-lucide="award" style="width:1rem;height:1rem;display:inline-block;vertical-align:middle;margin-top:-2px"></i> Burs Programları</button>
+            <button class="mezun-tab" id="btn-burs-applications" onclick="switchBursSubTab('applications')" style="padding: 0.5rem 1rem; font-size: 0.85rem;"><i data-lucide="clipboard-list" style="width:1rem;height:1rem;display:inline-block;vertical-align:middle;margin-top:-2px"></i> Gelen Başvurular <span class="badge badge-gold" id="bursPendingBadge" style="margin-left: 0.35rem; padding: 0.05rem 0.3rem; font-size: 0.7rem; display: none;">0</span></button>
+            <button class="mezun-tab" id="btn-burs-recipients" onclick="switchBursSubTab('recipients')" style="padding: 0.5rem 1rem; font-size: 0.85rem;"><i data-lucide="users" style="width:1rem;height:1rem;display:inline-block;vertical-align:middle;margin-top:-2px"></i> Aktif Bursiyerler</button>
+          </div>
+
+          <!-- Sub-Tab Content: 1. Programs -->
+          <div id="burs-subtab-programs" class="burs-subtab-content">
+            <div class="admin-actions-row" style="margin-bottom: 1rem;">
+              <div style="font-family:'Outfit',sans-serif;font-weight:600;font-size:0.9rem;" id="scholarshipsCount">0 burs programı</div>
+              <button class="btn btn-primary btn-sm" onclick="openAddScholarshipModal()"><i data-lucide="plus" style="width:1em;height:1em"></i> Yeni Burs Programı Ekle</button>
+            </div>
+            <div class="admin-table-container">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Sponsor</th>
+                    <th>Burs Başlığı</th>
+                    <th>Miktar</th>
+                    <th>Son Tarih</th>
+                    <th>Durum</th>
+                    <th style="text-align:right">İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody id="adminScholarshipsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Sub-Tab Content: 2. Applications -->
+          <div id="burs-subtab-applications" class="burs-subtab-content" style="display:none">
+            <div class="admin-actions-row" style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+              <div style="display: flex; gap: 0.5rem; flex-grow: 1; max-width: 600px; flex-wrap: wrap;">
+                <input type="text" class="form-input" id="bursAppSearchInput" placeholder="Öğrenci adı veya burs ara..." style="max-width: 240px; padding: 0.4rem 0.75rem; font-size: 0.85rem;" oninput="handleBursAppFilterChange()">
+                <select class="form-select" id="bursAppProgramFilter" style="max-width: 180px; padding: 0.4rem 1.75rem 0.4rem 0.75rem; font-size: 0.85rem;" onchange="handleBursAppFilterChange()">
+                  <option value="ALL">Tüm Programlar</option>
+                </select>
+                <select class="form-select" id="bursAppGpaFilter" style="max-width: 140px; padding: 0.4rem 1.75rem 0.4rem 0.75rem; font-size: 0.85rem;" onchange="handleBursAppFilterChange()">
+                  <option value="ALL">Tüm Notlar</option>
+                  <option value="4.5">GPA >= 4.5</option>
+                  <option value="4.0">GPA >= 4.0</option>
+                  <option value="3.5">GPA >= 3.5</option>
+                  <option value="3.0">GPA >= 3.0</option>
+                </select>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="exportBursToCSV('applications')" style="padding: 0.4rem 0.75rem; font-size: 0.85rem;"><i data-lucide="download" style="width:1rem;height:1rem;display:inline-block;vertical-align:middle;margin-right:4px"></i> CSV Dışa Aktar</button>
+            </div>
+            <div class="admin-table-container">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Başvuran Öğrenci</th>
+                    <th>Burs Programı</th>
+                    <th>Not Ortalaması (GPA)</th>
+                    <th>Sınıf / Bölüm</th>
+                    <th>Başvuru Tarihi</th>
+                    <th>Durum</th>
+                    <th style="text-align:right">İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody id="bursApplicationsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Sub-Tab Content: 3. Recipients -->
+          <div id="burs-subtab-recipients" class="burs-subtab-content" style="display:none">
+            <div class="admin-actions-row" style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+              <div style="display: flex; gap: 0.5rem; flex-grow: 1; max-width: 600px; flex-wrap: wrap;">
+                <input type="text" class="form-input" id="bursRecSearchInput" placeholder="Bursiyer veya burs ara..." style="max-width: 240px; padding: 0.4rem 0.75rem; font-size: 0.85rem;" oninput="handleBursRecFilterChange()">
+                <select class="form-select" id="bursRecProgramFilter" style="max-width: 180px; padding: 0.4rem 1.75rem 0.4rem 0.75rem; font-size: 0.85rem;" onchange="handleBursRecFilterChange()">
+                  <option value="ALL">Tüm Programlar</option>
+                </select>
+                <select class="form-select" id="bursRecGpaFilter" style="max-width: 140px; padding: 0.4rem 1.75rem 0.4rem 0.75rem; font-size: 0.85rem;" onchange="handleBursRecFilterChange()">
+                  <option value="ALL">Tüm Notlar</option>
+                  <option value="4.5">GPA >= 4.5</option>
+                  <option value="4.0">GPA >= 4.0</option>
+                  <option value="3.5">GPA >= 3.5</option>
+                  <option value="3.0">GPA >= 3.0</option>
+                </select>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="exportBursToCSV('recipients')" style="padding: 0.4rem 0.75rem; font-size: 0.85rem;"><i data-lucide="download" style="width:1rem;height:1rem;display:inline-block;vertical-align:middle;margin-right:4px"></i> CSV Dışa Aktar</button>
+            </div>
+            <div class="admin-table-container">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Bursiyer</th>
+                    <th>Burs Programı</th>
+                    <th>Sponsor / Miktar</th>
+                    <th>E-posta / Telefon</th>
+                    <th>Başlangıç Tarihi</th>
+                    <th style="text-align:right">İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody id="bursRecipientsTableBody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -206,6 +319,20 @@
           </div>
 
           <div id="adminApplicationsList"></div>
+        </div>
+
+        <!-- 6. LOGO ANNOUNCEMENTS TAB -->
+        <div id="tab-announcements" class="admin-panel-tab" style="display:none">
+          <div class="admin-actions-row">
+            <div>
+              <h2 style="font-size:1.4rem;font-family:'Outfit',sans-serif;font-weight:700;margin-bottom:0.25rem">Logo Duyuruları Yönetimi</h2>
+              <p style="color:var(--text-muted);font-size:0.85rem">Ana sayfada okul logosunun çevresinde bulunan 3 adet hareketli kartın içerik ve ikonlarını güncelleyin.</p>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2rem; margin-top: 1.5rem;" id="adminAnnouncementsContainer">
+            <!-- Dynamic edit forms for the 3 cards will be rendered here -->
+          </div>
         </div>
       </main>
     </div>
@@ -285,6 +412,18 @@
       </label>
     </div>
     <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="saveScholarshipFromModal()">Burs Programını Kaydet</button>
+  </div>
+</div>
+
+<!-- BURS APPLICATION DETAILS INSPECTOR MODAL -->
+<div class="modal-overlay" id="adminBursApplicationDetailsModal" onclick="if(event.target===this)ASDFL.closeModal('adminBursApplicationDetailsModal')">
+  <div class="modal" style="max-width:620px; background: rgba(26,27,35,0.92); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); backdrop-filter: blur(20px); color: var(--text-primary); text-align: left;">
+    <button class="modal-close" onclick="ASDFL.closeModal('adminBursApplicationDetailsModal')"><i data-lucide="x" style="width:1.2em;height:1.2em"></i></button>
+    <h3 style="margin-bottom:1.5rem; display:flex; align-items:center; gap:0.5rem; font-family:'Outfit',sans-serif; font-weight:700;"><i data-lucide="search" style="color:var(--gold-500)"></i> Başvuru Detayları</h3>
+    
+    <div id="bursDetailModalContent">
+      <!-- Dynamic contents populated by JS -->
+    </div>
   </div>
 </div>
 

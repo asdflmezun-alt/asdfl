@@ -226,3 +226,42 @@
     padding: 0.75rem 1rem;
   }
 }
+
+/* Sub Navigation Tabs for Scholarships */
+.mezun-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  overflow-x: auto;
+}
+
+.mezun-tab {
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.mezun-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  border-color: rgba(244, 168, 54, 0.3);
+}
+
+.mezun-tab.active {
+  background: linear-gradient(135deg, var(--gold-500), var(--gold-600));
+  color: #05111e;
+  border-color: transparent;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(244, 168, 54, 0.25);
+}

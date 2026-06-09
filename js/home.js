@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    const mentors = allAlumni.filter(a => a.mentor).slice(0, 4);
+    const mentors = allAlumni.filter(a => a.mentor && (a.role === 'Mezun' || a.role === 'Admin' || a.role === 'Öğretmen')).slice(0, 4);
     el.innerHTML = mentors.map(a => {
       let jobCompanyText = '';
       if (a.job) {

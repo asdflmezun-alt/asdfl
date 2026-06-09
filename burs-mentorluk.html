@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="css/animations.css">
 <link rel="stylesheet" href="css/burs.css">
+<link rel="stylesheet" href="css/mezunlar.css?v=1.5">
 <script src="https://unpkg.com/lucide@0.577.0"></script>
 </head>
 <body>
@@ -318,6 +319,23 @@
     <div class="form-group"><label class="form-label">Uzmanlık</label><input class="form-input" placeholder="Yapay Zeka, Tıp, Kariyer..." id="mOlSpecialty"></div>
     <div class="form-group"><label class="form-label">Haftada kaç saat ayırabilirsiniz?</label><select class="form-select" id="mOlHours"><option>1-2 saat</option><option>3-5 saat</option><option>5+ saat</option></select></div>
     <button class="btn btn-primary" style="width:100%" onclick="submitMentorRegister()">Başvur</button>
+  </div>
+</div>
+
+<!-- BIO MODAL -->
+<div class="modal-overlay" id="bioModal" onclick="if(event.target===this)ASDFL.closeModal('bioModal')">
+  <div class="modal" style="max-width:600px;width:100%">
+    <button class="modal-close" onclick="ASDFL.closeModal('bioModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <div style="display:flex;align-items:center;gap:1.25rem;margin-bottom:1.5rem;border-bottom:1px solid var(--glass-border);padding-bottom:1.25rem">
+      <div id="bioModalAvatar"></div>
+      <div>
+        <h3 id="bioModalTitle" style="font-size:1.4rem;margin-bottom:.25rem;font-family:'Outfit',sans-serif"></h3>
+        <span id="bioModalSubtitle" style="font-size:.82rem;color:var(--gold-500);font-weight:600"></span>
+      </div>
+    </div>
+    <div id="bioModalContent" style="font-size:.92rem;color:var(--text-secondary);line-height:1.6;white-space:pre-wrap;max-height:300px;overflow-y:auto;padding-right:0.5rem">
+      <!-- Full bio will be injected here -->
+    </div>
   </div>
 </div>
 

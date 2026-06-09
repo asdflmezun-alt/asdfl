@@ -35,7 +35,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   await ASDFL.waitForAuth();
 
   // 1. Strict Security Gating
-  if (!ASDFL.currentUser || ASDFL.currentUser.role !== 'Admin') {
+  const isAdmin = await ASDFL.verifyAdminSession();
+  if (!isAdmin) {
     const authBlock = document.getElementById('adminAuthBlock');
     const activeWrapper = document.getElementById('adminActiveWrapper');
     if (authBlock) authBlock.style.display = 'block';
@@ -449,7 +450,16 @@ window.deleteMember = async function(memberId) {
   if (!confirm('Bu üyeyi kalıcı olarak silmek istediğinize emin misiniz?')) return;
 
   if (ASDFL.supabase) {
-    const { error } = await ASDFL.supabase.from('profiles').delete().eq('id', memberId);
+    // Önce RPC (delete_user) fonksiyonu ile hem auth hem de profiles'dan silmeyi dene
+    let { error } = await ASDFL.supabase.rpc('delete_user', { target_user_id: memberId });
+
+    // Fallback: RPC fonksiyonu veritabanında yoksa doğrudan profiles tablosundan silmeyi dene
+    if (error && (error.code === '42883' || (error.message && (error.message.includes('function') || error.message.includes('does not exist'))))) {
+      console.log('delete_user RPC bulunamadı, profiles tablosundan doğrudan silme deneniyor...');
+      const fallbackResult = await ASDFL.supabase.from('profiles').delete().eq('id', memberId);
+      error = fallbackResult.error;
+    }
+
     if (error) {
       ASDFL.toast('Üye silinemedi: ' + error.message, 'error');
     } else {

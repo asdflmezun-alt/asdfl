@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const mentors = allAlumni.filter(a => a.mentor).slice(0, 4);
+    const mentors = allAlumni.filter(a => a.mentor && (a.role === 'Mezun' || a.role === 'Admin' || a.role === 'Öğretmen')).slice(0, 4);
     el.innerHTML = mentors.map(a => {
       let jobCompanyText = '';
       if (a.job) {
@@ -59,14 +59,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       const safeId = ASDFL.jsString(a.id);
       
       return `
-      <div class="card lift reveal" style="text-align:center;padding:1.5rem 1rem">
-        ${ASDFL.getAvatarHTML(a, 'avatar avatar-xl', 'margin:0 auto 1rem')}
-        <h4 style="font-size:.95rem">${ASDFL.escapeHTML(a.name)}</h4>
-        <span style="font-size:.75rem;color:var(--gold-500);font-weight:600;display:block;margin-bottom:.5rem">${ASDFL.escapeHTML(a.grad_year || 'Bilinmiyor')} Mezunu</span>
-        ${jobCompanyText ? `<div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:0.25rem;"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(jobCompanyText)}</div>` : ''}
-        ${a.university ? `<div style="font-size:.78rem;color:var(--text-secondary);margin-top:.25rem;margin-bottom:0.25rem;"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.university)}</div>` : ''}
-        ${a.city ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.25rem;"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.city)}</div>` : ''}
-        ${a.bio ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">${ASDFL.escapeHTML(a.bio)}</div>` : ''}
+      <div class="card mentor-card lift reveal">
+        <div class="mc-avatar">
+          ${ASDFL.getAvatarHTML(a, 'avatar avatar-xl')}
+          <div class="mc-badge"><i data-lucide="star" style="width:1em;height:1em"></i></div>
+        </div>
+        <h4>${ASDFL.escapeHTML(a.name)}</h4>
+        <span class="mc-year">${ASDFL.escapeHTML(a.grad_year || 'Bilinmiyor')} Mezunu</span>
+        ${jobCompanyText ? `<div class="mc-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(jobCompanyText)}</div>` : ''}
+        ${a.university ? `<div class="mc-job" style="font-size:.8rem;color:var(--text-secondary);"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.university)}</div>` : ''}
+        ${a.city ? `<div class="mc-city"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.city)}</div>` : ''}
+        ${a.bio ? (
+          a.bio.length > 150 ? `
+            <div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">
+              ${ASDFL.escapeHTML(a.bio.substring(0, 140))}...
+              <a href="javascript:void(0)" onclick="openBioModal(${safeId})" style="color:var(--gold-500);font-weight:600;margin-left:.25rem;display:inline-block;">Devamını Oku</a>
+            </div>
+          ` : `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">${ASDFL.escapeHTML(a.bio)}</div>`
+        ) : ''}
         <button class="btn btn-primary btn-sm" style="margin-top:1rem;width:100%"
           onclick="openMentorshipRequestModal(${safeId}, ${ASDFL.jsString(a.name)})">Bağlantı Kur</button>
       </div>`;
@@ -159,6 +169,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+
+  window.openBioModal = function(alumniId) {
+    const alumnus = alumni.find(a => a.id === alumniId);
+    if (!alumnus) return;
+
+    const modalAvatar = document.getElementById('bioModalAvatar');
+    const modalTitle = document.getElementById('bioModalTitle');
+    const modalSubtitle = document.getElementById('bioModalSubtitle');
+    const modalContent = document.getElementById('bioModalContent');
+
+    if (modalAvatar) {
+      modalAvatar.innerHTML = ASDFL.getAvatarHTML(alumnus, 'avatar avatar-lg');
+    }
+    if (modalTitle) {
+      modalTitle.textContent = alumnus.name || '';
+    }
+    if (modalSubtitle) {
+      const yearText = alumnus.grad_year ? alumnus.grad_year + ' Mezunu' : '';
+      const sectionText = alumnus.class_section ? '- ' + alumnus.class_section + ' Şubesi' : '';
+      modalSubtitle.textContent = `${yearText} ${sectionText}`.trim();
+    }
+    if (modalContent) {
+      modalContent.textContent = alumnus.bio || '';
+    }
+
+    ASDFL.openModal('bioModal');
+  };
 
   window.openMentorshipRequestModal = function(mentorId, mentorName) {
     if (!ASDFL.currentUser) {

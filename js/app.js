@@ -1277,6 +1277,37 @@ const ASDFL = {
   },
 
   // Auth Functions
+  async verifyAdminSession() {
+    if (!this.supabase) {
+      // Offline/Mock mode (dev convenience)
+      const userStr = this._storage.getItem('asdfl_user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          return user && user.role === 'Admin';
+        } catch (e) {}
+      }
+      return false;
+    }
+    try {
+      // Securely fetches the user object from Supabase Auth API using the current JWT token
+      const { data: { user }, error } = await this.supabase.auth.getUser();
+      if (error || !user) return false;
+      
+      // Query the actual profile database table for the true database role
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+        
+      return profile && profile.role === 'Admin';
+    } catch (err) {
+      console.error('Admin session verification failed:', err);
+      return false;
+    }
+  },
+
   async checkAuth() {
     // Synchronous local session check to avoid initial page-load login state flicker/flashes
     const userStr = this._storage.getItem('asdfl_user');
@@ -1610,9 +1641,7 @@ const ASDFL = {
     setTimeout(() => window.location.reload(), 1000);
   },
 
-  async handleLogin(emailId, passId) {
-    const email = document.getElementById(emailId).value;
-    const pass = document.getElementById(passId).value;
+  async quickLogin(email = 'admin@admin.com', pass = 'admin') {
     if (!email || !pass) { this.toast('Lütfen tüm alanları doldurun.', 'warning'); return; }
     
     if (this.supabase) {
@@ -1669,10 +1698,21 @@ const ASDFL = {
       this.currentUser = user;
     }
     
-    this.closeModal('loginModal');
     this.updateUIForAuth();
     this.toast('Giriş başarılı!', 'success');
     setTimeout(() => window.location.reload(), 500);
+  },
+
+  async handleLogin(emailId, passId) {
+    const emailEl = document.getElementById(emailId);
+    const passEl = document.getElementById(passId);
+    if (!emailEl || !passEl) return;
+    const email = emailEl.value;
+    const pass = passEl.value;
+    if (!email || !pass) { this.toast('Lütfen tüm alanları doldurun.', 'warning'); return; }
+    
+    await this.quickLogin(email, pass);
+    this.closeModal('loginModal');
   },
 
   initCities() {

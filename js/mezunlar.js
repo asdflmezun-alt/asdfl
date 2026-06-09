@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const matchYear = year === 'all' || a.grad_year == year;
       const matchCity = city === 'all' || a.city === city;
       const matchUniversity = university === 'all' || a.university === university;
-      const matchMentor = !mentorOnly || a.mentor;
+      const matchMentor = !mentorOnly || (a.mentor && a.role !== 'Öğrenci');
       
       return matchSearch && matchYear && matchCity && matchUniversity && matchMentor;
     });
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderMentors() {
     const grid = document.getElementById('mentorGrid');
     if(!grid) return;
-    const mentors = allAlumni.filter(a => a.mentor);
+    const mentors = allAlumni.filter(a => a.mentor && a.role !== 'Öğrenci');
     grid.innerHTML = mentors.map(a => {
       let jobCompanyText = '';
       if (a.job) {

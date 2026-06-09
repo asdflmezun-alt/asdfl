@@ -136,6 +136,37 @@
       gap: 0.75rem;
     }
   }
+  .similarity-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(244, 168, 54, 0.3) !important;
+    box-shadow: 0 8px 24px rgba(244, 168, 54, 0.08);
+    background: rgba(255, 255, 255, 0.03) !important;
+  }
+  .profile-right-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+  @media (max-width: 1024px) {
+    .profile-right-grid {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+  }
+  #social-bio::-webkit-scrollbar {
+    width: 6px;
+  }
+  #social-bio::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.01);
+  }
+  #social-bio::-webkit-scrollbar-thumb {
+    background: rgba(244, 168, 54, 0.25);
+    border-radius: var(--radius-full);
+  }
+  #social-bio::-webkit-scrollbar-thumb:hover {
+    background: rgba(244, 168, 54, 0.45);
+  }
 </style>
 </head>
 <body>
@@ -200,7 +231,7 @@
 </nav>
 
 <section class="section" style="padding-top:8rem">
-  <div class="container" style="max-width:800px">
+  <div class="container" style="max-width:1200px">
     <!-- Geri Dön Butonu -->
     <div id="profileBackBtn" class="hidden" style="margin-bottom: 1.5rem;">
       <button class="btn btn-ghost btn-sm" onclick="goBackToAlumni()" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem;">
@@ -221,6 +252,23 @@
       </div>
       <h1 id="profileName" style="margin-bottom:.5rem">Profil Yükleniyor...</h1>
       <p id="profileRole" style="color:var(--text-secondary);font-size:1.1rem;margin:0;"></p>
+      
+      <!-- Profil Tamamlanma Skoru -->
+      <div id="profileCompletionWrapper" style="margin-top: 1.5rem; display: none; max-width: 340px; margin-left: auto; margin-right: auto; padding: 1rem 1.25rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: var(--radius-md); box-shadow: var(--shadow-md);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.82rem;">
+          <span style="color: var(--text-secondary); font-weight: 500; display: flex; align-items: center; gap: 0.35rem;">
+            <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--gold-500);"></i>
+            Profil Doluluk Oranı
+          </span>
+          <span id="profileCompletionText" style="color: var(--gold-500); font-weight: 700;">0%</span>
+        </div>
+        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); height: 8px; border-radius: var(--radius-full); overflow: hidden; position: relative;">
+          <div id="profileCompletionBar" style="background: linear-gradient(90deg, var(--gold-500), var(--gold-400)); height: 100%; width: 0%; transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);"></div>
+        </div>
+        <div id="profileCompletionTips" style="margin-top: 0.65rem; font-size: 0.75rem; color: var(--text-muted); text-align: center; line-height: 1.4;">
+          Profilinizi tamamlamak için eksik bilgilerinizi doldurun.
+        </div>
+      </div>
     </div>
 
     <!-- Tab Switches -->
@@ -278,21 +326,29 @@
           </div>
         </div>
 
-        <!-- Right Column: Bio & Academic cards -->
-        <div style="display:flex; flex-direction:column; gap:1.5rem;">
+        <!-- Right Column: Bio & Academic cards side-by-side -->
+        <div class="profile-right-grid">
           <!-- Bio -->
-          <div class="card" style="padding: 2rem; background: var(--glass-bg); border: 1px solid var(--glass-border); text-align: left; border-radius: var(--radius-lg);">
+          <div class="card" style="padding: 2rem; background: var(--glass-bg); border: 1px solid var(--glass-border); text-align: left; border-radius: var(--radius-lg); display: flex; flex-direction: column; height: 100%;">
             <h3 style="margin-top:0; margin-bottom:1rem; border-bottom:1px solid var(--glass-border); padding-bottom:0.75rem; font-family:'Outfit',sans-serif; font-weight:600; font-size:1.2rem; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="quote" style="color:var(--gold-500); width:1.2rem; height:1.2rem;"></i> Hakkımda</h3>
-            <p id="social-bio" style="color:var(--text-secondary); line-height:1.6; white-space:pre-wrap; font-style:italic; margin: 0;">Kendiniz hakkında henüz bilgi girmediniz. Ayarlar sekmesinden doldurabilirsiniz.</p>
+            <p id="social-bio" style="color:var(--text-secondary); line-height:1.6; white-space:pre-wrap; font-style:italic; margin: 0; max-height: 380px; overflow-y: auto; padding-right: 0.5rem;">Kendiniz hakkında henüz bilgi girmediniz. Ayarlar sekmesinden doldurabilirsiniz.</p>
           </div>
 
           <!-- Academic / Mentor detail -->
-          <div class="card" style="padding: 2rem; background: var(--glass-bg); border: 1px solid var(--glass-border); text-align: left; border-radius: var(--radius-lg);">
+          <div class="card" style="padding: 2rem; background: var(--glass-bg); border: 1px solid var(--glass-border); text-align: left; border-radius: var(--radius-lg); height: 100%;">
             <h3 style="margin-top:0; margin-bottom:1rem; border-bottom:1px solid var(--glass-border); padding-bottom:0.75rem; font-family:'Outfit',sans-serif; font-weight:600; font-size:1.2rem; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="award" style="color:var(--gold-500); width:1.2rem; height:1.2rem;"></i> Mentorluk &amp; Eğitim Bilgileri</h3>
             <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem; color:var(--text-secondary);" id="social-academic-details">
               <!-- Dynamically populated -->
             </div>
           </div>
+        </div>
+      </div>
+      
+      <!-- Benzer Mezunlar (Full Width) -->
+      <div class="card fade-in-up-init" style="padding: 2rem; background: var(--glass-bg); border: 1px solid var(--glass-border); text-align: left; border-radius: var(--radius-lg); margin-top: 1.5rem; animation-delay: 0.3s" id="similarAlumniCard">
+        <h3 style="margin-top:0; margin-bottom:1.15rem; border-bottom:1px solid var(--glass-border); padding-bottom:0.75rem; font-family:'Outfit',sans-serif; font-weight:600; font-size:1.2rem; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="sparkles" style="color:var(--gold-500); width:1.2rem; height:1.2rem;"></i> Benzer Mezunlar</h3>
+        <div id="similarAlumniList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem;">
+          <p style="color:var(--text-muted); font-size:0.88rem; font-style:italic;">Yükleniyor...</p>
         </div>
       </div>
     </div>
@@ -427,6 +483,14 @@
           <label class="form-label">Hakkımda / Özgeçmiş Tanıtımı</label>
           <textarea class="form-textarea" id="editBio" placeholder="Kendiniz, başarılarınız ve ilgi alanlarınız hakkında kısa bir açıklama yazın..." style="height:110px"></textarea>
         </div>
+
+        <!-- Mentörlük Tercihi -->
+        <div class="form-group" style="margin-top:1rem; text-align: left;">
+          <label class="form-label" style="font-weight: 600;">Mentörlük Tercihi</label>
+          <select class="form-select" id="editMentorPreference">
+            <option value="">Seçiniz...</option>
+          </select>
+        </div>
         
         <div style="margin-top:1.5rem; display:flex; flex-direction:column; gap:0.5rem; border-top:1px solid var(--glass-border); padding-top:1.5rem; text-align: left;">
           <h4 style="margin-bottom:.5rem; font-family:'Outfit',sans-serif; font-size:1rem; font-weight:600;">İletişim Bilgileri Paylaşım Tercihleri</h4>
@@ -463,6 +527,37 @@
   </div>
   <div class="footer-bottom"><span>© 2025 ASDFL Mezunlar Derneği</span><span>💛 ASDFL ruhuyla yapıldı</span></div>
 </div></footer>
+<!-- CONTACT REQUEST DETAILS MODAL -->
+<div class="modal-overlay" id="contactRequestModal" onclick="if(event.target===this)ASDFL.closeModal('contactRequestModal')">
+  <div class="modal" style="max-width:500px">
+    <button class="modal-close" onclick="ASDFL.closeModal('contactRequestModal')"><i data-lucide="x" style="width:1.2em;height:1.2em"></i></button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2.5rem;color:var(--gold-500);margin-bottom:.5rem"><i data-lucide="mail" style="width:1em;height:1em"></i></div>
+      <h3 style="font-family:'Outfit',sans-serif;font-weight:700">İletişim Bilgilerini Talep Et</h3>
+      <p style="font-size:.9rem;margin-top:.25rem;color:var(--text-muted)">Talep göndermeden önce iletişime geçme nedeninizi belirtin.</p>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">İletişime Geçme Nedeni</label>
+      <select class="form-select" id="contactRequestReason" onchange="handleContactReasonChange(this.value)" style="width:100%; border-radius: var(--radius-full) !important; padding: 0.5rem 1rem !important;">
+        <option value="" disabled selected>Neden seçiniz...</option>
+        <option value="Mentörlük almak istiyorum">Mentörlük almak istiyorum</option>
+        <option value="Üniversite hakkında soru sormak istiyorum">Üniversite hakkında soru sormak istiyorum</option>
+        <option value="Kariyer tavsiyesi almak istiyorum">Kariyer tavsiyesi almak istiyorum</option>
+        <option value="Aynı şehirdeki mezunlarla tanışmak istiyorum">Aynı şehirdeki mezunlarla tanışmak istiyorum</option>
+        <option value="Diğer">Diğer (Kendi mesajımı yazacağım)</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Kısa Mesaj (İsteğe bağlı)</label>
+      <textarea class="form-textarea" id="contactRequestMessage" placeholder="Merhaba, sizinle şu konuda iletişime geçmek istiyorum..." style="height:100px; border-radius: var(--radius-md); padding: 0.75rem;"></textarea>
+    </div>
+    
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="submitContactRequest()">Talebi Gönder</button>
+  </div>
+</div>
+
 <div class="toast-container"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/universities.js"></script>
@@ -473,6 +568,117 @@
       history.back();
     } else {
       window.location.href = 'mezunlar.html';
+    }
+  };
+
+  window.setupMentorPreferenceSelect = function(role, currentValue) {
+    const selectEl = document.getElementById('editMentorPreference');
+    if (!selectEl) return;
+    selectEl.innerHTML = '';
+    
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = 'Seçiniz...';
+    selectEl.appendChild(defaultOpt);
+
+    if (role === 'Öğrenci') {
+      const optYes = document.createElement('option');
+      optYes.value = 'yes';
+      optYes.textContent = 'Mentörlük desteği almak istiyorum';
+      selectEl.appendChild(optYes);
+
+      const optNo = document.createElement('option');
+      optNo.value = 'no';
+      optNo.textContent = 'Mentörlük desteği almak istemiyorum';
+      selectEl.appendChild(optNo);
+    } else {
+      const optYes = document.createElement('option');
+      optYes.value = 'yes';
+      optYes.textContent = 'Mentör olmak istiyorum (Öğrencilere rehberlik edebilirim)';
+      selectEl.appendChild(optYes);
+
+      const optNo = document.createElement('option');
+      optNo.value = 'no';
+      optNo.textContent = 'Mentör olmak istemiyorum';
+      selectEl.appendChild(optNo);
+    }
+    selectEl.value = currentValue || '';
+  };
+
+  window.updateProfileCompletion = function(profile) {
+    if (!profile) return;
+
+    const checklist = [];
+
+    // 1. Fotoğraf eklendi
+    const hasPhoto = !!(profile.avatar_url || profile.avatarUrl);
+    checklist.push({ name: 'Profil Fotoğrafı', completed: hasPhoto, tip: 'Profil fotoğrafı yükleyin.' });
+
+    // 2. Mezuniyet/Eğitim yılı girildi
+    let hasYear = false;
+    if (profile.role === 'Mezun' || profile.role === 'Admin') {
+      hasYear = !!(profile.grad_year || profile.gradYear);
+    } else if (profile.role === 'Öğrenci') {
+      hasYear = !!profile.grade;
+    } else if (profile.role === 'Öğretmen') {
+      hasYear = !!(profile.teaching_year || profile.teachingYear);
+    }
+    checklist.push({ name: 'Mezuniyet Yılı', completed: hasYear, tip: 'Eğitim/mezuniyet yılınızı girin.' });
+
+    // 3. Üniversite girildi
+    let hasUniOrSec = false;
+    if (profile.role === 'Mezun' || profile.role === 'Admin') {
+      hasUniOrSec = !!profile.university;
+    } else if (profile.role === 'Öğrenci') {
+      hasUniOrSec = !!(profile.class_section || profile.classSection);
+    } else if (profile.role === 'Öğretmen') {
+      hasUniOrSec = !!profile.branch;
+    }
+    checklist.push({ name: 'Üniversite', completed: hasUniOrSec, tip: profile.role === 'Öğrenci' ? 'Sınıf şubenizi girin.' : 'Üniversite veya branş bilgisi girin.' });
+
+    // 4. Meslek/şirket girildi
+    let hasJob = false;
+    if (profile.role === 'Mezun' || profile.role === 'Admin') {
+      hasJob = !!(profile.job || profile.company);
+    } else if (profile.role === 'Öğrenci') {
+      hasJob = !!profile.university; // okuduğu/hedeflediği üniversite
+    } else if (profile.role === 'Öğretmen') {
+      hasJob = !!profile.branch; // default true if branch is checked
+    }
+    checklist.push({ name: 'Meslek/Şirket', completed: hasJob, tip: profile.role === 'Öğrenci' ? 'Hedeflediğiniz üniversiteyi seçin.' : 'Meslek veya kurum bilgisi girin.' });
+
+    // 5. Şehir girildi
+    const hasCity = !!profile.city;
+    checklist.push({ name: 'Şehir', completed: hasCity, tip: 'Yaşadığınız şehri belirtin.' });
+
+    // 6. Biyografi yazıldı
+    const hasBio = !!profile.bio;
+    checklist.push({ name: 'Biyografi', completed: hasBio, tip: 'Hakkınızda kısa bir biyografi yazın.' });
+
+    // 7. Mentörlük tercihi seçildi
+    const hasMentorPref = !!(profile.mentor_preference || profile.mentorPreference);
+    checklist.push({ name: 'Mentörlük Tercihi', completed: hasMentorPref, tip: 'Ayarlardan mentörlük tercihinizi seçin.' });
+
+    const total = checklist.length;
+    const completedCount = checklist.filter(c => c.completed).length;
+    const percentage = Math.round((completedCount / total) * 100);
+
+    const textEl = document.getElementById('profileCompletionText');
+    const barEl = document.getElementById('profileCompletionBar');
+    const tipEl = document.getElementById('profileCompletionTips');
+
+    if (textEl) textEl.textContent = `${percentage}%`;
+    if (barEl) barEl.style.width = `${percentage}%`;
+
+    if (tipEl) {
+      if (percentage === 100) {
+        tipEl.innerHTML = `<span style="color: var(--success); font-weight: 600;">✨ Tebrikler! Profiliniz %100 tamamlandı.</span>`;
+      } else {
+        const nextItem = checklist.find(c => !c.completed);
+        if (nextItem) {
+          tipEl.innerHTML = `💡 <span style="font-weight: 500; color: var(--text-secondary);">Öneri:</span> ${nextItem.tip}`;
+        }
+      }
     }
   };
 
@@ -672,10 +878,20 @@
       if (user.role === 'Mezun' || user.role === 'Admin') {
         document.querySelectorAll('.role-mezun').forEach(el => el.classList.remove('hidden'));
       } else if (user.role === 'Öğrenci') {
+        document.querySelectorAll('.role-ogretmen').forEach(el => el.classList.add('hidden')); // fix student tab edge cases
         document.querySelectorAll('.role-ogrenci').forEach(el => el.classList.remove('hidden'));
       } else if (user.role === 'Öğretmen') {
         document.querySelectorAll('.role-ogretmen').forEach(el => el.classList.remove('hidden'));
       }
+
+      setupMentorPreferenceSelect(user.role, user.mentor_preference || user.mentorPreference || '');
+
+      // Show and calculate completion score on load
+      const completionWrapper = document.getElementById('profileCompletionWrapper');
+      if (completionWrapper) {
+        completionWrapper.style.display = 'block';
+      }
+      updateProfileCompletion(user);
 
     } catch (e) {
       console.error('Error parsing cached user:', e);
@@ -726,34 +942,115 @@
     if (targetBtn) targetBtn.classList.add('active');
   };
 
-  window.requestContactFromProfile = async function() {
+  window.requestContactFromProfile = function() {
     const urlParams = new URLSearchParams(window.location.search);
     const targetUserId = urlParams.get('id');
-    if (!ASDFL.supabase || !ASDFL.currentUser || !targetUserId) return;
+    if (!ASDFL.currentUser || !targetUserId) return;
 
-    const btn = document.getElementById('profileContactRequestBtn');
+    // Reset modal inputs
+    const reasonEl = document.getElementById('contactRequestReason');
+    const msgEl = document.getElementById('contactRequestMessage');
+    if (reasonEl) reasonEl.value = '';
+    if (msgEl) msgEl.value = '';
+
+    // Reset button state
+    const submitBtn = document.querySelector('#contactRequestModal .btn-primary');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Talebi Gönder';
+    }
+
+    ASDFL.openModal('contactRequestModal');
+  };
+
+  window.handleContactReasonChange = function(value) {
+    const msgEl = document.getElementById('contactRequestMessage');
+    if (!msgEl) return;
+    
+    const templates = {
+      'Mentörlük almak istiyorum': 'Merhaba, mezuniyetiniz ve mentörlük tecrübeniz hakkında bilgi almak ve eğer uygunsanız mentörlük desteği talep etmek amacıyla sizinle iletişime geçmek istiyorum.',
+      'Üniversite hakkında soru sormak istiyorum': 'Merhaba, okuduğunuz/mezun olduğunuz üniversite ve bölüm hakkında bilgi edinmek, sorularımı yöneltmek amacıyla sizinle iletişime geçmek istiyorum.',
+      'Kariyer tavsiyesi almak istiyorum': 'Merhaba, çalıştığınız sektör ve mesleğiniz hakkında kariyer tavsiyesi almak, tecrübelerinizden faydalanmak amacıyla sizinle iletişime geçmek istiyorum.',
+      'Aynı şehirdeki mezunlarla tanışmak istiyorum': 'Merhaba, aynı şehirde yaşadığımızı gördüm. Tanışmak ve ASDFL mezunlar ağımızı güçlendirmek amacıyla sizinle iletişime geçmek istiyorum.'
+    };
+    
+    msgEl.value = templates[value] || '';
+  };
+
+  window.submitContactRequest = async function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUserId = urlParams.get('id');
+    if (!ASDFL.currentUser || !targetUserId) return;
+
+    const reason = document.getElementById('contactRequestReason').value;
+    const message = document.getElementById('contactRequestMessage').value;
+
+    if (!reason) {
+      ASDFL.toast('Lütfen iletişime geçme nedeninizi belirtin.', 'warning');
+      return;
+    }
+
+    const btn = document.querySelector('#contactRequestModal .btn-primary');
     if (btn) {
       btn.disabled = true;
       btn.textContent = 'Talep Gönderiliyor...';
     }
 
-    const { error } = await ASDFL.supabase
-      .from('contact_requests')
-      .insert({
-        sender_id: ASDFL.currentUser.id,
-        receiver_id: targetUserId,
-        status: 'Pending'
-      });
+    const requestData = {
+      sender_id: ASDFL.currentUser.id,
+      receiver_id: targetUserId,
+      status: 'Pending',
+      reason: reason,
+      message: message
+    };
 
-    if (error) {
-      ASDFL.toast('Talep gönderilirken hata oluştu: ' + error.message, 'error');
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = 'İletişim Bilgilerini Talep Et';
+    if (ASDFL.supabase) {
+      const { error } = await ASDFL.supabase
+        .from('contact_requests')
+        .insert(requestData);
+
+      if (error) {
+        ASDFL.toast('Talep gönderilirken hata oluştu: ' + error.message, 'error');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Talebi Gönder';
+        }
+      } else {
+        ASDFL.toast('İletişim erişim talebi başarıyla gönderildi!', 'success');
+        ASDFL.closeModal('contactRequestModal');
+        await loadProfile();
       }
     } else {
-      ASDFL.toast('İletişim erişim talebi başarıyla gönderildi!', 'success');
-      await loadProfile();
+      // Local fallback
+      try {
+        const stored = ASDFL._storage.getItem('asdfl_contact_requests') || '[]';
+        const reqs = JSON.parse(stored);
+        
+        const exists = reqs.some(r => r.sender_id === ASDFL.currentUser.id && r.receiver_id === targetUserId);
+        if (!exists) {
+          reqs.push({
+            id: Math.random().toString(36).substring(2),
+            sender_id: ASDFL.currentUser.id,
+            receiver_id: targetUserId,
+            status: 'Pending',
+            reason: reason,
+            message: message,
+            created_at: new Date().toISOString()
+          });
+          ASDFL._storage.setItem('asdfl_contact_requests', JSON.stringify(reqs));
+        }
+        
+        ASDFL.toast('İletişim erişim talebi başarıyla gönderildi! (Yerel)', 'success');
+        ASDFL.closeModal('contactRequestModal');
+        await loadProfile();
+      } catch (e) {
+        console.error('Error saving local contact request:', e);
+        ASDFL.toast('Yerel talep kaydedilirken hata oluştu.', 'error');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Talebi Gönder';
+        }
+      }
     }
   };
 
@@ -799,7 +1096,10 @@
           profileData = ASDFL.currentUser;
         }
       } else {
-        profileData = data;
+        profileData = isOwnProfile ? { ...ASDFL.currentUser, ...data } : data;
+        if (isOwnProfile) {
+          profileData.mentor_preference = ASDFL.currentUser.mentor_preference || ASDFL.currentUser.mentorPreference;
+        }
       }
 
       if (!isOwnProfile) {
@@ -829,11 +1129,37 @@
           const alumni = JSON.parse(stored);
           profileData = alumni.find(a => a.id === targetUserId) || {};
         }
+        
+        // İlişki durumunu sorgula (Yerel)
+        const storedReqs = ASDFL._storage.getItem('asdfl_contact_requests') || '[]';
+        try {
+          const reqs = JSON.parse(storedReqs);
+          relReq = reqs.find(r => 
+            (r.sender_id === ASDFL.currentUser.id && r.receiver_id === targetUserId) ||
+            (r.sender_id === targetUserId && r.receiver_id === ASDFL.currentUser.id)
+          );
+          if (relReq) {
+            requestStatus = relReq.status;
+          }
+        } catch (e) {
+          console.error('Error parsing local contact requests:', e);
+        }
       }
     }
 
     document.getElementById('profileName').textContent = profileData.name || 'Bilinmeyen Üye';
     document.getElementById('profileRole').textContent = (profileData.role || 'Kullanıcı') + (profileData.grad_year ? ' · ' + profileData.grad_year + ' Mezunu' : '');
+
+    // Profil doluluk oranı görünürlük ve hesaplaması
+    const completionWrapper = document.getElementById('profileCompletionWrapper');
+    if (completionWrapper) {
+      if (isOwnProfile) {
+        completionWrapper.style.display = 'block';
+        updateProfileCompletion(profileData);
+      } else {
+        completionWrapper.style.display = 'none';
+      }
+    }
 
     // Avatar render
     const avatarEl = document.getElementById('profileAvatar');
@@ -959,6 +1285,8 @@
       document.getElementById('editLinkedin').value = profileData.linkedin_url || '';
       document.getElementById('editGithub').value = profileData.github_url || '';
       document.getElementById('editInstagram').value = profileData.instagram_url || '';
+
+      setupMentorPreferenceSelect(profileData.role, profileData.mentor_preference || profileData.mentorPreference || '');
 
       await loadContactRequests();
 
@@ -1204,6 +1532,7 @@
       academicDiv.innerHTML = academicHTML;
     }
 
+    await loadSimilarAlumni(profileData);
     ASDFL.initReveal();
     setTimeout(() => lucide.createIcons(), 10);
   }
@@ -1284,22 +1613,162 @@
     ASDFL.toast('Profil fotoğrafı başarıyla güncellendi!', 'success');
   }
 
-  async function loadContactRequests() {
-    const el = document.getElementById('contactRequestsList');
-    if (!el || !ASDFL.supabase || !ASDFL.currentUser) return;
+  async function loadSimilarAlumni(currentProfile) {
+    const listEl = document.getElementById('similarAlumniList');
+    if (!listEl) return;
 
-    const { data, error } = await ASDFL.supabase
-      .from('contact_requests')
-      .select('*, profiles!contact_requests_sender_id_fkey(name, role, grad_year, email, phone)')
-      .eq('receiver_id', ASDFL.currentUser.id);
+    let alumniList = [];
 
-    if (error) {
-      console.error('Error fetching contact requests:', error);
-      el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem">Talepler yüklenirken bir hata oluştu.</p>';
+    if (ASDFL.supabase) {
+      try {
+        const { data, error } = await ASDFL.supabase
+          .from('profiles')
+          .select('*')
+          .neq('id', currentProfile.id) // exclude current profile
+          .limit(100);
+        if (!error && data) {
+          alumniList = data;
+        }
+      } catch (err) {
+        console.error('Error fetching similar alumni:', err);
+      }
+    } else {
+      // Local fallback
+      try {
+        const stored = ASDFL._storage.getItem('asdfl_alumni');
+        if (stored) {
+          alumniList = JSON.parse(stored).filter(a => a.id !== currentProfile.id);
+        }
+      } catch (e) {
+        console.error('Error parsing local alumni:', e);
+      }
+    }
+
+    if (alumniList.length === 0) {
+      listEl.innerHTML = '<p style="color:var(--text-muted); font-size:0.88rem; font-style:italic;">Gösterilecek benzer mezun bulunamadı.</p>';
       return;
     }
 
-    const pendingRequests = data.filter(r => r.status === 'Pending');
+    // Calculate similarity score for each profile
+    const scoredList = alumniList.map(a => {
+      let score = 0;
+      const reasons = [];
+
+      // Same graduation year
+      if (currentProfile.grad_year && a.grad_year && currentProfile.grad_year === a.grad_year) {
+        score += 3;
+        reasons.push(`${currentProfile.grad_year} Mezunu`);
+      }
+      
+      // Same city
+      if (currentProfile.city && a.city && currentProfile.city.toLowerCase() === a.city.toLowerCase()) {
+        score += 2;
+        reasons.push(`Aynı Şehir (${a.city})`);
+      }
+
+      // Same university
+      if (currentProfile.university && a.university && currentProfile.university.toLowerCase() === a.university.toLowerCase()) {
+        score += 2;
+        reasons.push('Aynı Üniversite');
+      }
+
+      // Same job or company
+      if (currentProfile.job && a.job && currentProfile.job.toLowerCase() === a.job.toLowerCase()) {
+        score += 2;
+        reasons.push('Aynı Sektör/Meslek');
+      } else if (currentProfile.company && a.company && currentProfile.company.toLowerCase() === a.company.toLowerCase()) {
+        score += 2;
+        reasons.push('Aynı Şirket');
+      }
+
+      // Active mentor
+      if (a.mentor && a.role !== 'Öğrenci') {
+        score += 1;
+        reasons.push('Mentör');
+      }
+
+      return { profile: a, score, reasons };
+    });
+
+    // Sort by score descending
+    scoredList.sort((x, y) => {
+      if (y.score !== x.score) return y.score - x.score;
+      if (y.profile.mentor !== x.profile.mentor) return (y.profile.mentor ? 1 : 0) - (x.profile.mentor ? 1 : 0);
+      return 0;
+    });
+
+    // Take top 3 recommendations
+    const recommendations = scoredList.slice(0, 3);
+
+    if (recommendations.length === 0) {
+      listEl.innerHTML = '<p style="color:var(--text-muted); font-size:0.88rem; font-style:italic;">Gösterilecek benzer mezun bulunamadı.</p>';
+      return;
+    }
+
+    listEl.innerHTML = recommendations.map(rec => {
+      const p = rec.profile;
+      const reasonsHTML = rec.reasons.length > 0 
+        ? rec.reasons.map(r => `<span style="font-size:0.7rem; background:rgba(244,168,54,0.06); border:1px solid rgba(244,168,54,0.15); color:var(--gold-400); padding:2px 6px; border-radius:10px; display:inline-block; margin-right:4px; margin-top:4px;"><i data-lucide="info" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-top:-2px;margin-right:2px"></i> ${r}</span>`).join('')
+        : `<span style="font-size:0.7rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); color:var(--text-muted); padding:2px 6px; border-radius:10px; display:inline-block; margin-top:4px;">Mezun Üye</span>`;
+
+      return `
+        <div class="card reveal similarity-card" style="padding:1.25rem; background:rgba(255,255,255,0.01); border:1px solid var(--glass-border); border-radius:var(--radius-md); display:flex; flex-direction:column; justify-content:space-between; height:100%; transition: all 0.3s ease; text-align:left; cursor:pointer;" onclick="window.location.href='profil.html?id=${p.id}'">
+          <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem;">
+            ${ASDFL.getAvatarHTML(p, 'avatar avatar-sm', 'width:44px; height:44px; font-size:0.95rem; border:1px solid var(--glass-border);')}
+            <div style="min-width: 0; flex-grow: 1;">
+              <strong style="font-size:0.92rem; color:var(--text-primary); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${p.name}">${p.name}</strong>
+              <span style="font-size:0.78rem; color:var(--text-muted); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.role} ${p.grad_year ? ' · ' + p.grad_year : ''}</span>
+            </div>
+          </div>
+          <div style="border-top:1px dashed var(--glass-border); padding-top:0.5rem; margin-top:auto;">
+            <div style="display:flex; flex-wrap:wrap;">
+              ${reasonsHTML}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    setTimeout(() => {
+      if (window.lucide) window.lucide.createIcons();
+    }, 10);
+  }
+
+  async function loadContactRequests() {
+    const el = document.getElementById('contactRequestsList');
+    if (!el || !ASDFL.currentUser) return;
+
+    let pendingRequests = [];
+    if (ASDFL.supabase) {
+      const { data, error } = await ASDFL.supabase
+        .from('contact_requests')
+        .select('*, profiles!contact_requests_sender_id_fkey(name, role, grad_year, email, phone)')
+        .eq('receiver_id', ASDFL.currentUser.id);
+
+      if (error) {
+        console.error('Error fetching contact requests:', error);
+        el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem">Talepler yüklenirken bir hata oluştu.</p>';
+        return;
+      }
+      pendingRequests = (data || []).filter(r => r.status === 'Pending');
+    } else {
+      // Local fallback
+      try {
+        const storedReqs = ASDFL._storage.getItem('asdfl_contact_requests') || '[]';
+        const reqs = JSON.parse(storedReqs);
+        const storedAlumni = ASDFL._storage.getItem('asdfl_alumni') || '[]';
+        const alumni = JSON.parse(storedAlumni);
+        
+        pendingRequests = reqs
+          .filter(r => r.receiver_id === ASDFL.currentUser.id && r.status === 'Pending')
+          .map(r => ({
+            ...r,
+            profiles: alumni.find(a => a.id === r.sender_id) || { name: 'Bilinmeyen Üye', role: 'Kullanıcı' }
+          }));
+      } catch (e) {
+        console.error('Error parsing local contact requests:', e);
+      }
+    }
 
     const badge = document.getElementById('requestsCountBadge');
     if (badge) {
@@ -1319,16 +1788,27 @@
     el.innerHTML = pendingRequests.map(r => {
       const sender = r.profiles;
       const desc = sender.role + (sender.grad_year ? ` (${sender.grad_year} Mezunu)` : '');
+      const reasonBadge = r.reason ? `<span class="badge badge-gold" style="font-size:0.75rem; margin-top:0.25rem; display:inline-block; border-radius:10px; padding: 2px 8px;"><i data-lucide="info" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-top:-2px;margin-right:2px"></i> ${r.reason}</span>` : '';
+      const customMessage = r.message ? `
+        <div style="margin-top:0.75rem; padding:0.75rem; background:rgba(255,255,255,0.02); border-left:3px solid var(--gold-500); border-radius:4px; font-size:0.85rem; color:var(--text-secondary); line-height:1.4;">
+          "${r.message}"
+        </div>
+      ` : '';
+
       return `
-        <div class="reveal" style="display:flex; align-items:center; justify-content:space-between; padding:1rem; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:var(--radius-md); margin-bottom:1rem; text-align:left;">
-          <div>
-            <strong style="display:block; font-size:.95rem">${sender.name}</strong>
-            <span style="font-size:.8rem; color:var(--text-secondary)">${desc} iletişim bilgilerinize erişmek istiyor.</span>
+        <div class="reveal" style="padding:1.25rem; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:var(--radius-md); margin-bottom:1rem; text-align:left;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <strong style="display:block; font-size:.95rem; color:var(--text-primary);">${sender.name}</strong>
+              <span style="font-size:.8rem; color:var(--text-muted)">${desc}</span>
+              <div>${reasonBadge}</div>
+            </div>
+            <div style="display:flex; gap:.5rem;">
+              <button class="btn btn-primary btn-sm" onclick="respondRequest('${r.id}', 'Approved')" style="padding:.25rem .75rem; font-size:.8rem">Onayla</button>
+              <button class="btn btn-sm" onclick="respondRequest('${r.id}', 'Rejected')" style="padding:.25rem .75rem; font-size:.8rem; background:rgba(255,255,255,.05); border:1px solid var(--glass-border)">Reddet</button>
+            </div>
           </div>
-          <div style="display:flex; gap:.5rem;">
-            <button class="btn btn-primary btn-sm" onclick="respondRequest('${r.id}', 'Approved')" style="padding:.25rem .75rem; font-size:.8rem">Onayla</button>
-            <button class="btn btn-sm" onclick="respondRequest('${r.id}', 'Rejected')" style="padding:.25rem .75rem; font-size:.8rem; background:rgba(255,255,255,.05); border:1px solid var(--glass-border)">Reddet</button>
-          </div>
+          ${customMessage}
         </div>
       `;
     }).join('');
@@ -1337,18 +1817,32 @@
   }
 
   window.respondRequest = async function(requestId, status) {
-    if (!ASDFL.supabase) return;
-    
-    const { error } = await ASDFL.supabase
-      .from('contact_requests')
-      .update({ status })
-      .eq('id', requestId);
+    if (ASDFL.supabase) {
+      const { error } = await ASDFL.supabase
+        .from('contact_requests')
+        .update({ status })
+        .eq('id', requestId);
 
-    if (error) {
-      ASDFL.toast('İşlem başarısız: ' + error.message, 'error');
+      if (error) {
+        ASDFL.toast('İşlem başarısız: ' + error.message, 'error');
+      } else {
+        ASDFL.toast(status === 'Approved' ? 'Talep onaylandı!' : 'Talep reddedildi.', 'success');
+        await loadContactRequests();
+      }
     } else {
-      ASDFL.toast(status === 'Approved' ? 'Talep onaylandı!' : 'Talep reddedildi.', 'success');
-      await loadContactRequests();
+      // Local fallback
+      try {
+        const storedReqs = ASDFL._storage.getItem('asdfl_contact_requests') || '[]';
+        let reqs = JSON.parse(storedReqs);
+        reqs = reqs.map(r => r.id === requestId ? { ...r, status } : r);
+        ASDFL._storage.setItem('asdfl_contact_requests', JSON.stringify(reqs));
+        
+        ASDFL.toast(status === 'Approved' ? 'Talep onaylandı! (Yerel)' : 'Talep reddedildi. (Yerel)', 'success');
+        await loadContactRequests();
+      } catch (e) {
+        console.error('Error updating local contact request:', e);
+        ASDFL.toast('Yerel talep güncellenirken hata oluştu.', 'error');
+      }
     }
   };
 
@@ -1398,6 +1892,8 @@
     const github_url = document.getElementById('editGithub').value;
     const instagram_url = document.getElementById('editInstagram').value;
 
+    const mentorPreference = document.getElementById('editMentorPreference')?.value || '';
+
     const zoom = document.getElementById('sliderZoom') ? document.getElementById('sliderZoom').value : 1.0;
     const posX = document.getElementById('sliderPosX') ? document.getElementById('sliderPosX').value : 0;
     const posY = document.getElementById('sliderPosY') ? document.getElementById('sliderPosY').value : 0;
@@ -1424,7 +1920,8 @@
           linkedin_url,
           github_url,
           instagram_url,
-          avatar_position: avatarPosition
+          avatar_position: avatarPosition,
+          mentor: ASDFL.currentUser.role !== 'Öğrenci' && mentorPreference === 'yes'
         })
         .eq('id', ASDFL.currentUser.id);
 
@@ -1438,7 +1935,8 @@
       await ASDFL.supabase.auth.updateUser({
         data: { 
           name, city, job, company, classSection, gradYear, grade, branch, teachingYear, phone, sharePhone, shareEmail,
-          bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition
+          bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition,
+          mentor_preference: mentorPreference
         }
       });
     } else {
@@ -1446,7 +1944,9 @@
       const updatedUser = {
         ...ASDFL.currentUser,
         name, city, job, company, classSection, gradYear, grade, branch, teachingYear, phone, sharePhone, shareEmail,
-        bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition
+        bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition,
+        mentor: ASDFL.currentUser.role !== 'Öğrenci' && mentorPreference === 'yes',
+        mentor_preference: mentorPreference
       };
       
       // Update in local array
@@ -1456,7 +1956,9 @@
         alumni = alumni.map(m => m.id === ASDFL.currentUser.id ? { 
           ...m, 
           name, city, job, company, class_section: classSection, grad_year: gradYear, grade, branch, teaching_year: teachingYear, phone, share_phone: sharePhone, share_email: shareEmail,
-          bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition
+          bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition,
+          mentor: ASDFL.currentUser.role !== 'Öğrenci' && mentorPreference === 'yes',
+          mentor_preference: mentorPreference
         } : m);
         ASDFL._storage.setItem('asdfl_alumni', JSON.stringify(alumni));
       }
@@ -1483,6 +1985,8 @@
     ASDFL.currentUser.github_url = github_url;
     ASDFL.currentUser.instagram_url = instagram_url;
     ASDFL.currentUser.avatar_position = avatarPosition;
+    ASDFL.currentUser.mentor_preference = mentorPreference;
+    ASDFL.currentUser.mentor = ASDFL.currentUser.role !== 'Öğrenci' && mentorPreference === 'yes';
 
     document.getElementById('profileName').textContent = name;
     document.getElementById('profileRole').textContent = ASDFL.currentUser.role + (gradYear ? ' · ' + gradYear + ' Mezunu' : '');

@@ -186,11 +186,13 @@
     ].filter(Boolean).join(' · ');
     const time = timeAgo(post.created_at);
     const liked = likedPosts.has(post.id);
+    const safePostId = ASDFL.jsString(post.id);
+    const safePostIdAttr = ASDFL.escapeAttr(post.id);
 
     const audienceBadge = post.target_section
-      ? `<span class="post-audience"><i data-lucide="users" style="width:.85rem;height:.85rem"></i> ${post.target_year}-${post.target_section}</span>`
+      ? `<span class="post-audience"><i data-lucide="users" style="width:.85rem;height:.85rem"></i> ${escapeHtml(post.target_year)}-${escapeHtml(post.target_section)}</span>`
       : post.target_year
-      ? `<span class="post-audience"><i data-lucide="graduation-cap" style="width:.85rem;height:.85rem"></i> ${post.target_year} Mezunları</span>`
+      ? `<span class="post-audience"><i data-lucide="graduation-cap" style="width:.85rem;height:.85rem"></i> ${escapeHtml(post.target_year)} Mezunları</span>`
       : '';
 
     let commentCount = 0;
@@ -213,7 +215,7 @@
           postText = parsed.text || '';
           
           if (parsed.feeling) {
-            feelingHtml = `<span class="feeling-text">— ${parsed.feeling.emoji} ${parsed.feeling.text} hissediyor</span>`;
+            feelingHtml = `<span class="feeling-text">— ${escapeHtml(parsed.feeling.emoji || '')} ${escapeHtml(parsed.feeling.text || '')} hissediyor</span>`;
           }
 
           if (parsed.attachment) {
@@ -221,13 +223,13 @@
             if (att.type === 'photo') {
               attachmentHtml = `
                 <div class="post-media-attachment">
-                  <img src="${att.value}" alt="Paylaşım görseli" onclick="window.openImageLightbox('${att.value}')">
+                  <img src="${ASDFL.escapeAttr(att.value)}" alt="Paylaşım görseli" onclick="window.openImageLightbox(${ASDFL.jsString(att.value)})">
                 </div>
               `;
             } else if (att.type === 'video') {
               attachmentHtml = `
                 <div class="post-media-attachment video-attachment">
-                  <iframe src="https://www.youtube.com/embed/${att.value}" frameborder="0" allowfullscreen></iframe>
+                  <iframe src="https://www.youtube.com/embed/${ASDFL.escapeAttr(String(att.value || '').match(/^[a-zA-Z0-9_-]{6,20}$/) ? att.value : '')}" frameborder="0" allowfullscreen></iframe>
                 </div>
               `;
             } else if (att.type === 'event') {
@@ -236,10 +238,10 @@
                   <div class="event-attach-card">
                     <div class="event-attach-icon"><i data-lucide="calendar"></i></div>
                     <div class="event-attach-info">
-                      <h4 class="event-attach-title">${att.value.title}</h4>
+                      <h4 class="event-attach-title">${escapeHtml(att.value.title || '')}</h4>
                       <div class="event-attach-meta">
                         <span><i data-lucide="calendar-days"></i> ${ASDFL.formatDate(att.value.date)}</span>
-                        <span><i data-lucide="map-pin"></i> ${att.value.location}</span>
+                        <span><i data-lucide="map-pin"></i> ${escapeHtml(att.value.location || '')}</span>
                       </div>
                     </div>
                     <a href="etkinlikler.html" class="btn btn-secondary btn-sm event-attach-btn">Etkinliğe Git</a>
@@ -255,41 +257,41 @@
     }
 
     return `
-      <div class="post-card" id="post-${post.id}">
+      <div class="post-card" id="post-${safePostIdAttr}">
         <div class="post-header">
           ${ASDFL.getAvatarHTML({ initials, avatar_url: author?.avatar_url, avatar_position: author?.avatar_position, name }, 'post-avatar')}
           <div class="post-meta">
-            <strong class="post-author" style="display:inline-block">${name} ${feelingHtml}</strong>
-            <span class="post-submeta">${meta}</span>
+            <strong class="post-author" style="display:inline-block">${escapeHtml(name)} ${feelingHtml}</strong>
+            <span class="post-submeta">${escapeHtml(meta)}</span>
           </div>
           <div class="post-time-audience">
-            <span class="post-time">${time}</span>
+            <span class="post-time">${escapeHtml(time)}</span>
             ${audienceBadge}
           </div>
         </div>
         <div class="post-body">${escapeHtml(postText)} ${attachmentHtml}</div>
         <div class="post-actions">
-          <button class="post-action-btn ${liked ? 'liked' : ''}" onclick="window.toggleLike('${post.id}', this)" id="like-${post.id}">
+          <button class="post-action-btn ${liked ? 'liked' : ''}" onclick="window.toggleLike(${safePostId}, this)" id="like-${safePostIdAttr}">
             <i data-lucide="heart" style="width:1.1rem;height:1.1rem"></i>
             <span class="like-count">${post.likes_count || 0}</span>
           </button>
-          <button class="post-action-btn" onclick="window.toggleComments('${post.id}', this)" id="comment-btn-${post.id}">
+          <button class="post-action-btn" onclick="window.toggleComments(${safePostId}, this)" id="comment-btn-${safePostIdAttr}">
             <i data-lucide="message-square" style="width:1.1rem;height:1.1rem"></i>
             <span class="comment-count">${commentCount}</span> Yorum
           </button>
-          <button class="post-action-btn" onclick="window.sharePost('${post.id}')">
+          <button class="post-action-btn" onclick="window.sharePost(${safePostId})">
             <i data-lucide="share-2" style="width:1.1rem;height:1.1rem"></i>
             <span>Paylaş</span>
           </button>
         </div>
         
         <!-- YORUMLAR PANELİ -->
-        <div class="comments-section hidden" id="comments-section-${post.id}">
-          <div class="comments-list" id="comments-list-${post.id}"></div>
+        <div class="comments-section hidden" id="comments-section-${safePostIdAttr}">
+          <div class="comments-list" id="comments-list-${safePostIdAttr}"></div>
           <div class="comment-compose">
             ${ASDFL.getAvatarHTML(ASDFL.currentUser, 'comment-avatar', 'width:30px;height:30px;font-size:0.7rem')}
-            <input type="text" class="comment-input" placeholder="Yorum yaz ve Enter'a bas..." id="comment-input-${post.id}" onkeydown="if(event.key==='Enter')window.submitCommentAction('${post.id}')">
-            <button class="btn btn-primary btn-sm" style="padding:0.35rem 0.85rem;font-size:0.8rem;border-radius:var(--radius-full)" onclick="window.submitCommentAction('${post.id}')">Gönder</button>
+            <input type="text" class="comment-input" placeholder="Yorum yaz ve Enter'a bas..." id="comment-input-${safePostIdAttr}" onkeydown="if(event.key==='Enter')window.submitCommentAction(${safePostId})">
+            <button class="btn btn-primary btn-sm" style="padding:0.35rem 0.85rem;font-size:0.8rem;border-radius:var(--radius-full)" onclick="window.submitCommentAction(${safePostId})">Gönder</button>
           </div>
         </div>
       </div>
@@ -561,7 +563,7 @@
 
   /* ---------- Helpers ---------- */
   function escapeHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
   }
 
   function timeAgo(dateStr) {

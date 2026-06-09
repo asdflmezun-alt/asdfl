@@ -17,12 +17,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     el.innerHTML = list.map(b => `
       <div class="card burs-card reveal lift">
         <div>
-          <span class="badge badge-gold">${b.sponsor}</span>
+          <span class="badge badge-gold">${ASDFL.escapeHTML(b.sponsor)}</span>
           ${b.active ? '<span class="badge badge-teal" style="margin-left:.5rem">Açık</span>' : ''}
         </div>
-        <div class="burs-amount">${b.amount}</div>
-        <h3>${b.title}</h3>
-        <p style="font-size:.88rem;color:var(--text-secondary);line-height:1.6">${b.description}</p>
+        <div class="burs-amount">${ASDFL.escapeHTML(b.amount)}</div>
+        <h3>${ASDFL.escapeHTML(b.title)}</h3>
+        <p style="font-size:.88rem;color:var(--text-secondary);line-height:1.6">${ASDFL.escapeHTML(b.description)}</p>
         <div class="burs-deadline">⏰ Son başvuru: ${ASDFL.formatDate(b.deadline)}</div>
         <button class="btn btn-primary btn-sm" style="align-self:flex-start;margin-top:.5rem"
           onclick="ASDFL.openModal('basvuruModal')">Başvur <i data-lucide="arrow-right" style="width:1em;height:1em"></i></button>
@@ -56,18 +56,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (a.company) {
         jobCompanyText = a.company;
       }
+      const safeId = ASDFL.jsString(a.id);
       
       return `
       <div class="card lift reveal" style="text-align:center;padding:1.5rem 1rem">
         ${ASDFL.getAvatarHTML(a, 'avatar avatar-xl', 'margin:0 auto 1rem')}
-        <h4 style="font-size:.95rem">${a.name}</h4>
-        <span style="font-size:.75rem;color:var(--gold-500);font-weight:600;display:block;margin-bottom:.5rem">${a.grad_year || 'Bilinmiyor'} Mezunu</span>
-        ${jobCompanyText ? `<div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:0.25rem;"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${jobCompanyText}</div>` : ''}
-        ${a.university ? `<div style="font-size:.78rem;color:var(--text-secondary);margin-top:.25rem;margin-bottom:0.25rem;"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.university}</div>` : ''}
-        ${a.city ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.25rem;"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.city}</div>` : ''}
-        ${a.bio ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">${a.bio}</div>` : ''}
+        <h4 style="font-size:.95rem">${ASDFL.escapeHTML(a.name)}</h4>
+        <span style="font-size:.75rem;color:var(--gold-500);font-weight:600;display:block;margin-bottom:.5rem">${ASDFL.escapeHTML(a.grad_year || 'Bilinmiyor')} Mezunu</span>
+        ${jobCompanyText ? `<div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:0.25rem;"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(jobCompanyText)}</div>` : ''}
+        ${a.university ? `<div style="font-size:.78rem;color:var(--text-secondary);margin-top:.25rem;margin-bottom:0.25rem;"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.university)}</div>` : ''}
+        ${a.city ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.25rem;"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.city)}</div>` : ''}
+        ${a.bio ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">${ASDFL.escapeHTML(a.bio)}</div>` : ''}
         <button class="btn btn-primary btn-sm" style="margin-top:1rem;width:100%"
-          onclick="openMentorshipRequestModal('${a.id}', '${a.name}')">Bağlantı Kur</button>
+          onclick="openMentorshipRequestModal(${safeId}, ${ASDFL.jsString(a.name)})">Bağlantı Kur</button>
       </div>`;
     }).join('');
     ASDFL.initReveal();

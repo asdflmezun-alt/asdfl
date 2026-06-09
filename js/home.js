@@ -29,11 +29,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span class="mon">${mon}</span>
           </div>
           <div class="event-info">
-            <h4>${ev.title}</h4>
+            <h4>${ASDFL.escapeHTML(ev.title)}</h4>
             <div class="event-meta">
-              <span class="badge ${typeColors[ev.type]||'badge-blue'}">${ev.type}</span>
-              <span style="font-size:.8rem;color:var(--text-muted)"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ev.location}</span>
-              <span style="font-size:.8rem;color:var(--text-muted)"><i data-lucide="clock" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ev.time}</span>
+              <span class="badge ${typeColors[ev.type]||'badge-blue'}">${ASDFL.escapeHTML(ev.type)}</span>
+              <span style="font-size:.8rem;color:var(--text-muted)"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(ev.location)}</span>
+              <span style="font-size:.8rem;color:var(--text-muted)"><i data-lucide="clock" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(ev.time)}</span>
             </div>
           </div>
           <span style="color:var(--text-muted);font-size:1.2rem"><i data-lucide="chevron-right" style="width:1.2rem;height:1.2rem"></i></span>
@@ -73,11 +73,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       return `
       <div class="card alumni-card reveal lift">
         ${ASDFL.getAvatarHTML(a, 'avatar avatar-lg', 'margin:0 auto 1rem')}
-        <h4>${a.name}</h4>
-        <span class="year-badge">${a.grad_year || 'Bilinmiyor'} Mezunu</span>
-        ${jobCompanyText ? `<p style="font-size:.82rem;margin-bottom:0.25rem;"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${jobCompanyText}</p>` : ''}
-        ${a.university ? `<p style="font-size:.78rem;color:var(--text-secondary);margin-top:.25rem;margin-bottom:0.25rem;"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.university}</p>` : ''}
-        <p style="font-size:.78rem;color:var(--text-muted);margin-top:.25rem;"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.city || 'Şehir Belirtilmemiş'}</p>
+        <h4>${ASDFL.escapeHTML(a.name)}</h4>
+        <span class="year-badge">${ASDFL.escapeHTML(a.grad_year || 'Bilinmiyor')} Mezunu</span>
+        ${jobCompanyText ? `<p style="font-size:.82rem;margin-bottom:0.25rem;"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(jobCompanyText)}</p>` : ''}
+        ${a.university ? `<p style="font-size:.78rem;color:var(--text-secondary);margin-top:.25rem;margin-bottom:0.25rem;"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.university)}</p>` : ''}
+        <p style="font-size:.78rem;color:var(--text-muted);margin-top:.25rem;"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.city || 'Şehir Belirtilmemiş')}</p>
         <span class="badge badge-teal mentor-tag"><i data-lucide="sparkles" style="width:1em;height:1em"></i> Mentör</span>
       </div>`;
     }).join('');
@@ -112,11 +112,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="feed-header">
           ${ASDFL.getAvatarHTML({ initials: p.initials, avatar_url: p.profiles?.avatar_url, avatar_position: p.profiles?.avatar_position, name: p.author }, 'post-avatar')}
           <div class="info">
-            <strong>${p.author}</strong>
-            <span>${p.authorYear || 'Bilinmiyor'} Mezunu · ${timeStr}</span>
+            <strong>${ASDFL.escapeHTML(p.author)}</strong>
+            <span>${ASDFL.escapeHTML(p.authorYear || 'Bilinmiyor')} Mezunu · ${ASDFL.escapeHTML(timeStr)}</span>
           </div>
         </div>
-        <div class="feed-body">${p.content}</div>
+        <div class="feed-body">${ASDFL.escapeHTML(p.content)}</div>
         <div class="feed-footer">
           <button class="feed-action" onclick="ASDFL.toast('Beğenildi!','success')"><i data-lucide="heart" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${p.likes || 0}</button>
           <button class="feed-action"><i data-lucide="message-circle" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> 0</button>
@@ -186,7 +186,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (titleEl) titleEl.textContent = announce.title;
       if (subEl) subEl.textContent = announce.subtitle;
       if (iconEl && announce.icon) {
-        iconEl.innerHTML = `<i data-lucide="${announce.icon}" style="width:1.2rem;height:1.2rem"></i>`;
+        const icon = /^[a-z0-9-]+$/i.test(announce.icon) ? announce.icon : 'info';
+        iconEl.innerHTML = `<i data-lucide="${icon}" style="width:1.2rem;height:1.2rem"></i>`;
       }
     });
     setTimeout(() => lucide.createIcons(), 10);
@@ -196,7 +197,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderAlumniMap(allAlumni) {
     const authEl = document.getElementById('diag-auth');
     if (authEl) {
-      authEl.innerHTML = `- Kullanıcı Oturum Durumu: <span style="color:#2ecc71">${ASDFL.currentUser ? 'Giriş Yapıldı (' + ASDFL.currentUser.name + ')' : 'Giriş Yapılmadı'}</span>`;
+      authEl.innerHTML = `- Kullanıcı Oturum Durumu: <span style="color:#2ecc71">${ASDFL.currentUser ? 'Giriş Yapıldı (' + ASDFL.escapeHTML(ASDFL.currentUser.name) + ')' : 'Giriş Yapılmadı'}</span>`;
     }
 
     const wrapper = document.getElementById('alumniMapWrapper');

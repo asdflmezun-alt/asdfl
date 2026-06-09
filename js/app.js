@@ -944,6 +944,33 @@ const ASDFL = {
   },
 
   // ---- Utility Functions ----
+  escapeHTML(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
+  escapeAttr(value) {
+    return this.escapeHTML(value);
+  },
+
+  jsString(value) {
+    return `'${String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n')
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029')}'`;
+  },
+
   toast(msg, type = 'success') {
     const container = document.querySelector('.toast-container') || (() => {
       const c = document.createElement('div');
@@ -954,8 +981,13 @@ const ASDFL = {
     const t = document.createElement('div');
     const icons = { success: '<i data-lucide="check-circle" style="width:1.2rem;height:1.2rem"></i>', warning: '<i data-lucide="alert-triangle" style="width:1.2rem;height:1.2rem"></i>', error: '<i data-lucide="x-circle" style="width:1.2rem;height:1.2rem"></i>', info: '<i data-lucide="info" style="width:1.2rem;height:1.2rem"></i>' };
     t.className = `toast ${type}`;
-    t.innerHTML = `<span>${icons[type]||'<i data-lucide="info" style="width:1.2rem;height:1.2rem"></i>'}</span><span>${msg}</span>`;
+    const iconWrap = document.createElement('span');
+    iconWrap.innerHTML = icons[type] || icons.info;
+    const textWrap = document.createElement('span');
+    textWrap.textContent = msg;
+    t.append(iconWrap, textWrap);
     container.appendChild(t);
+    if (window.lucide) lucide.createIcons();
     setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); }, 3500);
   },
 
@@ -985,9 +1017,9 @@ const ASDFL = {
   },
 
   getAvatarHTML(user, sizeClass = '', extraStyle = '') {
-    if (!user) return `<div class="${sizeClass}" style="${extraStyle}">?</div>`;
+    if (!user) return `<div class="${this.escapeAttr(sizeClass)}" style="${this.escapeAttr(extraStyle)}">?</div>`;
     const avatarUrl = user.avatar_url || user.avatarUrl;
-    const initials = user.initials || this.getInitials(user.name || 'U');
+    const initials = this.escapeHTML(user.initials || this.getInitials(user.name || 'U'));
     const position = user.avatar_position || user.avatarPosition || '50% 50%';
     
     const isAdminPage = window.location.pathname.includes('yonetim.html');
@@ -1007,12 +1039,12 @@ const ASDFL = {
         objPosStr = `object-position: ${position};`;
       }
       return `
-        <div class="${finalClass}" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; ${extraStyle}">
-          <img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover; ${objPosStr} ${transformStr}">
+        <div class="${this.escapeAttr(finalClass)}" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; ${this.escapeAttr(extraStyle)}">
+          <img src="${this.escapeAttr(avatarUrl)}" style="width: 100%; height: 100%; object-fit: cover; ${this.escapeAttr(objPosStr)} ${this.escapeAttr(transformStr)}">
         </div>
       `;
     }
-    return `<div class="${finalClass}" style="display: flex; align-items: center; justify-content: center; ${extraStyle}">${initials}</div>`;
+    return `<div class="${this.escapeAttr(finalClass)}" style="display: flex; align-items: center; justify-content: center; ${this.escapeAttr(extraStyle)}">${initials}</div>`;
   },
 
   setAvatarElement(element, user) {
@@ -1044,7 +1076,10 @@ const ASDFL = {
         objPosStr = `object-position: ${position};`;
       }
       
-      element.innerHTML = `<img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover; ${objPosStr} ${transformStr}">`;
+      const img = document.createElement('img');
+      img.src = avatarUrl;
+      img.style.cssText = `width: 100%; height: 100%; object-fit: cover; ${objPosStr} ${transformStr}`;
+      element.replaceChildren(img);
     } else {
       element.style.backgroundImage = '';
       element.style.display = 'flex';
@@ -1067,9 +1102,19 @@ const ASDFL = {
 
   // Scroll reveal
   initReveal() {
-    const els = document.querySelectorAll('.reveal,.reveal-left,.reveal-right,.reveal-scale');
+    const els = document.querySelectorAll('.reveal:not(.visible),.reveal-left:not(.visible),.reveal-right:not(.visible),.reveal-scale:not(.visible)');
+    if (!els.length) return;
+    if (!('IntersectionObserver' in window)) {
+      els.forEach(el => el.classList.add('visible'));
+      return;
+    }
     const observer = new IntersectionObserver((entries) => {
-      entries.forEach(e => { if(e.isIntersecting) { e.target.classList.add('visible'); } });
+      entries.forEach(e => {
+        if(e.isIntersecting) {
+          e.target.classList.add('visible');
+          observer.unobserve(e.target);
+        }
+      });
     }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
     els.forEach(el => observer.observe(el));
   },
@@ -1078,10 +1123,22 @@ const ASDFL = {
   initNavbar() {
     const nav = document.querySelector('.navbar');
     if(!nav) return;
+    let ticking = false;
+    let lastScrolled = null;
     const handleScroll = () => {
-      nav.classList.toggle('scrolled', window.scrollY > 60);
+      ticking = false;
+      const shouldBeScrolled = window.scrollY > 60;
+      if (shouldBeScrolled !== lastScrolled) {
+        nav.classList.toggle('scrolled', shouldBeScrolled);
+        lastScrolled = shouldBeScrolled;
+      }
     };
-    window.addEventListener('scroll', handleScroll);
+    const scheduleScrollUpdate = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(handleScroll);
+    };
+    window.addEventListener('scroll', scheduleScrollUpdate, { passive: true });
     // Scroll pozisyonunu geçiş animasyonu OLMADAN belirle
     handleScroll();
     // Küçük gecikme sonrası no-transitions kaldır: artık kullanıcı scroll'unda animasyon aktif
@@ -1132,11 +1189,22 @@ const ASDFL = {
 
   initCounters() {
     const counters = document.querySelectorAll('[data-count]');
+    if (!counters.length) return;
+    if (!('IntersectionObserver' in window)) {
+      counters.forEach(c => {
+        if (!c.dataset.counted) {
+          c.dataset.counted = true;
+          this.animateCounter(c, parseInt(c.dataset.count));
+        }
+      });
+      return;
+    }
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(e => {
         if(e.isIntersecting && !e.target.dataset.counted) {
           e.target.dataset.counted = true;
           this.animateCounter(e.target, parseInt(e.target.dataset.count));
+          observer.unobserve(e.target);
         }
       });
     }, { threshold: 0.5 });
@@ -1347,19 +1415,19 @@ const ASDFL = {
         navCta.dataset.userCache = cacheKey;
         const initials = this.getInitials(name);
         const avatarHTML = avatarUrl 
-          ? `<div class="profile-avatar" style="background-image: url(${avatarUrl}); background-size: cover; background-position: center; border: 1.5px solid var(--gold-500);"></div>`
-          : `<div class="profile-avatar">${initials}</div>`;
+          ? `<div class="profile-avatar" style="background-image: url('${this.escapeAttr(avatarUrl)}'); background-size: cover; background-position: center; border: 1.5px solid var(--gold-500);"></div>`
+          : `<div class="profile-avatar">${this.escapeHTML(initials)}</div>`;
         navCta.innerHTML = `
           <div class="user-profile" onclick="this.classList.toggle('open')">
             <button class="profile-btn">
               ${avatarHTML}
-              <span style="display:none;@media(min-width:768px){display:inline}">${name}</span>
+              <span class="user-name-span">${this.escapeHTML(name)}</span>
               <i data-lucide="chevron-down" style="width:14px;height:14px"></i>
             </button>
             <div class="profile-menu">
               <div style="padding:.5rem 1rem;border-bottom:1px solid var(--glass-border);margin-bottom:.25rem">
-                <strong style="color:var(--text-primary);display:block">${name}</strong>
-                <span style="font-size:.75rem;color:var(--text-muted)">${role}</span>
+                <strong style="color:var(--text-primary);display:block">${this.escapeHTML(name)}</strong>
+                <span style="font-size:.75rem;color:var(--text-muted)">${this.escapeHTML(role)}</span>
               </div>
               <a href="profil.html" style="display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;color:var(--text-secondary);text-decoration:none;transition:all .2s"><i data-lucide="user" style="width:16px;height:16px"></i> Profilim</a>
               <button onclick="ASDFL.logout()" class="logout"><i data-lucide="log-out" style="width:16px;height:16px"></i> Çıkış Yap</button>
@@ -1633,6 +1701,10 @@ const ASDFL = {
   },
 
   async initAutocomplete() {
+    const jobInputs = document.querySelectorAll('#regJob, #editJob');
+    const companyInputs = document.querySelectorAll('#regCompany, #editCompany');
+    if (!jobInputs.length && !companyInputs.length) return;
+
     let jobsDatalist = document.getElementById('jobsDatalist');
     if (!jobsDatalist) {
       jobsDatalist = document.createElement('datalist');
@@ -1646,17 +1718,18 @@ const ASDFL = {
       document.body.appendChild(companiesDatalist);
     }
 
-    const alumni = await this.fetchAlumni();
+    this._autocompleteAlumniPromise = this._autocompleteAlumniPromise || this.fetchAlumni();
+    const alumni = await this._autocompleteAlumniPromise;
     if (alumni && alumni.length > 0) {
       const uniqueJobs = [...new Set(alumni.map(a => a.job).filter(Boolean))].sort();
       const uniqueCompanies = [...new Set(alumni.map(a => a.company).filter(Boolean))].sort();
 
-      jobsDatalist.innerHTML = uniqueJobs.map(j => `<option value="${j}">`).join('');
-      companiesDatalist.innerHTML = uniqueCompanies.map(c => `<option value="${c}">`).join('');
+      jobsDatalist.innerHTML = uniqueJobs.map(j => `<option value="${this.escapeAttr(j)}">`).join('');
+      companiesDatalist.innerHTML = uniqueCompanies.map(c => `<option value="${this.escapeAttr(c)}">`).join('');
     }
 
-    document.querySelectorAll('#regJob, #editJob').forEach(el => el.setAttribute('list', 'jobsDatalist'));
-    document.querySelectorAll('#regCompany, #editCompany').forEach(el => el.setAttribute('list', 'companiesDatalist'));
+    jobInputs.forEach(el => el.setAttribute('list', 'jobsDatalist'));
+    companyInputs.forEach(el => el.setAttribute('list', 'companiesDatalist'));
   },
 
   async ensureUniversitiesLoaded() {
@@ -1681,6 +1754,10 @@ const ASDFL = {
     }
 
     const unis = window.TURKISH_UNIVERSITIES || [];
+    const universitySearchIndex = unis.map(uni => ({
+      value: uni,
+      normalized: uni.toLocaleUpperCase('tr')
+    }));
     
     dropdownWrappers.forEach(wrapper => {
       const triggerInput = wrapper.querySelector('.searchable-select-trigger');
@@ -1697,19 +1774,20 @@ const ASDFL = {
       function renderList(query = '') {
         const uppercaseQuery = query.toLocaleUpperCase('tr');
         
-        let filtered = unis;
+        let filtered = universitySearchIndex;
         if (uppercaseQuery) {
-          filtered = unis.filter(uni => 
-            uni.toLocaleUpperCase('tr').includes(uppercaseQuery)
+          filtered = universitySearchIndex.filter(uni => 
+            uni.normalized.includes(uppercaseQuery)
           );
         }
         
         let html = '';
         
         // Show "Add custom" option if the query doesn't match any university exactly
-        const exactMatch = unis.some(uni => uni.toLocaleUpperCase('tr') === uppercaseQuery);
+        const exactMatch = universitySearchIndex.some(uni => uni.normalized === uppercaseQuery);
         if (uppercaseQuery && !exactMatch) {
-          html += `<li class="searchable-select-item custom-add" data-value="${query.replace(/"/g, '&quot;')}"><i data-lucide="plus" style="width:12px;height:12px;display:inline-block;margin-right:4px;"></i> Ekle: "${query}"</li>`;
+          const safeQuery = ASDFL.escapeHTML(query);
+          html += `<li class="searchable-select-item custom-add" data-value="${ASDFL.escapeAttr(query)}"><i data-lucide="plus" style="width:12px;height:12px;display:inline-block;margin-right:4px;"></i> Ekle: "${safeQuery}"</li>`;
         }
         
         if (filtered.length === 0 && !uppercaseQuery) {
@@ -1720,7 +1798,8 @@ const ASDFL = {
           }
         } else {
           filtered.forEach(uni => {
-            html += `<li class="searchable-select-item" data-value="${uni.replace(/"/g, '&quot;')}">${uni}</li>`;
+            const value = ASDFL.escapeAttr(uni.value);
+            html += `<li class="searchable-select-item" data-value="${value}">${ASDFL.escapeHTML(uni.value)}</li>`;
           });
         }
         
@@ -1734,18 +1813,17 @@ const ASDFL = {
           });
         }
         
-        itemsList.querySelectorAll('.searchable-select-item').forEach(item => {
-          if (item.classList.contains('no-results')) return;
-          
-          item.onclick = function(e) {
-            e.stopPropagation();
-            const val = this.getAttribute('data-value');
-            triggerInput.value = val;
-            closeDropdown();
-            triggerInput.dispatchEvent(new Event('change'));
-          };
-        });
       }
+
+      itemsList.onclick = function(e) {
+        const item = e.target.closest('.searchable-select-item');
+        if (!item || item.classList.contains('no-results')) return;
+        e.stopPropagation();
+        const val = item.getAttribute('data-value');
+        triggerInput.value = val;
+        closeDropdown();
+        triggerInput.dispatchEvent(new Event('change'));
+      };
       
       function openDropdown() {
         document.querySelectorAll('.searchable-select-dropdown').forEach(el => {
@@ -1767,8 +1845,14 @@ const ASDFL = {
         openDropdown();
       };
       
+      let searchRenderFrame = null;
       searchInput.oninput = function() {
-        renderList(this.value);
+        const value = this.value;
+        if (searchRenderFrame) cancelAnimationFrame(searchRenderFrame);
+        searchRenderFrame = requestAnimationFrame(() => {
+          searchRenderFrame = null;
+          renderList(value);
+        });
       };
       
       dropdown.onclick = function(e) {

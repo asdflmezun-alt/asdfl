@@ -200,7 +200,7 @@ window.filterJobs = function() {
     if (!user) {
       actionBtn = `<button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Başvur (Giriş Yapın)</button>`;
     } else if (user.role === 'Öğrenci' || user.role === 'Admin') {
-      actionBtn = `<button class="btn btn-primary btn-sm" onclick="openApplyJobModal('${job.id}', '${job.title.replace(/'/g, "\\'")}', '${job.company.replace(/'/g, "\\'")}')">Başvur</button>`;
+      actionBtn = `<button class="btn btn-primary btn-sm" onclick="openApplyJobModal(${ASDFL.jsString(job.id)}, ${ASDFL.jsString(job.title)}, ${ASDFL.jsString(job.company)})">Başvur</button>`;
     } else {
       actionBtn = `<button class="btn btn-secondary btn-sm" style="opacity:0.65;cursor:not-allowed" disabled title="Sadece öğrenciler iş/staj ilanlarına başvurabilir">Sadece Öğrenci</button>`;
     }
@@ -209,23 +209,23 @@ window.filterJobs = function() {
       <div class="${cardClass}">
         <div class="job-card-header">
           <div class="job-title-group">
-            <h3>${job.title}</h3>
-            <span class="job-company">${job.company}</span>
+            <h3>${ASDFL.escapeHTML(job.title)}</h3>
+            <span class="job-company">${ASDFL.escapeHTML(job.company)}</span>
           </div>
-          <span class="badge ${isStaj ? 'badge-success' : 'badge-gold'}">${job.type}</span>
+          <span class="badge ${isStaj ? 'badge-success' : 'badge-gold'}">${ASDFL.escapeHTML(job.type)}</span>
         </div>
         
         <div class="job-meta-row">
-          <div class="job-meta-item"><i data-lucide="map-pin" style="width:14px;height:14px"></i> ${job.location}</div>
-          <div class="job-meta-item"><i data-lucide="calendar" style="width:14px;height:14px"></i> ${dateStr}</div>
+          <div class="job-meta-item"><i data-lucide="map-pin" style="width:14px;height:14px"></i> ${ASDFL.escapeHTML(job.location)}</div>
+          <div class="job-meta-item"><i data-lucide="calendar" style="width:14px;height:14px"></i> ${ASDFL.escapeHTML(dateStr)}</div>
         </div>
         
-        <p class="job-desc">${job.description}</p>
+        <p class="job-desc">${ASDFL.escapeHTML(job.description)}</p>
         
         <div class="job-footer">
           <div class="job-poster">
             ${ASDFL.getAvatarHTML({ initials, avatar_url: job.employerAvatarUrl, avatar_position: job.employerAvatarPosition, name: job.employerName }, 'avatar avatar-sm')}
-            <span>Yayınlayan: <strong>${job.employerName}</strong> ${job.employerYear ? `(${job.employerYear} Mezunu)` : ''}</span>
+            <span>Yayınlayan: <strong>${ASDFL.escapeHTML(job.employerName)}</strong> ${job.employerYear ? `(${ASDFL.escapeHTML(job.employerYear)} Mezunu)` : ''}</span>
           </div>
           ${actionBtn}
         </div>
@@ -430,10 +430,10 @@ async function renderMyPostings() {
       <div class="card" style="padding:1.5rem;margin-bottom:1rem;position:relative">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem">
           <div>
-            <h4 style="color:var(--text-primary);margin-bottom:0.25rem">${job.title}</h4>
-            <span class="badge ${job.type === 'Staj' ? 'badge-success' : 'badge-gold'}" style="font-size:0.75rem">${job.type}</span>
+            <h4 style="color:var(--text-primary);margin-bottom:0.25rem">${ASDFL.escapeHTML(job.title)}</h4>
+            <span class="badge ${job.type === 'Staj' ? 'badge-success' : 'badge-gold'}" style="font-size:0.75rem">${ASDFL.escapeHTML(job.type)}</span>
             <span style="font-size:0.8rem;color:var(--text-muted);margin-left:0.5rem">
-              <i data-lucide="map-pin" style="width:0.85rem;height:0.85rem;display:inline-block;vertical-align:middle"></i> ${job.location}
+              <i data-lucide="map-pin" style="width:0.85rem;height:0.85rem;display:inline-block;vertical-align:middle"></i> ${ASDFL.escapeHTML(job.location)}
             </span>
           </div>
           <div style="text-align:right">
@@ -443,10 +443,10 @@ async function renderMyPostings() {
             </span>
           </div>
         </div>
-        <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.75rem;line-height:1.5">${job.description}</p>
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.75rem;line-height:1.5">${ASDFL.escapeHTML(job.description)}</p>
         <div style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="switchDashboardMenu('manage-apps')">Gelen Başvuruları Yönet <i data-lucide="user-check"></i></button>
-          <button class="btn btn-danger btn-sm" style="background:rgba(248, 113, 113, 0.2);color:var(--danger);border:1px solid rgba(248, 113, 113, 0.3)" onclick="confirmDeletePosting('${job.id}')"><i data-lucide="trash-2"></i> İlanı Sil</button>
+          <button class="btn btn-danger btn-sm" style="background:rgba(248, 113, 113, 0.2);color:var(--danger);border:1px solid rgba(248, 113, 113, 0.3)" onclick="confirmDeletePosting(${ASDFL.jsString(job.id)})"><i data-lucide="trash-2"></i> İlanı Sil</button>
         </div>
       </div>
     `;

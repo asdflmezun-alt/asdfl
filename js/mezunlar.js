@@ -225,37 +225,38 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (a.company) {
         jobCompanyText = a.company;
       }
+      const safeId = ASDFL.jsString(a.id);
       
       return `
       <div class="card alumni-card-full lift reveal">
         <div class="ac-header">
           ${ASDFL.getAvatarHTML(a, 'avatar avatar-lg')}
           <div class="ac-info">
-            <strong>${a.name}</strong>
-            <span>${a.grad_year || 'Bilinmiyor'} Mezunu</span>
+            <strong>${ASDFL.escapeHTML(a.name)}</strong>
+            <span>${ASDFL.escapeHTML(a.grad_year || 'Bilinmiyor')} Mezunu</span>
           </div>
         </div>
-        ${jobCompanyText ? `<div class="ac-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${jobCompanyText}</div>` : ''}
-        ${a.university ? `<div class="ac-job"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.university}</div>` : ''}
-        ${a.city ? `<div class="ac-job"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.city}</div>` : ''}
+        ${jobCompanyText ? `<div class="ac-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(jobCompanyText)}</div>` : ''}
+        ${a.university ? `<div class="ac-job"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.university)}</div>` : ''}
+        ${a.city ? `<div class="ac-job"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.city)}</div>` : ''}
         ${a.bio ? (
           a.bio.length > 150 ? `
             <div style="font-size:.82rem;color:var(--text-muted);line-height:1.5">
-              ${a.bio.substring(0, 140)}...
-              <a href="javascript:void(0)" onclick="openBioModal('${a.id}')" style="color:var(--gold-500);font-weight:600;margin-left:.25rem;display:inline-block;">Devamını Oku</a>
+              ${ASDFL.escapeHTML(a.bio.substring(0, 140))}...
+              <a href="javascript:void(0)" onclick="openBioModal(${safeId})" style="color:var(--gold-500);font-weight:600;margin-left:.25rem;display:inline-block;">Devamını Oku</a>
             </div>
-          ` : `<div style="font-size:.82rem;color:var(--text-muted);line-height:1.5">${a.bio}</div>`
+          ` : `<div style="font-size:.82rem;color:var(--text-muted);line-height:1.5">${ASDFL.escapeHTML(a.bio)}</div>`
         ) : ''}
         
         ${getContactHTML(a)}
         
         <div class="ac-tags">
           ${a.mentor ? '<span class="badge badge-teal"><i data-lucide="sparkles" style="width:1em;height:1em"></i> Mentör</span>' : ''}
-          ${a.grad_year ? `<span class="badge badge-blue">${a.grad_year}</span>` : ''}
+          ${a.grad_year ? `<span class="badge badge-blue">${ASDFL.escapeHTML(a.grad_year)}</span>` : ''}
         </div>
         <div class="ac-actions">
-          <button class="btn btn-ghost btn-sm" onclick="window.location.href='profil.html?id=${a.id}'">Profili Gör</button>
-          ${a.mentor ? `<button class="btn btn-secondary btn-sm" onclick="openMentorshipRequestModal('${a.id}', '${a.name}')">Bağlantı Kur</button>` : ''}
+          <button class="btn btn-ghost btn-sm" onclick="window.location.href='profil.html?id=${encodeURIComponent(a.id)}'">Profili Gör</button>
+          ${a.mentor ? `<button class="btn btn-secondary btn-sm" onclick="openMentorshipRequestModal(${safeId}, ${ASDFL.jsString(a.name)})">Bağlantı Kur</button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -297,6 +298,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (a.company) {
         jobCompanyText = a.company;
       }
+      const safeId = ASDFL.jsString(a.id);
       
       return `
       <div class="card mentor-card lift reveal">
@@ -304,20 +306,20 @@ document.addEventListener('DOMContentLoaded', async () => {
           ${ASDFL.getAvatarHTML(a, 'avatar avatar-xl')}
           <div class="mc-badge"><i data-lucide="star" style="width:1em;height:1em"></i></div>
         </div>
-        <h4>${a.name}</h4>
-        <span class="mc-year">${a.grad_year || 'Bilinmiyor'} Mezunu</span>
-        ${jobCompanyText ? `<div class="mc-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${jobCompanyText}</div>` : ''}
-        ${a.university ? `<div class="mc-job" style="font-size:.8rem;color:var(--text-secondary);"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.university}</div>` : ''}
-        ${a.city ? `<div class="mc-city"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.city}</div>` : ''}
+        <h4>${ASDFL.escapeHTML(a.name)}</h4>
+        <span class="mc-year">${ASDFL.escapeHTML(a.grad_year || 'Bilinmiyor')} Mezunu</span>
+        ${jobCompanyText ? `<div class="mc-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(jobCompanyText)}</div>` : ''}
+        ${a.university ? `<div class="mc-job" style="font-size:.8rem;color:var(--text-secondary);"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.university)}</div>` : ''}
+        ${a.city ? `<div class="mc-city"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.city)}</div>` : ''}
         ${a.bio ? (
           a.bio.length > 150 ? `
             <div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">
-              ${a.bio.substring(0, 140)}...
-              <a href="javascript:void(0)" onclick="openBioModal('${a.id}')" style="color:var(--gold-500);font-weight:600;margin-left:.25rem;display:inline-block;">Devamını Oku</a>
+              ${ASDFL.escapeHTML(a.bio.substring(0, 140))}...
+              <a href="javascript:void(0)" onclick="openBioModal(${safeId})" style="color:var(--gold-500);font-weight:600;margin-left:.25rem;display:inline-block;">Devamını Oku</a>
             </div>
-          ` : `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">${a.bio}</div>`
+          ` : `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">${ASDFL.escapeHTML(a.bio)}</div>`
         ) : ''}
-        <button class="btn btn-primary btn-sm" style="margin-top:1rem;width:100%" onclick="openMentorshipRequestModal('${a.id}', '${a.name}')">Bağlantı Kur</button>
+        <button class="btn btn-primary btn-sm" style="margin-top:1rem;width:100%" onclick="openMentorshipRequestModal(${safeId}, ${ASDFL.jsString(a.name)})">Bağlantı Kur</button>
       </div>`;
     }).join('');
     ASDFL.initReveal();
@@ -395,14 +397,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="p-header">
           ${ASDFL.getAvatarHTML(a, 'avatar')}
           <div class="p-info">
-            <strong>${a.name}</strong>
-            <span>${a.grad_year} Mezunu ${a.class_section ? '- ' + a.class_section + ' Şubesi' : ''}</span>
+            <strong>${ASDFL.escapeHTML(a.name)}</strong>
+            <span>${ASDFL.escapeHTML(a.grad_year)} Mezunu ${a.class_section ? '- ' + ASDFL.escapeHTML(a.class_section) + ' Şubesi' : ''}</span>
           </div>
         </div>
         <div class="p-body">
-          ${jobCompanyText ? `<div class="p-detail"><i data-lucide="briefcase" style="width:1em;height:1em"></i> ${jobCompanyText}</div>` : ''}
-          ${a.university ? `<div class="p-detail"><i data-lucide="graduation-cap" style="width:1em;height:1em"></i> ${a.university}</div>` : ''}
-          ${a.city ? `<div class="p-detail"><i data-lucide="map-pin" style="width:1em;height:1em"></i> ${a.city}</div>` : ''}
+          ${jobCompanyText ? `<div class="p-detail"><i data-lucide="briefcase" style="width:1em;height:1em"></i> ${ASDFL.escapeHTML(jobCompanyText)}</div>` : ''}
+          ${a.university ? `<div class="p-detail"><i data-lucide="graduation-cap" style="width:1em;height:1em"></i> ${ASDFL.escapeHTML(a.university)}</div>` : ''}
+          ${a.city ? `<div class="p-detail"><i data-lucide="map-pin" style="width:1em;height:1em"></i> ${ASDFL.escapeHTML(a.city)}</div>` : ''}
           
           ${getContactHTML(a)}
         </div>

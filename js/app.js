@@ -6,11 +6,29 @@
 const ASDFL = {
   version: '1.0.0',
 
+  // Timeout wrapper for database queries to prevent page freezes if database is blocked or slow
+  async queryWithTimeout(queryPromise, timeoutMs = 2500) {
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('Query timeout')), timeoutMs);
+    });
+    try {
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+      clearTimeout(timeoutId);
+      return result;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
+    }
+  },
+
   // ---- Supabase API Fetchers ----
   async fetchAlumni() {
     if (this.supabase) {
       try {
-        const { data, error } = await this.supabase.from('profiles').select('*').order('created_at', { ascending: false });
+        const { data, error } = await this.queryWithTimeout(
+          this.supabase.from('profiles').select('*').order('created_at', { ascending: false })
+        );
         if (!error && data) {
           return data.map(d => ({ ...d, initials: this.getInitials(d.name) }));
         }
@@ -40,22 +58,36 @@ const ASDFL = {
 
   async fetchEvents() {
     if (!this.supabase) return [];
-    const { data, error } = await this.supabase.from('events').select('*').order('event_date', { ascending: true });
-    if (error) { console.error('Error fetching events:', error); return []; }
-    // Convert to camelCase to match previous demo structures if needed
-    return data.map(d => ({ ...d, date: d.event_date, time: d.event_time }));
+    try {
+      const { data, error } = await this.queryWithTimeout(
+        this.supabase.from('events').select('*').order('event_date', { ascending: true })
+      );
+      if (error || !data) { if (error) console.error('Error fetching events:', error); return []; }
+      // Convert to camelCase to match previous demo structures if needed
+      return data.map(d => ({ ...d, date: d.event_date, time: d.event_time }));
+    } catch (err) {
+      console.warn('Exception fetching events from Supabase:', err);
+      return [];
+    }
   },
 
   async fetchPosts() {
     if (!this.supabase) return [];
-    const { data, error } = await this.supabase.from('posts').select('*, profiles!author_id(name, role, avatar_url, avatar_position, grad_year)').order('created_at', { ascending: false });
-    if (error) { console.error('Error fetching posts:', error); return []; }
-    return data.map(p => ({
-      ...p,
-      author: p.profiles?.name || 'Kullanıcı',
-      authorYear: p.profiles?.grad_year,
-      initials: this.getInitials(p.profiles?.name || 'U')
-    }));
+    try {
+      const { data, error } = await this.queryWithTimeout(
+        this.supabase.from('posts').select('*, profiles!author_id(name, role, avatar_url, avatar_position, grad_year)').order('created_at', { ascending: false })
+      );
+      if (error || !data) { if (error) console.error('Error fetching posts:', error); return []; }
+      return data.map(p => ({
+        ...p,
+        author: p.profiles?.name || 'Kullanıcı',
+        authorYear: p.profiles?.grad_year,
+        initials: this.getInitials(p.profiles?.name || 'U')
+      }));
+    } catch (err) {
+      console.warn('Exception fetching posts from Supabase:', err);
+      return [];
+    }
   },
 
   async fetchScholarships() {
@@ -112,10 +144,12 @@ const ASDFL = {
   async fetchLogoAnnouncements() {
     if (this.supabase) {
       try {
-        const { data, error } = await this.supabase
-          .from('logo_announcements')
-          .select('*')
-          .order('id', { ascending: true });
+        const { data, error } = await this.queryWithTimeout(
+          this.supabase
+            .from('logo_announcements')
+            .select('*')
+            .order('id', { ascending: true })
+        );
         if (!error && data && data.length > 0) {
           return data;
         }
@@ -1153,12 +1187,24 @@ const ASDFL = {
   authReady: false,
   waitForAuth() {
     return new Promise(resolve => {
+      let resolved = false;
       const check = setInterval(() => {
         if (this.authReady) {
           clearInterval(check);
+          resolved = true;
           resolve();
         }
       }, 50);
+
+      // Safety timeout: resolve after 1.5 seconds no matter what to prevent blank page freezes
+      setTimeout(() => {
+        if (!resolved) {
+          clearInterval(check);
+          resolved = true;
+          console.warn('Auth check timed out, resolving anyway.');
+          resolve();
+        }
+      }, 1500);
     });
   },
 
@@ -1183,7 +1229,7 @@ const ASDFL = {
     
     let session = null;
     try {
-      const { data } = await this.supabase.auth.getSession();
+      const { data } = await this.queryWithTimeout(this.supabase.auth.getSession(), 2000);
       session = data?.session;
     } catch (err) {
       console.error('Error fetching session:', err);
@@ -1194,11 +1240,14 @@ const ASDFL = {
       let dbAvatarUrl = session.user.user_metadata?.avatar_url || '';
       let dbAvatarPosition = session.user.user_metadata?.avatar_position || '50% 50%';
       try {
-        const { data: profile } = await this.supabase
-          .from('profiles')
-          .select('role, avatar_url, avatar_position')
-          .eq('id', session.user.id)
-          .single();
+        const { data: profile } = await this.queryWithTimeout(
+          this.supabase
+            .from('profiles')
+            .select('role, avatar_url, avatar_position')
+            .eq('id', session.user.id)
+            .single(),
+          2000
+        );
         if (profile?.role) {
           dbRole = profile.role;
         }
@@ -1758,8 +1807,14 @@ const ASDFL = {
     this.initCities();
     this.initAutocomplete();
     this.setupSearchableDropdowns();
+
+    const diagApp = document.getElementById('diag-app-js');
+    if (diagApp) diagApp.innerHTML = '- app.js Yüklenme Durumu: <span style="color:#2ecc71">Yüklendi (Ok)</span>';
   }
 };
+
+// Expose ASDFL globally so that inline event handlers (like onclick) on any page can access it
+window.ASDFL = ASDFL;
 
 document.addEventListener('DOMContentLoaded', () => ASDFL.init());
 

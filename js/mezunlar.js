@@ -131,6 +131,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+  window.openBioModal = function(alumniId) {
+    const alumnus = allAlumni.find(a => a.id === alumniId);
+    if (!alumnus) return;
+
+    const modalAvatar = document.getElementById('bioModalAvatar');
+    const modalTitle = document.getElementById('bioModalTitle');
+    const modalSubtitle = document.getElementById('bioModalSubtitle');
+    const modalContent = document.getElementById('bioModalContent');
+
+    if (modalAvatar) {
+      modalAvatar.innerHTML = ASDFL.getAvatarHTML(alumnus, 'avatar avatar-lg');
+    }
+    if (modalTitle) {
+      modalTitle.textContent = alumnus.name || '';
+    }
+    if (modalSubtitle) {
+      const yearText = alumnus.grad_year ? alumnus.grad_year + ' Mezunu' : '';
+      const sectionText = alumnus.class_section ? '- ' + alumnus.class_section + ' Şubesi' : '';
+      modalSubtitle.textContent = `${yearText} ${sectionText}`.trim();
+    }
+    if (modalContent) {
+      modalContent.textContent = alumnus.bio || '';
+    }
+
+    ASDFL.openModal('bioModal');
+  };
+
   // Populate filters
   function populateFilters() {
     const years = [...new Set(allAlumni.map(a => a.grad_year).filter(Boolean))].sort((a,b) => b-a);
@@ -211,7 +238,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         ${jobCompanyText ? `<div class="ac-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${jobCompanyText}</div>` : ''}
         ${a.university ? `<div class="ac-job"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.university}</div>` : ''}
         ${a.city ? `<div class="ac-job"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.city}</div>` : ''}
-        ${a.bio ? `<div style="font-size:.82rem;color:var(--text-muted);line-height:1.5">${a.bio}</div>` : ''}
+        ${a.bio ? (
+          a.bio.length > 150 ? `
+            <div style="font-size:.82rem;color:var(--text-muted);line-height:1.5">
+              ${a.bio.substring(0, 140)}...
+              <a href="javascript:void(0)" onclick="openBioModal('${a.id}')" style="color:var(--gold-500);font-weight:600;margin-left:.25rem;display:inline-block;">Devamını Oku</a>
+            </div>
+          ` : `<div style="font-size:.82rem;color:var(--text-muted);line-height:1.5">${a.bio}</div>`
+        ) : ''}
         
         ${getContactHTML(a)}
         
@@ -275,7 +309,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         ${jobCompanyText ? `<div class="mc-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${jobCompanyText}</div>` : ''}
         ${a.university ? `<div class="mc-job" style="font-size:.8rem;color:var(--text-secondary);"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.university}</div>` : ''}
         ${a.city ? `<div class="mc-city"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${a.city}</div>` : ''}
-        ${a.bio ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">${a.bio}</div>` : ''}
+        ${a.bio ? (
+          a.bio.length > 150 ? `
+            <div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">
+              ${a.bio.substring(0, 140)}...
+              <a href="javascript:void(0)" onclick="openBioModal('${a.id}')" style="color:var(--gold-500);font-weight:600;margin-left:.25rem;display:inline-block;">Devamını Oku</a>
+            </div>
+          ` : `<div style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;line-height:1.5">${a.bio}</div>`
+        ) : ''}
         <button class="btn btn-primary btn-sm" style="margin-top:1rem;width:100%" onclick="openMentorshipRequestModal('${a.id}', '${a.name}')">Bağlantı Kur</button>
       </div>`;
     }).join('');
@@ -399,6 +440,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   populateFilters();
+
+  // URL parametresi ile filtreleme desteği (?city=İstanbul vb.)
+  const urlParams = new URLSearchParams(window.location.search);
+  const cityParam = urlParams.get('city');
+  if (cityParam) {
+    const cityFilterEl = document.getElementById('cityFilter');
+    if (cityFilterEl) {
+      cityFilterEl.value = cityParam;
+    }
+  }
+
   filterAlumni();
   renderYillar();
   renderMentors();

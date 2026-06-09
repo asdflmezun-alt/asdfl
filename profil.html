@@ -268,10 +268,12 @@
           <!-- Social Link Buttons -->
           <div style="border-top:1px solid var(--glass-border); padding-top:1rem;">
             <h5 style="margin: 0 0 0.75rem 0; font-family:'Outfit',sans-serif; color:var(--text-muted); font-size:0.75rem; text-transform:uppercase; font-weight: 600; letter-spacing: 0.05em;">Bağlantılar</h5>
-            <div style="display:flex; gap:0.5rem;">
+            <div style="display:flex; gap:0.5rem; flex-wrap: wrap;">
               <a href="#" id="social-linkedin" target="_blank" class="social-icon-btn" title="LinkedIn"><i data-lucide="linkedin" style="width:16px; height:16px;"></i></a>
               <a href="#" id="social-github" target="_blank" class="social-icon-btn" title="GitHub"><i data-lucide="github" style="width:16px; height:16px;"></i></a>
               <a href="#" id="social-instagram" target="_blank" class="social-icon-btn" title="Instagram"><i data-lucide="instagram" style="width:16px; height:16px;"></i></a>
+              <a href="#" id="social-whatsapp" target="_blank" class="social-icon-btn" title="WhatsApp" style="display:none;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.73-1.464L0 24zm6.59-4.846c1.6.95 3.198 1.45 4.817 1.452 5.398 0 9.79-4.39 9.794-9.792.002-2.617-1.015-5.08-2.86-6.93C16.5 2.03 14.05 1.01 11.436 1.01c-5.405 0-9.8 4.393-9.804 9.795-.001 2.07.543 4.085 1.573 5.867l-.99 3.611 3.7.971c1.7-.929 3.29-1.42 4.84-1.422zm11.238-6.195c-.296-.148-1.747-.862-2.019-.962-.27-.099-.467-.148-.663.148-.198.297-.768.963-.941 1.16-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.663-1.597-.908-2.193-.24-.576-.48-.497-.663-.506-.17-.008-.368-.01-.565-.01-.196 0-.518.074-.789.371-.271.297-1.033 1.012-1.033 2.47 0 1.458 1.06 2.871 1.208 3.07.149.198 2.088 3.19 5.06 4.477.708.307 1.26.49 1.69.627.712.227 1.36.195 1.871.118.571-.085 1.747-.713 1.996-1.402.248-.688.248-1.277.173-1.402-.075-.125-.27-.199-.57-.347z"/></svg></a>
+              <a href="#" id="social-mail" class="social-icon-btn" title="E-posta Gönder" style="display:none;"><i data-lucide="mail" style="width:16px; height:16px;"></i></a>
             </div>
           </div>
         </div>
@@ -464,7 +466,7 @@
 <div class="toast-container"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/universities.js"></script>
-<script src="js/app.js"></script>
+<script src="js/app.js?v=1.3"></script>
 <script>
   window.goBackToAlumni = function() {
     if (document.referrer && document.referrer.includes('mezunlar.html')) {
@@ -484,7 +486,10 @@
       const nameEl = document.getElementById('profileName');
       const roleEl = document.getElementById('profileRole');
       if (nameEl) nameEl.textContent = user.name;
-      if (roleEl) roleEl.textContent = user.role + (user.gradYear ? ' · ' + user.gradYear + ' Mezunu' : '');
+      if (roleEl) {
+        const year = user.gradYear || user.grad_year;
+        roleEl.textContent = user.role + (year ? ' · ' + year + ' Mezunu' : '');
+      }
 
       const avatarEl = document.getElementById('profileAvatar');
       const initialsEl = document.getElementById('profileInitials');
@@ -776,23 +781,28 @@
     let requestStatus = null;
     let relReq = null;
 
-    if (isOwnProfile) {
-      profileData = ASDFL.currentUser;
-    } else {
-      if (ASDFL.supabase) {
-        const { data, error } = await ASDFL.supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', targetUserId)
-          .single();
-        
-        if (error || !data) {
+    if (ASDFL.supabase) {
+      const activeUserId = isOwnProfile ? ASDFL.currentUser.id : targetUserId;
+      const { data, error } = await ASDFL.supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', activeUserId)
+        .single();
+      
+      if (error || !data) {
+        if (!isOwnProfile) {
           ASDFL.toast('Profil bulunamadı veya erişim yetkiniz yok.', 'error');
           window.location.href = 'mezunlar.html';
           return;
+        } else {
+          // Fallback to local user state if database fetch failed for own profile
+          profileData = ASDFL.currentUser;
         }
+      } else {
         profileData = data;
+      }
 
+      if (!isOwnProfile) {
         // İlişki durumunu sorgula
         const { data: reqs } = await ASDFL.supabase
           .from('contact_requests')
@@ -808,8 +818,12 @@
             requestStatus = relReq.status;
           }
         }
+      }
+    } else {
+      // Çevrimdışı mod
+      if (isOwnProfile) {
+        profileData = ASDFL.currentUser;
       } else {
-        // Çevrimdışı mod
         const stored = ASDFL._storage.getItem('asdfl_alumni');
         if (stored) {
           const alumni = JSON.parse(stored);
@@ -1089,7 +1103,6 @@
         githubEl.style.opacity = '0.3';
       }
     }
-    const instagramEl = document.getElementById('social-instagram');
     if (instagramEl) {
       if (profileData.instagram_url) {
         instagramEl.href = profileData.instagram_url;
@@ -1099,6 +1112,37 @@
         instagramEl.removeAttribute('href');
         instagramEl.style.pointerEvents = 'none';
         instagramEl.style.opacity = '0.3';
+      }
+    }
+
+    // WhatsApp & Mail dynamic connection buttons
+    const whatsappEl = document.getElementById('social-whatsapp');
+    const mailEl = document.getElementById('social-mail');
+
+    const isVisibleEmail = isOwnProfile || hasEmailShared || isApproved;
+    const isVisiblePhone = isOwnProfile || hasPhoneShared || isApproved;
+
+    if (whatsappEl) {
+      if (isVisiblePhone && profileData.phone) {
+        let cleanedPhone = profileData.phone.replace(/\D/g, '');
+        if (cleanedPhone.startsWith('0')) {
+          cleanedPhone = '90' + cleanedPhone.substring(1);
+        } else if (cleanedPhone.length === 10) {
+          cleanedPhone = '90' + cleanedPhone;
+        }
+        whatsappEl.href = `https://wa.me/${cleanedPhone}`;
+        whatsappEl.style.display = 'inline-flex';
+      } else {
+        whatsappEl.style.display = 'none';
+      }
+    }
+
+    if (mailEl) {
+      if (isVisibleEmail && profileData.email) {
+        mailEl.href = `mailto:${profileData.email}`;
+        mailEl.style.display = 'inline-flex';
+      } else {
+        mailEl.style.display = 'none';
       }
     }
 

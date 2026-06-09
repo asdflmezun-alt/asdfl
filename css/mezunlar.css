@@ -1,29 +1,47 @@
 /* MEZUNLAR PAGE */
 
 .mezun-tabs-wrapper {
-  background: rgba(5,17,30,.5);
-  border-bottom: 1px solid var(--glass-border);
-  backdrop-filter: blur(12px);
   position: sticky;
   top: 65px;
   z-index: 50;
+  background: transparent;
+  border-bottom: none;
+  pointer-events: none;
+  margin-top: -1.5rem;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 0;
 }
 
 .mezun-tabs {
   display: flex;
-  gap: .5rem;
-  padding: .75rem 0;
+  gap: .35rem;
+  padding: .4rem .5rem;
+  background: rgba(13, 27, 42, 0.85);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-lg), 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
+  pointer-events: auto;
   overflow-x: auto;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mezun-tabs:hover {
+  border-color: rgba(244, 168, 54, 0.25);
+  box-shadow: var(--shadow-lg), 0 12px 48px rgba(244, 168, 54, 0.08);
 }
 
 .mezun-tab {
-  padding: .6rem 1.5rem;
+  padding: .5rem 1.25rem;
   border-radius: var(--radius-full);
-  border: 1px solid var(--glass-border);
+  border: 1px solid transparent;
   background: transparent;
   color: var(--text-secondary);
   font-family: 'Inter', sans-serif;
-  font-size: .88rem;
+  font-size: .82rem;
   font-weight: 500;
   cursor: pointer;
   transition: all var(--ease-normal);
@@ -36,14 +54,124 @@
 /* Filters */
 .filters-bar {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 1.5rem;
-  padding: 1.25rem 1.5rem;
-  background: var(--glass-bg);
+  margin: 0 auto 1.75rem auto;
+  padding: 0.5rem 0.75rem;
+  background: rgba(13, 27, 42, 0.75);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-lg), 0 12px 40px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px) saturate(180%);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  justify-content: center;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.filters-bar:hover {
+  border-color: rgba(244, 168, 54, 0.25);
+  box-shadow: var(--shadow-lg), 0 12px 48px rgba(244, 168, 54, 0.08);
+}
+
+@media (min-width: 769px) {
+  .filters-bar {
+    position: sticky;
+    top: 145px;
+    z-index: 45;
+  }
+}
+
+.filters-bar .form-input,
+.filters-bar .form-select {
+  border-radius: var(--radius-full) !important;
+  padding: 0 1.25rem !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  height: 38px;
+  font-size: 0.85rem !important;
+  color: var(--text-primary) !important;
+  transition: all 0.25s ease !important;
+}
+
+.filters-bar .form-select {
+  padding-right: 2rem !important;
+}
+
+.filters-bar .form-input:hover,
+.filters-bar .form-select:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.filters-bar .form-input:focus,
+.filters-bar .form-select:focus {
+  border-color: var(--gold-500) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 0 12px rgba(244, 168, 54, 0.15) !important;
+}
+
+/* Custom checkbox wrapper styled as a pill */
+.filters-bar label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  color: var(--text-secondary) !important;
+  cursor: pointer !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: var(--radius-full) !important;
+  padding: 0 1.25rem !important;
+  height: 38px !important;
+  transition: all 0.25s ease !important;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.filters-bar label:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(244, 168, 54, 0.25) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Custom Checkbox Design */
+.filters-bar label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative;
+  background: transparent;
+}
+
+.filters-bar label input[type="checkbox"]:hover {
+  border-color: var(--gold-500);
+}
+
+.filters-bar label input[type="checkbox"]:checked {
+  background: var(--gold-500);
+  border-color: var(--gold-500);
+}
+
+.filters-bar label input[type="checkbox"]:checked::after {
+  content: '';
+  width: 8px;
+  height: 4px;
+  border-left: 2px solid var(--navy-950);
+  border-bottom: 2px solid var(--navy-950);
+  transform: rotate(-45deg) translate(1px, -1px);
+  display: block;
 }
 
 .alumni-count {
@@ -211,7 +339,12 @@
 }
 
 @media (max-width: 600px) {
-  .filters-bar { flex-direction: column; align-items: stretch; }
+  .filters-bar { 
+    flex-direction: column; 
+    align-items: stretch; 
+    border-radius: var(--radius-lg) !important;
+    padding: 1.25rem !important;
+  }
   .filters-bar > .form-input,
   .filters-bar > .form-select {
     max-width: none !important;

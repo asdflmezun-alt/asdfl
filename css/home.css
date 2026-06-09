@@ -258,6 +258,187 @@
 .feed-action { background: none; border: none; color: var(--text-muted); font-size: .82rem; cursor: pointer; display: flex; align-items: center; gap: .4rem; transition: color 150ms; font-family: inherit; }
 .feed-action:hover { color: var(--gold-400); }
 
+/* Alumni Map Section */
+.alumni-map-wrapper {
+  margin-top: 2rem;
+  min-height: 500px;
+  position: relative;
+}
+
+.alumni-map-container {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  height: 500px;
+}
+
+.alumni-map-sidebar {
+  padding: 1.5rem;
+  border-right: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  background: rgba(10, 20, 35, 0.4);
+}
+
+.alumni-map-sidebar h4 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-primary);
+}
+
+.sidebar-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.city-progress-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.city-progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.city-progress-bar-bg {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.city-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-500), var(--gold-400));
+  border-radius: var(--radius-full);
+  transition: width 0.8s ease-out;
+}
+
+.alumni-map-canvas-container {
+  position: relative;
+  height: 100%;
+}
+
+#alumniMap {
+  background: #0d1622 !important;
+  z-index: 1;
+}
+
+/* Custom Marker Styling */
+.map-marker-pulse-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-marker-pulse {
+  width: 10px;
+  height: 10px;
+  background: var(--gold-500);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--gold-500);
+  position: relative;
+  cursor: pointer;
+}
+
+.map-marker-pulse::after {
+  content: '';
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  top: -10px;
+  left: -10px;
+  border: 1.5px solid var(--gold-500);
+  border-radius: 50%;
+  animation: mapPulse 2s ease-out infinite;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes mapPulse {
+  0% { transform: scale(0.2); opacity: 0; }
+  50% { opacity: 0.6; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* Leaflet Popup Premium Styles override */
+.leaflet-popup-content-wrapper {
+  background: rgba(19, 34, 54, 0.95) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+  border-radius: var(--radius-md) !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: var(--shadow-lg) !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(19, 34, 54, 0.95) !important;
+  border-left: 1px solid var(--glass-border) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px !important;
+}
+
+.leaflet-popup-content h5 {
+  margin: 0 0 0.25rem 0;
+  font-family: 'Outfit', sans-serif;
+  color: var(--gold-400);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.leaflet-popup-content p {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.leaflet-popup-content a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--gold-400);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 150ms;
+}
+
+.leaflet-popup-content a:hover {
+  color: var(--gold-500);
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  color: var(--text-muted) !important;
+  padding: 6px !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: var(--text-primary) !important;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .hero .container { grid-template-columns: 1fr; }
@@ -265,6 +446,23 @@
   .burs-cta-card { grid-template-columns: 1fr; }
   .burs-cta-stats { flex-direction: row; border-left: none; border-top: 1px solid var(--glass-border); padding-left: 0; padding-top: 1.5rem; justify-content: center; }
 }
+
+@media (max-width: 768px) {
+  .alumni-map-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 350px;
+    height: auto;
+  }
+  .alumni-map-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--glass-border);
+    max-height: 250px;
+  }
+  #alumniMap {
+    height: 350px !important;
+  }
+}
+
 @media (max-width: 500px) {
   .burs-cta-stats { flex-direction: column; gap: 1.25rem; }
 }

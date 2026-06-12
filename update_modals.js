@@ -64,17 +64,54 @@ const newModals = `<!-- LOGIN MODAL -->
           <input type="text" class="form-input" placeholder="Örn: Ankara" id="regCity">
         </div>
       </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Akademik Unvan (Varsa)</label>
+          <input type="text" class="form-input" placeholder="Örn: Uzm. Dr., Prof. Dr." id="regAcademicTitle">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Uzmanlık Alanı (Varsa)</label>
+          <input type="text" class="form-input" placeholder="Örn: Dahiliye, Otomasyon" id="regSpecialization">
+        </div>
+      </div>
     </div>
 
     <!-- Öğrenci Alanları -->
-    <div id="ogrenciFields" class="form-group hidden">
-      <label class="form-label">Sınıf</label>
-      <select class="form-select" id="regGrade">
-        <option value="9. Sınıf">9. Sınıf</option>
-        <option value="10. Sınıf">10. Sınıf</option>
-        <option value="11. Sınıf">11. Sınıf</option>
-        <option value="12. Sınıf">12. Sınıf</option>
-      </select>
+    <!-- Öğrenci Alanları -->
+    <div id="ogrenciFields" class="hidden">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Sınıf</label>
+          <select class="form-select" id="regGrade">
+            <option value="9. Sınıf">9. Sınıf</option>
+            <option value="10. Sınıf">10. Sınıf</option>
+            <option value="11. Sınıf">11. Sınıf</option>
+            <option value="12. Sınıf">12. Sınıf</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şube</label>
+          <input type="text" class="form-input" placeholder="Örn: A" id="regClassSectionStudent" maxlength="2">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hedeflenen Üniversite (Öğrenci)</label>
+        <div class="searchable-select-wrapper" id="wrapper-regTargetUniversity">
+          <input type="text" class="form-input searchable-select-trigger" id="regTargetUniversity" readonly placeholder="Seçmek için tıklayın veya arayın..." autocomplete="off">
+          <div class="searchable-select-dropdown" style="display:none;">
+            <div class="searchable-select-search-container">
+              <input type="text" class="searchable-select-search-input" placeholder="Üniversite Ara..." autocomplete="off">
+            </div>
+            <ul class="searchable-select-items">
+              <!-- Dinamik olarak doldurulur -->
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hedeflenen Meslek (Öğrenci)</label>
+        <input type="text" class="form-input" placeholder="Örn: Bilgisayar Mühendisi" id="regTargetJob">
+      </div>
     </div>
 
     <!-- Öğretmen Alanları -->

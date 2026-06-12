@@ -43,9 +43,9 @@ const ASDFL = {
       let localAlumni = JSON.parse(localStorage.getItem('asdfl_alumni') || '[]');
       if (localAlumni.length === 0 || !localAlumni[0].avatar_url) {
         localAlumni = [
-          { id: '1', name: 'Alika Yıldız', email: 'alika@example.com', phone: '0555 123 45 67', role: 'Admin', grad_year: 2012, mentor: true, job: 'Kıdemli Yazılım Mühendisi', company: 'Google', university: 'ORTA DOĞU TEKNİK ÜNİVERSİTESİ', city: 'İstanbul', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80' },
-          { id: '2', name: 'Burak Yılmaz', email: 'burak@example.com', phone: '0532 987 65 43', role: 'Mezun', grad_year: 2008, mentor: true, job: 'Veri Bilimci', company: 'TÜBİTAK', university: 'BOĞAZİÇİ ÜNİVERSİTESİ', city: 'Ankara', avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&h=200&q=80' },
-          { id: '3', name: 'Ceren Demir', email: 'ceren@example.com', phone: '0544 555 66 77', role: 'Öğrenci', grad_year: 2026, mentor: false, job: 'Öğrenci', company: '', university: 'HACETTEPE ÜNİVERSİTESİ', city: 'Afyon', avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&h=200&q=80' }
+          { id: '1', name: 'Alika Yıldız', email: 'alika@example.com', phone: '0555 123 45 67', role: 'Admin', grad_year: 2012, mentor: true, job: 'Kıdemli Yazılım Mühendisi', company: 'Google', university: 'ORTA DOĞU TEKNİK ÜNİVERSİTESİ', city: 'İstanbul', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80', academic_title: 'Dr.', specialization: 'Otomasyon ve Yapay Zeka' },
+          { id: '2', name: 'Burak Yılmaz', email: 'burak@example.com', phone: '0532 987 65 43', role: 'Mezun', grad_year: 2008, mentor: true, job: 'Dahiliye Uzmanı', company: 'Ankara Şehir Hastanesi', university: 'HACETTEPE ÜNİVERSİTESİ', city: 'Ankara', avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&h=200&q=80', academic_title: 'Uzm. Dr.', specialization: 'Dahiliye' },
+          { id: '3', name: 'Ceren Demir', email: 'ceren@example.com', phone: '0544 555 66 77', role: 'Öğrenci', grad_year: 2026, mentor: false, job: 'Öğrenci', company: '', university: 'HACETTEPE ÜNİVERSİTESİ', city: 'Afyon', avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&h=200&q=80', target_university: 'Hacettepe Üniversitesi', target_job: 'Doktor' }
         ];
         localStorage.setItem('asdfl_alumni', JSON.stringify(localAlumni));
       }
@@ -75,12 +75,12 @@ const ASDFL = {
     if (!this.supabase) return [];
     try {
       const { data, error } = await this.queryWithTimeout(
-        this.supabase.from('posts').select('*, profiles!author_id(name, role, avatar_url, avatar_position, grad_year)').order('created_at', { ascending: false })
+        this.supabase.from('posts').select('*, profiles!author_id(name, role, avatar_url, avatar_position, grad_year, academic_title, specialization)').order('created_at', { ascending: false })
       );
       if (error || !data) { if (error) console.error('Error fetching posts:', error); return []; }
       return data.map(p => ({
         ...p,
-        author: p.profiles?.name || 'Kullanıcı',
+        author: (p.profiles?.academic_title ? p.profiles.academic_title + ' ' : '') + (p.profiles?.name || 'Kullanıcı'),
         authorYear: p.profiles?.grad_year,
         initials: this.getInitials(p.profiles?.name || 'U')
       }));
@@ -254,7 +254,7 @@ const ASDFL = {
       try {
         const { data, error } = await this.supabase
           .from('mentorships')
-          .select('*, mentor:profiles!mentor_id(name, email, role, grad_year, job, city, avatar_url, avatar_position), student:profiles!student_id(name, email, role, grad_year, grade, city, avatar_url, avatar_position)');
+          .select('*, mentor:profiles!mentor_id(name, email, role, grad_year, job, city, avatar_url, avatar_position, academic_title, specialization), student:profiles!student_id(name, email, role, grad_year, grade, city, avatar_url, avatar_position, academic_title, specialization)');
         if (!error && data) return data;
         console.warn('Supabase fetch mentorships error, falling back to LocalStorage:', error);
       } catch (err) {
@@ -391,7 +391,7 @@ const ASDFL = {
       try {
         const { data, error } = await this.supabase
           .from('mentorship_appointments')
-          .select('*, mentor:profiles!mentor_id(name, avatar_url, avatar_position), student:profiles!student_id(name, avatar_url, avatar_position)');
+          .select('*, mentor:profiles!mentor_id(name, avatar_url, avatar_position, academic_title), student:profiles!student_id(name, avatar_url, avatar_position, academic_title)');
         if (!error && data) return data;
         console.warn('Supabase fetch appointments error, falling back to LocalStorage:', error);
       } catch (err) {
@@ -547,12 +547,12 @@ const ASDFL = {
     if (this.supabase) {
       const { data, error } = await this.supabase
         .from('job_postings')
-        .select('*, profiles!employer_id(name, role, grad_year, city, job, company, avatar_url, avatar_position)')
+        .select('*, profiles!employer_id(name, role, grad_year, city, job, company, avatar_url, avatar_position, academic_title, specialization)')
         .order('created_at', { ascending: false });
       if (error) { console.error('Error fetching job postings:', error); return []; }
       return data.map(jp => ({
         ...jp,
-        employerName: jp.profiles?.name || 'Mezun',
+        employerName: (jp.profiles?.academic_title ? jp.profiles.academic_title + ' ' : '') + (jp.profiles?.name || 'Mezun'),
         employerRole: jp.profiles?.role || 'Mezun',
         employerYear: jp.profiles?.grad_year,
         employerAvatarUrl: jp.profiles?.avatar_url || '',
@@ -605,7 +605,7 @@ const ASDFL = {
       if (!this.currentUser) return [];
       const { data, error } = await this.supabase
         .from('job_applications')
-        .select('*, job_postings(*), profiles!applicant_id(name, role, grad_year, email, phone, avatar_url, avatar_position)')
+        .select('*, job_postings(*), profiles!applicant_id(name, role, grad_year, email, phone, avatar_url, avatar_position, academic_title, specialization)')
         .order('created_at', { ascending: false });
       if (error) { console.error('Error fetching applications:', error); return []; }
       return data.map(app => ({
@@ -613,7 +613,7 @@ const ASDFL = {
         jobTitle: app.job_postings?.title,
         companyName: app.job_postings?.company,
         employerId: app.job_postings?.employer_id,
-        applicantName: app.profiles?.name || 'Üye',
+        applicantName: (app.profiles?.academic_title ? app.profiles.academic_title + ' ' : '') + (app.profiles?.name || 'Üye'),
         applicantRole: app.profiles?.role || 'Öğrenci',
         applicantYear: app.profiles?.grad_year,
         applicantEmail: app.profiles?.email,
@@ -648,12 +648,12 @@ const ASDFL = {
     if (this.supabase) {
       const { data, error } = await this.supabase
         .from('internship_requests')
-        .select('*, profiles!student_id(name, role, grad_year, city, grade, class_section, avatar_url, avatar_position)')
+        .select('*, profiles!student_id(name, role, grad_year, city, grade, class_section, avatar_url, avatar_position, academic_title, specialization)')
         .order('created_at', { ascending: false });
       if (error) { console.error('Error fetching internship requests:', error); return []; }
       return data.map(ir => ({
         ...ir,
-        studentName: ir.profiles?.name || 'Öğrenci',
+        studentName: (ir.profiles?.academic_title ? ir.profiles.academic_title + ' ' : '') + (ir.profiles?.name || 'Öğrenci'),
         studentRole: ir.profiles?.role || 'Öğrenci',
         studentGrade: ir.profiles?.grade,
         studentClassSection: ir.profiles?.class_section,
@@ -934,6 +934,163 @@ const ASDFL = {
     }
     this.toast('Başvurunuz başarıyla alındı! 🎉', 'success');
     return true;
+  },
+
+  openScholarshipModal(scholarshipTitle = '', scholarshipId = '') {
+    if (!this.currentUser) {
+      this.toast('Burs başvurusu yapabilmek için giriş yapmalısınız.', 'warning');
+      this.openModal('loginModal');
+      return;
+    }
+    
+    // Check if modal already exists in body, if not create it
+    let modal = document.getElementById('unifiedScholarshipModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.id = 'unifiedScholarshipModal';
+      modal.onclick = (e) => {
+        if (e.target === modal) this.closeModal('unifiedScholarshipModal');
+      };
+      
+      modal.innerHTML = `
+        <div class="modal" style="max-width: 550px; width: 100%;">
+          <button class="modal-close" onclick="ASDFL.closeModal('unifiedScholarshipModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+          <div style="text-align:center;margin-bottom:1.5rem">
+            <div style="font-size:2.5rem;margin-bottom:.5rem;color:var(--gold-500)"><i data-lucide="graduation-cap" style="width:1em;height:1em"></i></div>
+            <h3>Burs Başvuru Formu</h3>
+            <p style="font-size:.9rem;margin-top:.25rem;color:var(--text-secondary)" id="uniScholarshipSubtitle"></p>
+          </div>
+          
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Ad Soyad</label>
+              <input type="text" class="form-input" id="uniScholarshipName" placeholder="Adınız Soyadınız">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Sınıf / Mezuniyet</label>
+              <input type="text" class="form-input" id="uniScholarshipGrade" placeholder="Örn: 12. Sınıf">
+            </div>
+          </div>
+          
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">E-posta</label>
+              <input type="email" class="form-input" id="uniScholarshipEmail" placeholder="ornek@email.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Telefon</label>
+              <input type="tel" class="form-input" id="uniScholarshipPhone" placeholder="0555 555 55 55">
+            </div>
+          </div>
+          
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Not Ortalaması</label>
+              <input type="text" class="form-input" id="uniScholarshipGpa" placeholder="Örn: 92.5 veya 3.82">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Burs Türü / Programı</label>
+              <input type="text" class="form-input" id="uniScholarshipType" placeholder="Burs programı adı">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Başvuru Gerekçesi ve Kendinizi Tanıtın</label>
+            <textarea class="form-input" id="uniScholarshipBio" rows="4" placeholder="Neden bu bursa başvuruyorsunuz? Kendinizden ve hedeflerinizden bahsedin..."></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Belge Bağlantısı (Transkript, Gelir Belgesi vb. Drive/PDF Linki)</label>
+            <input type="url" class="form-input" id="uniScholarshipDocUrl" placeholder="https://drive.google.com/file/... veya PDF URL">
+          </div>
+          
+          <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="ASDFL.submitUnifiedScholarship()">Başvuruyu Tamamla</button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+    
+    // Populate details
+    const subtitleEl = document.getElementById('uniScholarshipSubtitle');
+    if (subtitleEl) {
+      subtitleEl.textContent = scholarshipTitle ? `Program: ${scholarshipTitle}` : 'ASDFL Mezunlar Derneği Burs Programı';
+    }
+    
+    const nameInput = document.getElementById('uniScholarshipName');
+    const gradeInput = document.getElementById('uniScholarshipGrade');
+    const emailInput = document.getElementById('uniScholarshipEmail');
+    const phoneInput = document.getElementById('uniScholarshipPhone');
+    const typeInput = document.getElementById('uniScholarshipType');
+    const gpaInput = document.getElementById('uniScholarshipGpa');
+    const bioInput = document.getElementById('uniScholarshipBio');
+    const docInput = document.getElementById('uniScholarshipDocUrl');
+    
+    // Reset values
+    if (gpaInput) gpaInput.value = '';
+    if (bioInput) bioInput.value = '';
+    if (docInput) docInput.value = '';
+    
+    // Prefill name, grade, email, phone if logged in
+    const user = this.currentUser;
+    if (nameInput) {
+      nameInput.value = user.name || '';
+      if (user.role === 'Öğrenci') nameInput.disabled = true;
+    }
+    if (gradeInput) {
+      gradeInput.value = user.grade || (user.grad_year || user.gradYear ? `${user.grad_year || user.gradYear} Mezunu` : '');
+      if (user.role === 'Öğrenci') gradeInput.disabled = true;
+    }
+    if (emailInput) {
+      emailInput.value = user.email || '';
+      if (user.role === 'Öğrenci') emailInput.disabled = true;
+    }
+    if (phoneInput) {
+      phoneInput.value = user.phone || '';
+      if (user.role === 'Öğrenci' && user.phone) phoneInput.disabled = true;
+    }
+    if (typeInput) {
+      typeInput.value = scholarshipTitle || 'Genel Burs';
+      typeInput.disabled = !!scholarshipTitle;
+    }
+    
+    this.openModal('unifiedScholarshipModal');
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async submitUnifiedScholarship() {
+    const name = document.getElementById('uniScholarshipName')?.value;
+    const grade = document.getElementById('uniScholarshipGrade')?.value;
+    const email = document.getElementById('uniScholarshipEmail')?.value;
+    const phone = document.getElementById('uniScholarshipPhone')?.value;
+    const gpa = document.getElementById('uniScholarshipGpa')?.value;
+    const type = document.getElementById('uniScholarshipType')?.value;
+    const bio = document.getElementById('uniScholarshipBio')?.value;
+    const docUrl = document.getElementById('uniScholarshipDocUrl')?.value;
+    
+    if (!gpa || !bio || !docUrl) {
+      this.toast('Lütfen Not Ortalaması, Gerekçe ve Belge Bağlantısı alanlarını doldurun.', 'warning');
+      return;
+    }
+    
+    const details = {
+      name,
+      grade,
+      email,
+      phone,
+      gpa,
+      bio,
+      document_url: docUrl
+    };
+    
+    const success = await this.createApplication('Burs', type, details);
+    if (success) {
+      this.closeModal('unifiedScholarshipModal');
+      // If we are on ogrenci.html page, we should trigger loadDashboardData() to refresh list immediately
+      if (window.location.pathname.includes('ogrenci.html') && typeof loadDashboardData === 'function') {
+        loadDashboardData();
+      }
+    }
   },
 
   // ---- App State ----
@@ -1430,6 +1587,25 @@ const ASDFL = {
     const navCta = document.querySelector('.nav-cta');
     if (!navCta) return;
 
+    if (this.currentUser && this.currentUser.role === 'Öğrenci') {
+      const isIndex = window.location.pathname === '/' || 
+                      window.location.pathname.endsWith('index.html') || 
+                      window.location.pathname.endsWith('/');
+      if (isIndex) {
+        window.location.href = 'ogrenci.html';
+        return;
+      }
+      
+      const brand = document.querySelector('.nav-brand');
+      if (brand) brand.href = 'ogrenci.html';
+      
+      const homeLink = document.querySelector('.nav-links a[href="index.html"]');
+      if (homeLink) {
+        homeLink.href = 'ogrenci.html';
+        homeLink.innerHTML = '<i data-lucide="layout-dashboard" style="width:1.2rem;height:1.2rem"></i> Öğrenci Paneli';
+      }
+    }
+
     if (this.currentUser) {
       const avatarUrl = this.currentUser.avatar_url || this.currentUser.avatarUrl || '';
       const name = this.currentUser.name || '';
@@ -1571,6 +1747,8 @@ const ASDFL = {
     const grade = document.getElementById('regGrade')?.value;
     const branch = document.getElementById('regBranch')?.value;
     const teachingYear = document.getElementById('regTeachingYear')?.value;
+    const academicTitle = document.getElementById('regAcademicTitle')?.value || '';
+    const specialization = document.getElementById('regSpecialization')?.value || '';
 
     const classSectionAlumni = document.getElementById('regClassSectionAlumni')?.value;
     const classSectionStudent = document.getElementById('regClassSectionStudent')?.value;
@@ -1579,6 +1757,9 @@ const ASDFL = {
     const phone = document.getElementById('regPhone')?.value || '';
     const sharePhone = document.getElementById('regSharePhone')?.checked || false;
     const shareEmail = document.getElementById('regShareEmail')?.checked || false;
+
+    const targetUniversity = document.getElementById('regTargetUniversity')?.value || '';
+    const targetJob = document.getElementById('regTargetJob')?.value || '';
 
     if (!name || !email || !pass) {
       this.toast('Lütfen zorunlu alanları doldurun.', 'warning');
@@ -1596,8 +1777,11 @@ const ASDFL = {
     
     if (role === 'Mezun') {
       metadata.gradYear = gradYear; metadata.job = job; metadata.city = city; metadata.company = company; metadata.university = university;
+      metadata.academicTitle = academicTitle; metadata.specialization = specialization;
     } else if (role === 'Öğrenci') {
       metadata.grade = grade;
+      metadata.targetUniversity = targetUniversity;
+      metadata.targetJob = targetJob;
     } else if (role === 'Öğretmen') {
       metadata.branch = branch; metadata.teachingYear = teachingYear;
     }
@@ -1620,7 +1804,11 @@ const ASDFL = {
         mentor: false,
         grad_year: gradYear ? parseInt(gradYear) : null,
         class_section: classSection,
-        university: university
+        university: university,
+        academic_title: academicTitle,
+        specialization: specialization,
+        target_university: targetUniversity,
+        target_job: targetJob
       };
       this._storage.setItem('asdfl_user', JSON.stringify(newUser));
       this.currentUser = newUser;

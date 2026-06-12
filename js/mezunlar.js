@@ -35,10 +35,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         .select('*')
         .or(`sender_id.eq.${ASDFL.currentUser.id},receiver_id.eq.${ASDFL.currentUser.id}`)
     ]);
-    allAlumni = alumniData;
+    allAlumni = alumniData.filter(a => a.role !== 'Öğrenci');
     myRequests = requestsData.data || [];
   } else {
-    allAlumni = await ASDFL.fetchAlumni();
+    allAlumni = (await ASDFL.fetchAlumni()).filter(a => a.role !== 'Öğrenci');
     myRequests = [];
   }
 
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       modalAvatar.innerHTML = ASDFL.getAvatarHTML(alumnus, 'avatar avatar-lg');
     }
     if (modalTitle) {
-      modalTitle.textContent = alumnus.name || '';
+      modalTitle.textContent = (alumnus.academic_title ? alumnus.academic_title + ' ' : '') + (alumnus.name || '');
     }
     if (modalSubtitle) {
       const yearText = alumnus.grad_year ? alumnus.grad_year + ' Mezunu' : '';
@@ -163,10 +163,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const years = [...new Set(allAlumni.map(a => a.grad_year).filter(Boolean))].sort((a,b) => b-a);
     const cities = [...new Set(allAlumni.map(a => a.city).filter(Boolean))].sort();
     const universities = [...new Set(allAlumni.map(a => a.university).filter(Boolean))].sort();
+    const specializations = [...new Set(allAlumni.map(a => a.specialization).filter(Boolean))].sort();
     
     const yf = document.getElementById('yearFilter');
     const cf = document.getElementById('cityFilter');
     const uf = document.getElementById('universityFilter');
+    const sf = document.getElementById('specializationFilter');
     
     if(yf) {
       yf.innerHTML = '<option value="all">Tüm Yıllar</option>';
@@ -180,6 +182,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       uf.innerHTML = '<option value="all">Tüm Üniversiteler</option>';
       universities.forEach(u => { const o=document.createElement('option'); o.value=u; o.textContent=u; uf.appendChild(o); });
     }
+    if(sf) {
+      sf.innerHTML = '<option value="all">Tüm Uzmanlıklar</option>';
+      specializations.forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s; sf.appendChild(o); });
+    }
   }
 
   window.filterAlumni = function() {
@@ -187,6 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const year = document.getElementById('yearFilter')?.value || 'all';
     const city = document.getElementById('cityFilter')?.value || 'all';
     const university = document.getElementById('universityFilter')?.value || 'all';
+    const specialization = document.getElementById('specializationFilter')?.value || 'all';
     const mentorOnly = document.getElementById('mentorOnly')?.checked || false;
     
     let filtered = allAlumni.filter(a => {
@@ -194,14 +201,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         (a.name && a.name.toLocaleLowerCase('tr').includes(search)) || 
         (a.job && a.job.toLocaleLowerCase('tr').includes(search)) ||
         (a.company && a.company.toLocaleLowerCase('tr').includes(search)) ||
-        (a.university && a.university.toLocaleLowerCase('tr').includes(search));
+        (a.university && a.university.toLocaleLowerCase('tr').includes(search)) ||
+        (a.specialization && a.specialization.toLocaleLowerCase('tr').includes(search)) ||
+        (a.academic_title && a.academic_title.toLocaleLowerCase('tr').includes(search));
         
       const matchYear = year === 'all' || a.grad_year == year;
       const matchCity = city === 'all' || a.city === city;
       const matchUniversity = university === 'all' || a.university === university;
+      const matchSpecialization = specialization === 'all' || a.specialization === specialization;
       const matchMentor = !mentorOnly || (a.mentor && a.role !== 'Öğrenci');
       
-      return matchSearch && matchYear && matchCity && matchUniversity && matchMentor;
+      return matchSearch && matchYear && matchCity && matchUniversity && matchSpecialization && matchMentor;
     });
     renderAlumniGrid(filtered);
   };
@@ -232,11 +242,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="ac-header">
           ${ASDFL.getAvatarHTML(a, 'avatar avatar-lg')}
           <div class="ac-info">
-            <strong>${ASDFL.escapeHTML(a.name)}</strong>
+            <strong>${a.academic_title ? ASDFL.escapeHTML(a.academic_title) + ' ' : ''}${ASDFL.escapeHTML(a.name)}</strong>
             <span>${ASDFL.escapeHTML(a.grad_year || 'Bilinmiyor')} Mezunu</span>
           </div>
         </div>
         ${jobCompanyText ? `<div class="ac-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(jobCompanyText)}</div>` : ''}
+        ${a.specialization ? `<div class="ac-job"><i data-lucide="award" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px;color:var(--gold-500)"></i> Uzmanlık: ${ASDFL.escapeHTML(a.specialization)}</div>` : ''}
         ${a.university ? `<div class="ac-job"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.university)}</div>` : ''}
         ${a.city ? `<div class="ac-job"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.city)}</div>` : ''}
         ${a.bio ? (
@@ -252,6 +263,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         <div class="ac-tags">
           ${a.mentor ? '<span class="badge badge-teal"><i data-lucide="sparkles" style="width:1em;height:1em"></i> Mentör</span>' : ''}
+          ${a.specialization ? `<span class="badge badge-gold"><i data-lucide="award" style="width:1.1em;height:1.1em;margin-right:2px"></i> ${ASDFL.escapeHTML(a.specialization)}</span>` : ''}
           ${a.grad_year ? `<span class="badge badge-blue">${ASDFL.escapeHTML(a.grad_year)}</span>` : ''}
         </div>
         <div class="ac-actions">

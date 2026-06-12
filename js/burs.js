@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <p style="font-size:.88rem;color:var(--text-secondary);line-height:1.6">${ASDFL.escapeHTML(b.description)}</p>
         <div class="burs-deadline">⏰ Son başvuru: ${ASDFL.formatDate(b.deadline)}</div>
         <button class="btn btn-primary btn-sm" style="align-self:flex-start;margin-top:.5rem"
-          onclick="ASDFL.openModal('basvuruModal')">Başvur <i data-lucide="arrow-right" style="width:1em;height:1em"></i></button>
+          onclick="ASDFL.openScholarshipModal(${ASDFL.jsString(b.title)}, ${ASDFL.jsString(b.id)})">Başvur <i data-lucide="arrow-right" style="width:1em;height:1em"></i></button>
       </div>`).join('');
     ASDFL.initReveal();
     setTimeout(() => lucide.createIcons(), 10);
@@ -96,30 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById(id)?.scrollIntoView({ behavior:'smooth', block:'start' });
   };
 
-  window.submitBursApplication = async function() {
-    if(!ASDFL.currentUser) { ASDFL.toast('Başvuru yapmak için giriş yapmalısınız.', 'warning'); return; }
-    const name = document.getElementById('basvuruName')?.value;
-    const grade = document.getElementById('basvuruGrade')?.value;
-    const gpa = document.getElementById('basvuruGPA')?.value;
-    const type = document.getElementById('basvuruType')?.value;
-    const bio = document.getElementById('basvuruBio')?.value;
-    const email = document.getElementById('basvuruEmail')?.value;
 
-    if(!name || !email) {
-      ASDFL.toast('Lütfen zorunlu alanları (Ad Soyad, E-posta) doldurun.', 'warning');
-      return;
-    }
-
-    const details = { name, grade, gpa, bio, email };
-    const success = await ASDFL.createApplication('Burs', type, details);
-    if (success) {
-      ASDFL.closeModal('basvuruModal');
-      // Clear fields
-      document.getElementById('basvuruName').value = '';
-      document.getElementById('basvuruBio').value = '';
-      document.getElementById('basvuruEmail').value = '';
-    }
-  };
 
   window.submitMentorRequest = async function() {
     if(!ASDFL.currentUser) { ASDFL.toast('Talep göndermek için giriş yapmalısınız.', 'warning'); return; }

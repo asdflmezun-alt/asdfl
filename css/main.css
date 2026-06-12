@@ -52,7 +52,10 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
 
 body {
   font-family: 'Inter',sans-serif;
@@ -60,7 +63,7 @@ body {
   color:var(--text-primary);
   line-height:1.6;
   min-height:100vh;
-  overflow-x: clip;
+  overflow-x: hidden;
 }
 /* iOS Safari modal scroll lock */
 body.modal-open {

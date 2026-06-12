@@ -8,6 +8,22 @@ let allPostings = [];
 let allScholarships = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // 1. Optimistic Render: If user is locally cached as a student, render dashboard immediately
+  const isLoggedInSync = !!ASDFL.currentUser;
+  const isStudentSync = isLoggedInSync && ASDFL.currentUser.role === 'Öğrenci';
+
+  if (isLoggedInSync && isStudentSync) {
+    document.getElementById('studentAuthBlock').classList.add('hidden');
+    document.getElementById('studentDashboardWrapper').classList.remove('hidden');
+    renderHeaderDetails();
+    calculateProfileCompletion();
+  } else if (isLoggedInSync && !isStudentSync) {
+    // If logged in as someone else, redirect instantly
+    window.location.href = 'index.html';
+    return;
+  }
+
+  // 2. Perform deep database/token auth check
   await ASDFL.waitForAuth();
 
   const isLoggedIn = !!ASDFL.currentUser;
@@ -20,19 +36,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (!isStudent) {
-    // If logged in but not a student, redirect to index
     window.location.href = 'index.html';
     return;
   }
 
-  // Show dashboard wrapper
+  // Ensure dashboard wrapper is shown and blocker hidden
   document.getElementById('studentAuthBlock').classList.add('hidden');
   document.getElementById('studentDashboardWrapper').classList.remove('hidden');
 
-  // Render header static details
+  // Render fresh header details
   renderHeaderDetails();
 
-  // Load async dashboard data
+  // Load fresh async dashboard data
   await loadDashboardData();
   
   // Calculate profile completion
@@ -73,29 +88,41 @@ function renderHeaderDetails() {
 async function loadDashboardData() {
   const student = ASDFL.currentUser;
   
-  // Fetch common lists from app.js
-  allAlumni = await ASDFL.fetchAlumni();
-  allEvents = await ASDFL.fetchEvents();
-  allScholarships = await ASDFL.fetchScholarships();
-  allPostings = await ASDFL.fetchJobPostings();
-  
-  // Load applications data
-  if (ASDFL.supabase) {
-    try {
-      const [appsRes, mentRes, jobAppsRes] = await Promise.all([
-        ASDFL.supabase.from('applications').select('*').eq('user_id', student.id),
-        ASDFL.supabase.from('mentorships').select('*, mentor:profiles!mentor_id(id, name, email, phone, avatar_url, avatar_position, job, company, university)').eq('student_id', student.id),
-        ASDFL.supabase.from('job_applications').select('*, job_postings(*)').eq('applicant_id', student.id)
-      ]);
-      
-      myScholarshipApps = appsRes.data || [];
-      myMentorships = mentRes.data || [];
-      myInternshipApps = jobAppsRes.data || [];
-    } catch (err) {
-      console.warn('Supabase loading error in student dashboard, loading from local:', err);
+  try {
+    // Fetch common lists and personal applications in parallel to eliminate request waterfalls
+    const promises = [
+      ASDFL.fetchAlumni(),
+      ASDFL.fetchEvents(),
+      ASDFL.fetchScholarships(),
+      ASDFL.fetchJobPostings()
+    ];
+    
+    if (ASDFL.supabase) {
+      promises.push(ASDFL.supabase.from('applications').select('*').eq('user_id', student.id));
+      promises.push(ASDFL.supabase.from('mentorships').select('*, mentor:profiles!mentor_id(id, name, email, phone, avatar_url, avatar_position, job, company, university)').eq('student_id', student.id));
+      promises.push(ASDFL.supabase.from('job_applications').select('*, job_postings(*)').eq('applicant_id', student.id));
+    }
+    
+    const results = await Promise.all(promises);
+    
+    allAlumni = results[0] || [];
+    allEvents = results[1] || [];
+    allScholarships = results[2] || [];
+    allPostings = results[3] || [];
+    
+    if (ASDFL.supabase) {
+      myScholarshipApps = results[4]?.data || [];
+      myMentorships = results[5]?.data || [];
+      myInternshipApps = results[6]?.data || [];
+    } else {
       loadLocalDataFallback();
     }
-  } else {
+  } catch (err) {
+    console.warn('Error loading dashboard data in parallel, falling back to sequential with local storage:', err);
+    allAlumni = await ASDFL.fetchAlumni().catch(() => []);
+    allEvents = await ASDFL.fetchEvents().catch(() => []);
+    allScholarships = await ASDFL.fetchScholarships().catch(() => []);
+    allPostings = await ASDFL.fetchJobPostings().catch(() => []);
     loadLocalDataFallback();
   }
 

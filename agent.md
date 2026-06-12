@@ -138,7 +138,7 @@ Profil fotoğrafının dairesel çerçevede tam konumlandırılabilmesi için `a
 ## 4. Mobil Responsive Arayüz Kuralları (CSS & Layout)
 
 1. **Yatay Taşmaları Engelleme**:
-   - Mobil görünümde sayfanın sağa-sola kaymasını (`horizontal scroll`) önlemek için `body` etiketine `overflow-x: clip;` uygulanmıştır. 
+   - Mobil görünümde sayfanın sağa-sola kaymasını (`horizontal scroll`) önlemek için `html` ve `body` etiketlerine `overflow-x: hidden;` uygulanmıştır. 
    - Mobil menü kapalıyken tıklama algılamaması ve ekran sınırlarını taşırmaması için mobil `.nav-links` sınıfına `visibility: hidden;` verilir, menü açıldığında `visibility: visible;` konumuna getirilir.
 2. **Yönetim Paneli Menüsü**:
    - Dikey sekmeler mobil çözünürlüklerde (`max-width: 991px`) yatayda kaydırılabilir hap butonları (`.admin-nav` içindeki `.admin-nav-item`) şeklindedir. Kesinlikle dikey olarak alt alta kırılmamalıdır.

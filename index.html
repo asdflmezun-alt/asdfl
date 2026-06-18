@@ -550,7 +550,22 @@
         <input type="checkbox" id="regShareEmail" style="accent-color: var(--gold-500);"> E-posta adresimi diğer mezunlarla paylaş
       </label>
     </div>
-    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="ASDFL.handleRegister()">Kayıt Ol</button>
+    <div class="form-group" style="margin-top:1rem; display:flex; flex-direction:column; gap:.65rem; padding:1rem; border:1px solid var(--glass-border); border-radius:var(--radius-md); text-align:left;">
+      <label style="display:flex;align-items:flex-start;gap:.55rem;font-size:.82rem;color:var(--text-secondary);cursor:pointer;line-height:1.45">
+        <input type="checkbox" id="regKvkkNotice" style="margin-top:.2rem;accent-color:var(--gold-500)">
+        <span><a href="kvkk-aydinlatma.html" target="_blank" rel="noopener">KVKK Aydınlatma Metni</a>'ni okudum ve bilgilendirildim. <strong>(Zorunlu)</strong></span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:.55rem;font-size:.82rem;color:var(--text-secondary);cursor:pointer;line-height:1.45">
+        <input type="checkbox" id="regTerms" style="margin-top:.2rem;accent-color:var(--gold-500)">
+        <span><a href="kullanim-kosullari.html" target="_blank" rel="noopener">Kullanım Koşulları</a> ile <a href="topluluk-kurallari.html" target="_blank" rel="noopener">Topluluk Kuralları</a>'nı kabul ediyorum. <strong>(Zorunlu)</strong></span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:.55rem;font-size:.82rem;color:var(--text-secondary);cursor:pointer;line-height:1.45">
+        <input type="checkbox" id="regOptionalConsent" style="margin-top:.2rem;accent-color:var(--gold-500)">
+        <span><a href="acik-riza.html" target="_blank" rel="noopener">Açık Rıza Metni</a> kapsamında paylaşmayı seçtiğim iletişim bilgilerimin doğrulanmış üyelerce görüntülenmesine izin veriyorum. (İsteğe bağlı)</span>
+      </label>
+      <small style="color:var(--text-muted)">Gizlilik ve çerez kullanımı hakkında <a href="gizlilik-politikasi.html" target="_blank" rel="noopener">Gizlilik Politikası</a> ve <a href="cerez-politikasi.html" target="_blank" rel="noopener">Çerez Politikası</a>'nı inceleyebilirsiniz.</small>
+    </div>
+    <button class="btn btn-primary" id="registerSubmitBtn" style="width:100%;margin-top:.5rem" onclick="ASDFL.handleRegister()">Kayıt Ol</button>
     <div class="divider"></div>
     <p style="text-align:center;font-size:.88rem">Zaten üye misin? <a href="javascript:void(0)" onclick="ASDFL.closeModal('registerModal');ASDFL.openModal('loginModal')">Giriş Yap</a></p>
   </div>
@@ -574,7 +589,7 @@ function toggleRegFields(role) {
     document.getElementById('diag-leaflet-js').innerHTML = '- Leaflet JS Yüklenme Durumu: ' + (isLoaded ? '<span style="color:#2ecc71">Yüklendi (Ok)</span>' : '<span style="color:#e74c3c">Yüklenemedi (L tanımsız)</span>');
   }
 </script>
-<script src="js/app.js?v=1.3"></script>
+<script src="js/app.js?v=1.4"></script>
 <script>
   // Tarayıcı local cache'i app.js'i yenilemezse diye waitForAuth'u inline olarak eziyoruz (Zaman aşımı koruması)
   if (window.ASDFL) {

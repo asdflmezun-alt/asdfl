@@ -277,6 +277,7 @@
       <button class="mezun-tab active" id="btn-tab-social" onclick="switchProfileTab('social')"><i data-lucide="user"></i> Profilim</button>
       <button class="mezun-tab" id="btn-tab-settings" onclick="switchProfileTab('settings')"><i data-lucide="settings"></i> Ayarlar</button>
       <button class="mezun-tab" id="btn-tab-requests" onclick="switchProfileTab('requests')"><i data-lucide="bell"></i> Talepler <span class="badge badge-gold" id="requestsCountBadge" style="margin-left: 0.35rem; padding: 0.05rem 0.3rem; font-size: 0.7rem; display: none;">0</span></button>
+      <button class="mezun-tab" id="btn-tab-privacy" onclick="switchProfileTab('privacy')"><i data-lucide="shield-check"></i> Gizlilik ve Verilerim</button>
     </div>
 
     <!-- 1. SOCIAL PROFILE TAB CONTENT -->
@@ -534,6 +535,27 @@
         </div>
       </div>
     </div>
+
+    <div id="profile-tab-privacy" class="profile-tab-content reveal" style="display:none">
+      <div class="profile-right-grid">
+        <div class="card" style="padding:2rem">
+          <h3 style="margin-top:0;margin-bottom:.5rem;font-family:'Outfit',sans-serif;font-size:1.25rem;display:flex;align-items:center;gap:.5rem"><i data-lucide="shield-check" style="color:var(--gold-500)"></i> İzinlerim</h3>
+          <p style="color:var(--text-muted);font-size:.85rem">Kayıt sırasında verdiğiniz bildirim ve izinlerin sürümlü geçmişi.</p>
+          <div id="legalConsentsList"><p style="color:var(--text-muted)">Yükleniyor...</p></div>
+        </div>
+        <div class="card" style="padding:2rem">
+          <h3 style="margin-top:0;margin-bottom:.5rem;font-family:'Outfit',sans-serif;font-size:1.25rem;display:flex;align-items:center;gap:.5rem"><i data-lucide="file-question" style="color:var(--gold-500)"></i> Veri Talebi Oluştur</h3>
+          <p style="color:var(--text-muted);font-size:.85rem">Talebiniz yönetim tarafından değerlendirilir. Hesap silme işlemi doğrudan uygulanmaz.</p>
+          <div class="form-group"><label class="form-label" for="dataRequestType">Talep Türü</label><select class="form-select" id="dataRequestType"><option value="information">Bilgi talebi</option><option value="correction">Veri düzeltme</option><option value="data_copy">Verilerimin kopyası</option><option value="withdraw_consent">Açık rızayı geri çekme</option><option value="account_deletion">Hesap ve veri silme</option></select></div>
+          <div class="form-group"><label class="form-label" for="dataRequestDescription">Açıklama</label><textarea class="form-textarea" id="dataRequestDescription" rows="4" maxlength="2000" placeholder="Talebinizi açıklayın..."></textarea></div>
+          <button class="btn btn-primary" id="dataRequestSubmitBtn" onclick="submitDataRequest()">Talebi Gönder</button>
+        </div>
+      </div>
+      <div class="card" style="padding:2rem;margin-top:1.5rem">
+        <h3 style="margin-top:0;font-family:'Outfit',sans-serif;font-size:1.15rem">Geçmiş Taleplerim</h3>
+        <div id="myDataRequestsList"><p style="color:var(--text-muted)">Yükleniyor...</p></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -578,7 +600,7 @@
 <div class="toast-container"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/universities.js"></script>
-<script src="js/app.js?v=1.3"></script>
+<script src="js/app.js?v=1.4"></script>
 <script>
   window.goBackToAlumni = function() {
     if (document.referrer && document.referrer.includes('mezunlar.html')) {
@@ -973,6 +995,56 @@
     document.querySelectorAll('.mezun-tab').forEach(btn => btn.classList.remove('active'));
     const targetBtn = document.getElementById(`btn-tab-${tabName}`);
     if (targetBtn) targetBtn.classList.add('active');
+    if (tabName === 'privacy') loadPrivacyData();
+  };
+
+  const dataRequestLabels = { information: 'Bilgi talebi', correction: 'Veri düzeltme', data_copy: 'Veri kopyası', withdraw_consent: 'Açık rızayı geri çekme', account_deletion: 'Hesap ve veri silme' };
+  const consentLabels = { kvkk_notice: 'KVKK aydınlatma bildirimi', terms_and_community: 'Kullanım ve topluluk kuralları', optional_contact_sharing: 'İletişim bilgileri paylaşım izni' };
+
+  window.loadPrivacyData = async function() {
+    if (!ASDFL.currentUser) return;
+    let consents = [], requests = [];
+    if (ASDFL.supabase) {
+      const [consentResult, requestResult] = await Promise.all([
+        ASDFL.supabase.from('user_legal_consents').select('*').eq('user_id', ASDFL.currentUser.id).order('created_at', { ascending: false }),
+        ASDFL.supabase.from('data_requests').select('*').eq('user_id', ASDFL.currentUser.id).order('created_at', { ascending: false })
+      ]);
+      if (consentResult.error) console.error('Consent history fetch failed:', consentResult.error);
+      if (requestResult.error) console.error('Data request history fetch failed:', requestResult.error);
+      consents = consentResult.data || [];
+      requests = requestResult.data || [];
+    } else {
+      consents = JSON.parse(ASDFL._storage.getItem('asdfl_legal_consents') || '[]').filter(x => x.user_id === ASDFL.currentUser.id);
+      requests = JSON.parse(ASDFL._storage.getItem('asdfl_data_requests') || '[]').filter(x => x.user_id === ASDFL.currentUser.id).reverse();
+    }
+    const consentEl = document.getElementById('legalConsentsList');
+    consentEl.innerHTML = consents.length ? consents.map(c => `<div style="padding:.8rem 0;border-bottom:1px solid var(--glass-border);display:flex;justify-content:space-between;gap:1rem"><div><strong>${consentLabels[c.document_type] || c.document_type}</strong><div style="font-size:.76rem;color:var(--text-muted)">Sürüm ${c.document_version} · ${new Date(c.accepted_at || c.created_at).toLocaleDateString('tr-TR')}</div></div><span class="badge ${c.accepted && !c.withdrawn_at ? 'badge-teal' : 'badge-red'}">${c.withdrawn_at ? 'Geri çekildi' : (c.accepted ? 'Kabul edildi' : 'Verilmedi')}</span></div>`).join('') : '<p style="color:var(--text-muted)">Kayıtlı izin geçmişi bulunamadı.</p>';
+    const requestEl = document.getElementById('myDataRequestsList');
+    requestEl.innerHTML = requests.length ? requests.map(r => `<div style="padding:1rem 0;border-bottom:1px solid var(--glass-border)"><div style="display:flex;justify-content:space-between;gap:1rem"><strong>${dataRequestLabels[r.request_type] || r.request_type}</strong><span class="badge badge-gold">${r.status}</span></div><p style="margin:.4rem 0;color:var(--text-secondary);font-size:.85rem">${ASDFL.escapeHTML(r.description || 'Açıklama yok')}</p>${r.admin_note ? `<p style="font-size:.8rem;color:var(--text-muted)"><strong>Yönetim notu:</strong> ${ASDFL.escapeHTML(r.admin_note)}</p>` : ''}<small style="color:var(--text-muted)">${new Date(r.created_at).toLocaleString('tr-TR')}</small></div>`).join('') : '<p style="color:var(--text-muted)">Henüz veri talebiniz yok.</p>';
+  };
+
+  window.submitDataRequest = async function() {
+    if (!ASDFL.currentUser) return;
+    const requestType = document.getElementById('dataRequestType').value;
+    const description = document.getElementById('dataRequestDescription').value.trim();
+    if (!description) { ASDFL.toast('Lütfen talebinizi kısaca açıklayın.', 'warning'); return; }
+    if (requestType === 'account_deletion' && !window.confirm('Hesap silme talebi oluşturmak istediğinize emin misiniz? Hesabınız hemen silinmeyecektir.')) return;
+    const btn = document.getElementById('dataRequestSubmitBtn');
+    btn.disabled = true; btn.textContent = 'Gönderiliyor...';
+    const row = { user_id: ASDFL.currentUser.id, request_type: requestType, description, status: 'Pending' };
+    let error = null;
+    if (ASDFL.supabase) {
+      ({ error } = await ASDFL.supabase.from('data_requests').insert(row));
+    } else {
+      const rows = JSON.parse(ASDFL._storage.getItem('asdfl_data_requests') || '[]');
+      rows.push({ ...row, id: Math.random().toString(36).slice(2), admin_note: '', created_at: new Date().toISOString() });
+      ASDFL._storage.setItem('asdfl_data_requests', JSON.stringify(rows));
+    }
+    btn.disabled = false; btn.textContent = 'Talebi Gönder';
+    if (error) { console.error('Data request insert failed:', error); ASDFL.toast('Talep gönderilemedi: ' + error.message, 'error'); return; }
+    document.getElementById('dataRequestDescription').value = '';
+    ASDFL.toast('Veri talebiniz alındı.', 'success');
+    await loadPrivacyData();
   };
 
   window.requestContactFromProfile = function() {

@@ -5,6 +5,7 @@ let allEvents = [];
 let allScholarships = [];
 let allApplications = [];
 let allAnnouncements = [];
+let allDataRequests = [];
 
 let currentTab = 'dashboard';
 let currentAppFilter = 'ALL';
@@ -139,6 +140,16 @@ async function loadAdminData() {
       allAnnouncements = [];
     }
 
+    // 6. Kişisel veri talepleri
+    try {
+      const { data, error } = await ASDFL.supabase.from('data_requests').select('*').order('created_at', { ascending: false });
+      if (error) console.error('data_requests fetch error:', error.message);
+      allDataRequests = (data || []).map(request => ({ ...request, profile: allMembers.find(member => member.id === request.user_id) || null }));
+    } catch (e) {
+      console.error('data_requests exception:', e);
+      allDataRequests = [];
+    }
+
     // Eğer hiç üye yüklenmediyse offline fallback
     if (!allMembers || allMembers.length === 0) {
       loadOfflineFallbackData();
@@ -239,6 +250,13 @@ function loadOfflineFallbackData() {
     ];
     safeSetItem('asdfl_logo_announcements', JSON.stringify(allAnnouncements));
   }
+  try {
+    const storedRequests = localStorage.getItem('asdfl_data_requests');
+    allDataRequests = storedRequests ? JSON.parse(storedRequests).map(request => ({ ...request, profile: allMembers.find(member => member.id === request.user_id) || null })) : [];
+  } catch (e) {
+    console.error('Error parsing data request mock:', e);
+    allDataRequests = [];
+  }
 }
 
 // Master Render Method
@@ -257,6 +275,8 @@ function renderAllPanels() {
     renderApplicationsList();
   } else if (currentTab === 'announcements') {
     renderAnnouncementsPanel();
+  } else if (currentTab === 'data-requests') {
+    renderDataRequests();
   }
 
   setTimeout(() => {
@@ -266,6 +286,50 @@ function renderAllPanels() {
     }
   }, 10);
 }
+
+const adminDataRequestLabels = { information: 'Bilgi talebi', correction: 'Veri düzeltme', data_copy: 'Veri kopyası', withdraw_consent: 'Açık rızayı geri çekme', account_deletion: 'Hesap ve veri silme' };
+
+window.renderDataRequests = function() {
+  const container = document.getElementById('adminDataRequestsList');
+  if (!container) return;
+  const filter = document.getElementById('dataRequestStatusFilter')?.value || 'ALL';
+  const rows = allDataRequests.filter(row => filter === 'ALL' || row.status === filter);
+  if (!rows.length) { container.innerHTML = '<div class="card" style="padding:2rem;text-align:center;color:var(--text-muted)">Bu filtrede veri talebi bulunmuyor.</div>'; return; }
+  container.innerHTML = rows.map(row => `<div class="card" style="padding:1.25rem;margin-bottom:1rem">
+    <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap"><div><h3 style="margin:0 0 .25rem;font-size:1rem">${adminDataRequestLabels[row.request_type] || row.request_type}</h3><span style="font-size:.8rem;color:var(--text-muted)">${ASDFL.escapeHTML(row.profile?.name || 'Bilinmeyen kullanıcı')} · ${ASDFL.escapeHTML(row.profile?.email || '')} · ${new Date(row.created_at).toLocaleString('tr-TR')}</span></div><span class="badge badge-gold">${row.status}</span></div>
+    <p style="color:var(--text-secondary);font-size:.88rem">${ASDFL.escapeHTML(row.description || 'Açıklama yok')}</p>
+    <div class="grid-2"><div class="form-group"><label class="form-label">Durum</label><select class="form-select" id="request-status-${row.id}"><option value="Pending" ${row.status === 'Pending' ? 'selected' : ''}>Bekleyen</option><option value="InProgress" ${row.status === 'InProgress' ? 'selected' : ''}>İşlemde</option><option value="Resolved" ${row.status === 'Resolved' ? 'selected' : ''}>Sonuçlandı</option><option value="Rejected" ${row.status === 'Rejected' ? 'selected' : ''}>Reddedildi</option></select></div><div class="form-group"><label class="form-label">Yönetim Notu</label><input class="form-input" id="request-note-${row.id}" maxlength="2000" value="${ASDFL.escapeAttr(row.admin_note || '')}" placeholder="Kullanıcıya gösterilecek açıklama"></div></div>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem;flex-wrap:wrap"><button class="btn btn-primary btn-sm" onclick="updateDataRequest('${row.id}')">Talebi Güncelle</button>${row.request_type === 'account_deletion' && row.status !== 'Resolved' ? `<button class="btn btn-ghost btn-sm" style="color:var(--text-red)" onclick="completeAccountDeletion('${row.id}','${row.user_id}')">Hesabı Sil ve Sonuçlandır</button>` : ''}</div>
+  </div>`).join('');
+};
+
+window.updateDataRequest = async function(requestId) {
+  const status = document.getElementById(`request-status-${requestId}`).value;
+  const admin_note = document.getElementById(`request-note-${requestId}`).value.trim();
+  const patch = { status, admin_note, resolved_at: ['Resolved', 'Rejected'].includes(status) ? new Date().toISOString() : null };
+  if (ASDFL.supabase) {
+    const { error } = await ASDFL.supabase.from('data_requests').update(patch).eq('id', requestId);
+    if (error) { ASDFL.toast('Talep güncellenemedi: ' + error.message, 'error'); return; }
+  } else {
+    allDataRequests = allDataRequests.map(row => row.id === requestId ? { ...row, ...patch } : row);
+    safeSetItem('asdfl_data_requests', JSON.stringify(allDataRequests));
+  }
+  const row = allDataRequests.find(item => item.id === requestId); if (row) Object.assign(row, patch);
+  ASDFL.toast('Veri talebi güncellendi.', 'success'); renderDataRequests(); updateStats();
+};
+
+window.completeAccountDeletion = async function(requestId, userId) {
+  if (!confirm('Bu kullanıcının hesabı ve ilişkili verileri kalıcı olarak silinecek. Devam edilsin mi?')) return;
+  const { error } = await ASDFL.supabase.rpc('delete_user', { target_user_id: userId });
+  if (error) { ASDFL.toast('Hesap silinemedi: ' + error.message, 'error'); return; }
+  const resolvedPatch = { status: 'Resolved', admin_note: 'Kullanıcı hesabı ve ilişkili profil verileri silindi.', resolved_at: new Date().toISOString() };
+  const { error: requestError } = await ASDFL.supabase.from('data_requests').update(resolvedPatch).eq('id', requestId);
+  if (requestError) console.error('Deleted account request could not be marked resolved:', requestError);
+  const request = allDataRequests.find(row => row.id === requestId);
+  if (request) Object.assign(request, resolvedPatch, { user_id: null, profile: null });
+  allMembers = allMembers.filter(member => member.id !== userId);
+  ASDFL.toast('Hesap silindi ve talep sonuçlandırıldı.', 'success'); renderDataRequests(); updateStats();
+};
 
 // Render counters and badges
 function updateStats() {
@@ -279,6 +343,8 @@ function updateStats() {
   const elPending = document.getElementById('statPendingApps');
   const elBurs = document.getElementById('statTotalScholarships');
   const appBadge = document.getElementById('pendingAppsBadge');
+  const dataRequestBadge = document.getElementById('pendingDataRequestsBadge');
+  const pendingDataRequests = allDataRequests.filter(request => request.status === 'Pending').length;
 
   if (elUsers) elUsers.textContent = totalUsers;
   if (elEvents) elEvents.textContent = totalEvents;
@@ -292,6 +358,10 @@ function updateStats() {
     } else {
       appBadge.style.display = 'none';
     }
+  }
+  if (dataRequestBadge) {
+    dataRequestBadge.textContent = pendingDataRequests;
+    dataRequestBadge.style.display = pendingDataRequests > 0 ? 'inline-flex' : 'none';
   }
 }
 

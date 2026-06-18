@@ -5,6 +5,35 @@
 // Demo data stored in localStorage on first load
 const ASDFL = {
   version: '1.0.0',
+  legalDocumentVersion: '2026-06-18',
+  legalDocumentLinks: [
+    ['kvkk-aydinlatma.html', 'KVKK'], ['acik-riza.html', 'Açık Rıza'],
+    ['gizlilik-politikasi.html', 'Gizlilik'], ['cerez-politikasi.html', 'Çerezler'],
+    ['kullanim-kosullari.html', 'Kullanım Koşulları'], ['topluluk-kurallari.html', 'Topluluk Kuralları'],
+    ['veri-basvuru-silme.html', 'Veri Başvurusu']
+  ],
+
+  ensureLegalFooter() {
+    let footer = document.querySelector('footer');
+    if (!footer) {
+      footer = document.createElement('footer');
+      footer.className = 'footer';
+      footer.style.marginTop = '4rem';
+      footer.innerHTML = '<div class="container"><div class="footer-bottom"><span>© 2026 ASDFL Mezunlar Derneği</span></div></div>';
+      document.body.appendChild(footer);
+    }
+    if (footer.querySelector('.site-legal-links')) return;
+    const links = document.createElement('div');
+    links.className = 'site-legal-links';
+    links.setAttribute('aria-label', 'Hukuki belgeler');
+    links.innerHTML = this.legalDocumentLinks.map(([href, label]) => `<a href="${href}">${label}</a>`).join('');
+    const container = footer.querySelector('.container') || footer;
+    container.appendChild(links);
+    if (!document.querySelector('link[href="css/legal.css"]')) {
+      const style = document.createElement('link');
+      style.rel = 'stylesheet'; style.href = 'css/legal.css'; document.head.appendChild(style);
+    }
+  },
 
   // Timeout wrapper for database queries to prevent page freezes if database is blocked or slow
   async queryWithTimeout(queryPromise, timeoutMs = 2500) {
@@ -1757,6 +1786,9 @@ const ASDFL = {
     const phone = document.getElementById('regPhone')?.value || '';
     const sharePhone = document.getElementById('regSharePhone')?.checked || false;
     const shareEmail = document.getElementById('regShareEmail')?.checked || false;
+    const kvkkNotice = document.getElementById('regKvkkNotice')?.checked || false;
+    const termsAccepted = document.getElementById('regTerms')?.checked || false;
+    const optionalConsent = document.getElementById('regOptionalConsent')?.checked || false;
 
     const targetUniversity = document.getElementById('regTargetUniversity')?.value || '';
     const targetJob = document.getElementById('regTargetJob')?.value || '';
@@ -1765,6 +1797,22 @@ const ASDFL = {
       this.toast('Lütfen zorunlu alanları doldurun.', 'warning');
       return;
     }
+    if (!kvkkNotice) {
+      this.toast('Kayıt için KVKK Aydınlatma Metni bildirimi zorunludur.', 'warning');
+      return;
+    }
+    if (!termsAccepted) {
+      this.toast('Kullanım Koşulları ve Topluluk Kuralları kabul edilmelidir.', 'warning');
+      return;
+    }
+    if ((sharePhone || shareEmail) && !optionalConsent) {
+      this.toast('İletişim bilgisi paylaşmak için isteğe bağlı açık rıza kutusunu işaretleyin veya paylaşım tercihlerini kapatın.', 'warning');
+      return;
+    }
+
+    const submitBtn = document.getElementById('registerSubmitBtn');
+    if (submitBtn?.disabled) return;
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Kayıt oluşturuluyor...'; }
 
     const metadata = { 
       role, 
@@ -1772,7 +1820,11 @@ const ASDFL = {
       classSection: classSection ? classSection.toUpperCase() : '',
       phone,
       sharePhone,
-      shareEmail
+      shareEmail,
+      legalDocumentVersion: this.legalDocumentVersion,
+      kvkkNoticeAccepted: kvkkNotice,
+      termsAccepted,
+      optionalConsent
     };
     
     if (role === 'Mezun') {
@@ -1794,7 +1846,16 @@ const ASDFL = {
       });
       if (error) {
         this.toast('Kayıt hatası: ' + error.message, 'error');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Kayıt Ol'; }
         return;
+      }
+      if (data?.session?.user?.id) {
+        const { data: savedConsents, error: consentError } = await this.supabase
+          .from('user_legal_consents').select('id').eq('user_id', data.session.user.id).eq('document_version', this.legalDocumentVersion);
+        if (consentError || (savedConsents || []).length < 3) {
+          console.error('Legal consent persistence verification failed:', consentError || 'Missing consent rows');
+          this.toast('Üyelik oluşturuldu ancak onay kaydı doğrulanamadı. Lütfen yönetimle iletişime geçin.', 'warning');
+        }
       }
     } else {
       const newUser = {
@@ -1821,6 +1882,14 @@ const ASDFL = {
       } catch (e) {
         console.warn('Could not add to local alumni list:', e);
       }
+      const localConsents = JSON.parse(this._storage.getItem('asdfl_legal_consents') || '[]');
+      const acceptedAt = new Date().toISOString();
+      localConsents.push(
+        { user_id: newUser.id, document_type: 'kvkk_notice', document_version: this.legalDocumentVersion, accepted: true, accepted_at: acceptedAt, source: 'registration' },
+        { user_id: newUser.id, document_type: 'terms_and_community', document_version: this.legalDocumentVersion, accepted: true, accepted_at: acceptedAt, source: 'registration' },
+        { user_id: newUser.id, document_type: 'optional_contact_sharing', document_version: this.legalDocumentVersion, accepted: optionalConsent, accepted_at: acceptedAt, source: 'registration' }
+      );
+      this._storage.setItem('asdfl_legal_consents', JSON.stringify(localConsents));
     }
     
     this.closeModal('registerModal');
@@ -2115,6 +2184,7 @@ const ASDFL = {
     this.initReveal();
     this.initCounters();
     this.setActiveNav();
+    this.ensureLegalFooter();
     this.checkAuth();
     this.initCities();
     this.initAutocomplete();

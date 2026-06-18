@@ -169,7 +169,7 @@ GRANT SELECT (
   id, role, name, grad_year, job, city, mentor, grade, branch, bio,
   avatar_url, avatar_position, linkedin_url, github_url, instagram_url,
   class_section, company, university, academic_title, specialization,
-  target_university, target_job, created_at
+  target_university, target_job, teaching_year, created_at
 ) ON public.profiles TO authenticated;
 
 DROP POLICY IF EXISTS "Herkes profilleri gorebilir" ON public.profiles;

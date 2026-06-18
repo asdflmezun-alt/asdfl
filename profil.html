@@ -1205,7 +1205,11 @@
           profileData = ASDFL.currentUser;
         }
       } else {
-        profileData = isOwnProfile ? { ...ASDFL.currentUser, ...data } : data;
+        profileData = isOwnProfile ? { ...ASDFL.currentUser, ...data } : {
+          ...data,
+          share_email: Boolean(data.email),
+          share_phone: Boolean(data.phone)
+        };
         if (isOwnProfile) {
           profileData.mentor_preference = ASDFL.currentUser.mentor_preference || ASDFL.currentUser.mentorPreference;
         }
@@ -2067,7 +2071,6 @@
           avatar_position: avatarPosition,
           academic_title,
           specialization,
-          mentor: ASDFL.currentUser.role !== 'Öğrenci' && mentorPreference === 'yes',
           target_university: targetUniversity,
           target_job: targetJob
         })

@@ -74,6 +74,7 @@ const ASDFL = {
 
   // ---- Supabase API Fetchers ----
   async fetchAlumni({ limit = this.listPageSize, before = null, refresh = false } = {}) {
+    this.lastAlumniError = null;
     if (this.supabase) {
       try {
         const safeLimit = Math.min(Math.max(Number(limit) || this.listPageSize, 1), 200);
@@ -86,15 +87,23 @@ const ASDFL = {
             .order('created_at', { ascending: false })
             .limit(safeLimit);
           if (before) query = query.lt('created_at', before);
-          return this.queryWithTimeout(query);
+          return this.queryWithTimeout(query, 8000);
         });
         if (!error && data) {
-          return data.map(d => ({ ...d, initials: this.getInitials(d.name) }));
+          return data.map(d => ({
+            ...d,
+            share_email: Boolean(d.email),
+            share_phone: Boolean(d.phone),
+            initials: this.getInitials(d.name)
+          }));
         }
-        console.warn('Supabase fetch alumni error, falling back to LocalStorage:', error);
+        this.lastAlumniError = error || new Error('Mezun verisi alınamadı');
+        console.warn('Supabase fetch alumni error:', error);
       } catch (err) {
-        console.warn('Exception fetching alumni from Supabase, falling back to LocalStorage:', err);
+        this.lastAlumniError = err;
+        console.warn('Exception fetching alumni from Supabase:', err);
       }
+      return [];
     }
 
     // Fallback to local storage

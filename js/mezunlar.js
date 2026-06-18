@@ -37,6 +37,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     ]);
     allAlumni = alumniData.filter(a => a.role !== 'Öğrenci');
     myRequests = requestsData.data || [];
+    if (ASDFL.lastAlumniError) {
+      ASDFL.toast('Mezun listesi veritabanından alınamadı. Lütfen sayfayı yenileyin.', 'error');
+    }
   } else {
     allAlumni = (await ASDFL.fetchAlumni()).filter(a => a.role !== 'Öğrenci');
     myRequests = [];

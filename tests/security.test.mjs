@@ -23,6 +23,8 @@ test('public profile reads use the share-safe view', () => {
   assert.doesNotMatch(app, /profiles![^)]*\b(email|phone)\b/);
   assert.match(app, /from\('public_profiles'\)/);
   assert.doesNotMatch(app, /from\('profiles'\)\.select\('\*'\)/);
+  assert.match(app, /share_email: Boolean\(d\.email\)/);
+  assert.match(app, /queryWithTimeout\(query, 8000\)/);
 });
 
 test('known stored XSS fields are escaped', () => {

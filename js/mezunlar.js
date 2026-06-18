@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tabMentorlar = document.getElementById('tab-mentorlar');
     if (tabMentorlar) tabMentorlar.style.display = 'none';
     
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
     return;
   }
 
@@ -273,7 +273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>`;
     }).join('');
     ASDFL.initReveal();
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   function renderYillar() {
@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>`;
     }).join('');
     ASDFL.initReveal();
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   function renderMentors() {
@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>`;
     }).join('');
     ASDFL.initReveal();
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   window.switchTab = function(tab, btn) {
@@ -423,7 +423,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>`;
     }).join('');
     
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   window.openMentorshipRequestModal = function(mentorId, mentorName) {

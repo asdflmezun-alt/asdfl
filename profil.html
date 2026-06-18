@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="css/animations.css">
-<script src="https://unpkg.com/lucide@0.577.0"></script>
+<script src="assets/vendor/lucide.js"></script>
+<script src="js/bootstrap.js"></script>
 <style>
   .profile-header {
     background: var(--glass-bg);
@@ -195,19 +196,19 @@
               const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : '';
               const avatarUrl = user.avatar_url || user.avatarUrl || '';
               const avatarHTML = avatarUrl 
-                ? `<div class="profile-avatar" style="background-image: url('${avatarUrl}'); background-size: cover; background-position: center; border: 1.5px solid var(--gold-500);"></div>`
-                : `<div class="profile-avatar">${initials}</div>`;
+                ? `<div class="profile-avatar" style="background-image: url('${window.safeURL(avatarUrl)}'); background-size: cover; background-position: center; border: 1.5px solid var(--gold-500);"></div>`
+                : `<div class="profile-avatar">${window.safeHTML(initials)}</div>`;
               container.innerHTML = `
                 <div class="user-profile" onclick="this.classList.toggle('open')">
                   <button class="profile-btn">
                     ${avatarHTML}
-                    <span class="user-name-span">${user.name}</span>
+                    <span class="user-name-span">${window.safeHTML(user.name)}</span>
                     <i data-lucide="chevron-down" style="width:14px;height:14px"></i>
                   </button>
                   <div class="profile-menu">
                     <div style="padding:.5rem 1rem;border-bottom:1px solid var(--glass-border);margin-bottom:.25rem">
-                      <strong style="color:var(--text-primary);display:block">${user.name}</strong>
-                      <span style="font-size:.75rem;color:var(--text-muted)">${user.role}</span>
+                      <strong style="color:var(--text-primary);display:block">${window.safeHTML(user.name)}</strong>
+                      <span style="font-size:.75rem;color:var(--text-muted)">${window.safeHTML(user.role)}</span>
                     </div>
                     <a href="profil.html" style="display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;color:var(--text-secondary);text-decoration:none;transition:all .2s"><i data-lucide="user" style="width:16px;height:16px"></i> Profilim</a>
                     <button onclick="ASDFL.logout()" class="logout"><i data-lucide="log-out" style="width:16px;height:16px"></i> Çıkış Yap</button>
@@ -598,7 +599,7 @@
 </div>
 
 <div class="toast-container"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/vendor/supabase.js"></script>
 <script src="js/universities.js"></script>
 <script src="js/app.js?v=1.4"></script>
 <script>
@@ -766,7 +767,7 @@
           avatarEl.style.display = 'flex';
           avatarEl.style.alignItems = 'center';
           avatarEl.style.justifyContent = 'center';
-          avatarEl.innerHTML = `<img id="profileAvatarImg" src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover; ${objPosStr} ${transformStr}">`;
+          avatarEl.innerHTML = `<img id="profileAvatarImg" src="${window.safeURL(avatarUrl)}" style="width: 100%; height: 100%; object-fit: cover; ${objPosStr} ${transformStr}">`;
           initialsEl.style.display = 'none';
           const posSec = document.getElementById('avatarPositionSection');
           if (posSec) posSec.classList.remove('hidden');
@@ -1185,11 +1186,14 @@
 
     if (ASDFL.supabase) {
       const activeUserId = isOwnProfile ? ASDFL.currentUser.id : targetUserId;
-      const { data, error } = await ASDFL.supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', activeUserId)
-        .single();
+      const profileResult = isOwnProfile
+        ? await ASDFL.supabase.rpc('get_my_profile')
+        : await ASDFL.supabase
+            .from('public_profiles')
+            .select('id,role,name,email,phone,grad_year,job,city,mentor,grade,branch,bio,avatar_url,avatar_position,linkedin_url,github_url,instagram_url,class_section,company,university,academic_title,specialization,target_university,target_job,created_at')
+            .eq('id', activeUserId)
+            .single();
+      const { data, error } = profileResult;
       
       if (error || !data) {
         if (!isOwnProfile) {
@@ -1300,7 +1304,7 @@
         avatarEl.style.display = 'flex';
         avatarEl.style.alignItems = 'center';
         avatarEl.style.justifyContent = 'center';
-        avatarEl.innerHTML = `<img id="profileAvatarImg" src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover; ${objPosStr} ${transformStr}">`;
+        avatarEl.innerHTML = `<img id="profileAvatarImg" src="${window.safeURL(avatarUrl)}" style="width: 100%; height: 100%; object-fit: cover; ${objPosStr} ${transformStr}">`;
         initialsEl.style.display = 'none';
       } else {
         avatarEl.innerHTML = '<span id="profileInitials">?</span>';
@@ -1754,8 +1758,8 @@
     if (ASDFL.supabase) {
       try {
         const { data, error } = await ASDFL.supabase
-          .from('profiles')
-          .select('*')
+          .from('public_profiles')
+          .select('id,role,name,grad_year,job,city,mentor,avatar_url,avatar_position,class_section,company,university,academic_title,specialization')
           .neq('id', currentProfile.id) // exclude current profile
           .limit(100);
         if (!error && data) {
@@ -1874,7 +1878,7 @@
     if (ASDFL.supabase) {
       const { data, error } = await ASDFL.supabase
         .from('contact_requests')
-        .select('*, profiles!contact_requests_sender_id_fkey(name, role, grad_year, email, phone)')
+        .select('*, profiles!contact_requests_sender_id_fkey(name,role,grad_year)')
         .eq('receiver_id', ASDFL.currentUser.id);
 
       if (error) {
@@ -1919,11 +1923,11 @@
 
     el.innerHTML = pendingRequests.map(r => {
       const sender = r.profiles;
-      const desc = sender.role + (sender.grad_year ? ` (${sender.grad_year} Mezunu)` : '');
-      const reasonBadge = r.reason ? `<span class="badge badge-gold" style="font-size:0.75rem; margin-top:0.25rem; display:inline-block; border-radius:10px; padding: 2px 8px;"><i data-lucide="info" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-top:-2px;margin-right:2px"></i> ${r.reason}</span>` : '';
+      const desc = ASDFL.escapeHTML(sender.role + (sender.grad_year ? ` (${sender.grad_year} Mezunu)` : ''));
+      const reasonBadge = r.reason ? `<span class="badge badge-gold" style="font-size:0.75rem; margin-top:0.25rem; display:inline-block; border-radius:10px; padding: 2px 8px;"><i data-lucide="info" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-top:-2px;margin-right:2px"></i> ${ASDFL.escapeHTML(r.reason)}</span>` : '';
       const customMessage = r.message ? `
         <div style="margin-top:0.75rem; padding:0.75rem; background:rgba(255,255,255,0.02); border-left:3px solid var(--gold-500); border-radius:4px; font-size:0.85rem; color:var(--text-secondary); line-height:1.4;">
-          "${r.message}"
+          "${ASDFL.escapeHTML(r.message)}"
         </div>
       ` : '';
 
@@ -1931,7 +1935,7 @@
         <div class="reveal" style="padding:1.25rem; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:var(--radius-md); margin-bottom:1rem; text-align:left;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
             <div>
-              <strong style="display:block; font-size:.95rem; color:var(--text-primary);">${sender.name}</strong>
+              <strong style="display:block; font-size:.95rem; color:var(--text-primary);">${ASDFL.escapeHTML(sender.name)}</strong>
               <span style="font-size:.8rem; color:var(--text-muted)">${desc}</span>
               <div>${reasonBadge}</div>
             </div>

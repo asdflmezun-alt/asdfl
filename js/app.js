@@ -5,6 +5,10 @@
 // Demo data stored in localStorage on first load
 const ASDFL = {
   version: '1.0.0',
+  listPageSize: 100,
+  maxImageBytes: 5 * 1024 * 1024,
+  allowedImageTypes: new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
+  _queryCache: new Map(),
   legalDocumentVersion: '2026-06-18',
   legalDocumentLinks: [
     ['kvkk-aydinlatma.html', 'KVKK'], ['acik-riza.html', 'Açık Rıza'],
@@ -51,20 +55,55 @@ const ASDFL = {
     }
   },
 
+  async cachedQuery(key, loader, ttlMs = 30000) {
+    const cached = this._queryCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) return cached.promise;
+    const promise = Promise.resolve().then(loader).catch(error => {
+      this._queryCache.delete(key);
+      throw error;
+    });
+    this._queryCache.set(key, { promise, expiresAt: Date.now() + ttlMs });
+    return promise;
+  },
+
+  invalidateQueryCache(prefix = '') {
+    for (const key of this._queryCache.keys()) {
+      if (!prefix || key.startsWith(prefix)) this._queryCache.delete(key);
+    }
+  },
+
   // ---- Supabase API Fetchers ----
-  async fetchAlumni() {
+  async fetchAlumni({ limit = this.listPageSize, before = null, refresh = false } = {}) {
+    this.lastAlumniError = null;
     if (this.supabase) {
       try {
-        const { data, error } = await this.queryWithTimeout(
-          this.supabase.from('profiles').select('*').order('created_at', { ascending: false })
-        );
+        const safeLimit = Math.min(Math.max(Number(limit) || this.listPageSize, 1), 200);
+        const cacheKey = `alumni:${safeLimit}:${before || 'first'}`;
+        if (refresh) this.invalidateQueryCache('alumni:');
+        const { data, error } = await this.cachedQuery(cacheKey, async () => {
+          let query = this.supabase
+            .from('public_profiles')
+            .select('id,role,name,grad_year,job,city,mentor,grade,branch,bio,avatar_url,avatar_position,linkedin_url,github_url,instagram_url,class_section,company,university,academic_title,specialization,target_university,target_job,created_at,email,phone')
+            .order('created_at', { ascending: false })
+            .limit(safeLimit);
+          if (before) query = query.lt('created_at', before);
+          return this.queryWithTimeout(query, 8000);
+        });
         if (!error && data) {
-          return data.map(d => ({ ...d, initials: this.getInitials(d.name) }));
+          return data.map(d => ({
+            ...d,
+            share_email: Boolean(d.email),
+            share_phone: Boolean(d.phone),
+            initials: this.getInitials(d.name)
+          }));
         }
-        console.warn('Supabase fetch alumni error, falling back to LocalStorage:', error);
+        this.lastAlumniError = error || new Error('Mezun verisi alınamadı');
+        console.warn('Supabase fetch alumni error:', error);
       } catch (err) {
-        console.warn('Exception fetching alumni from Supabase, falling back to LocalStorage:', err);
+        this.lastAlumniError = err;
+        console.warn('Exception fetching alumni from Supabase:', err);
       }
+      return [];
     }
 
     // Fallback to local storage
@@ -89,7 +128,7 @@ const ASDFL = {
     if (!this.supabase) return [];
     try {
       const { data, error } = await this.queryWithTimeout(
-        this.supabase.from('events').select('*').order('event_date', { ascending: true })
+        this.supabase.from('events').select('id,title,event_date,event_time,location,type,description,upcoming,created_at').order('event_date', { ascending: true }).limit(100)
       );
       if (error || !data) { if (error) console.error('Error fetching events:', error); return []; }
       // Convert to camelCase to match previous demo structures if needed
@@ -104,7 +143,7 @@ const ASDFL = {
     if (!this.supabase) return [];
     try {
       const { data, error } = await this.queryWithTimeout(
-        this.supabase.from('posts').select('*, profiles!author_id(name, role, avatar_url, avatar_position, grad_year, academic_title, specialization)').order('created_at', { ascending: false })
+        this.supabase.from('posts').select('id,author_id,content,likes_count,target_year,target_section,created_at,profiles!author_id(name,role,avatar_url,avatar_position,grad_year,academic_title,specialization)').order('created_at', { ascending: false }).limit(50)
       );
       if (error || !data) { if (error) console.error('Error fetching posts:', error); return []; }
       return data.map(p => ({
@@ -122,7 +161,7 @@ const ASDFL = {
   async fetchScholarships() {
     if (this.supabase) {
       try {
-        const { data, error } = await this.supabase.from('scholarships').select('*').order('created_at', { ascending: false });
+        const { data, error } = await this.supabase.from('scholarships').select('id,title,amount,deadline,description,sponsor,active,created_at').order('created_at', { ascending: false }).limit(100);
         if (!error && data) return data;
         console.warn('Supabase fetch scholarships error, falling back to LocalStorage:', error);
       } catch (err) {
@@ -165,7 +204,7 @@ const ASDFL = {
 
   async fetchGallery() {
     if (!this.supabase) return [];
-    const { data, error } = await this.supabase.from('gallery').select('*, profiles(name, avatar_url)').order('created_at', { ascending: false });
+    const { data, error } = await this.supabase.from('gallery').select('id,uploader_id,image_url,title,category,year,description,created_at,profiles(name,avatar_url)').order('created_at', { ascending: false }).limit(100);
     if (error) { console.error('Error fetching gallery:', error); return []; }
     return data;
   },
@@ -176,7 +215,7 @@ const ASDFL = {
         const { data, error } = await this.queryWithTimeout(
           this.supabase
             .from('logo_announcements')
-            .select('*')
+            .select('id,title,subtitle,icon')
             .order('id', { ascending: true })
         );
         if (!error && data && data.length > 0) {
@@ -283,7 +322,7 @@ const ASDFL = {
       try {
         const { data, error } = await this.supabase
           .from('mentorships')
-          .select('*, mentor:profiles!mentor_id(name, email, role, grad_year, job, city, avatar_url, avatar_position, academic_title, specialization), student:profiles!student_id(name, email, role, grad_year, grade, city, avatar_url, avatar_position, academic_title, specialization)');
+          .select('*, mentor:profiles!mentor_id(name,role,grad_year,job,city,avatar_url,avatar_position,academic_title,specialization), student:profiles!student_id(name,role,grad_year,grade,city,avatar_url,avatar_position,academic_title,specialization)');
         if (!error && data) return data;
         console.warn('Supabase fetch mentorships error, falling back to LocalStorage:', error);
       } catch (err) {
@@ -634,7 +673,7 @@ const ASDFL = {
       if (!this.currentUser) return [];
       const { data, error } = await this.supabase
         .from('job_applications')
-        .select('*, job_postings(*), profiles!applicant_id(name, role, grad_year, email, phone, avatar_url, avatar_position, academic_title, specialization)')
+        .select('*, job_postings(*), profiles!applicant_id(name,role,grad_year,avatar_url,avatar_position,academic_title,specialization)')
         .order('created_at', { ascending: false });
       if (error) { console.error('Error fetching applications:', error); return []; }
       return data.map(app => ({
@@ -893,7 +932,12 @@ const ASDFL = {
       this.toast('Fotoğraf yüklemek için giriş yapmalısınız.', 'warning');
       return null;
     }
-    const fileExt = file.name.split('.').pop();
+    if (!(file instanceof File) || !this.allowedImageTypes.has(file.type) || file.size > this.maxImageBytes) {
+      this.toast('Yalnızca JPG, PNG, WebP veya GIF; en fazla 5 MB dosya yükleyebilirsiniz.', 'error');
+      return null;
+    }
+    const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
+    const fileExt = extensions[file.type];
     const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
     const filePath = `${this.currentUser.id}/${fileName}`;
 
@@ -1084,7 +1128,7 @@ const ASDFL = {
     }
     
     this.openModal('unifiedScholarshipModal');
-    if (window.lucide) lucide.createIcons();
+    this.refreshIcons();
   },
 
   async submitUnifiedScholarship() {
@@ -1143,6 +1187,22 @@ const ASDFL = {
     return this.escapeHTML(value);
   },
 
+  safeURL(value, { allowBlob = false } = {}) {
+    try {
+      const url = new URL(String(value || ''), window.location.origin);
+      if (url.protocol === 'https:' || url.protocol === 'http:' || (allowBlob && url.protocol === 'blob:')) {
+        return url.href;
+      }
+    } catch (e) {}
+    return '';
+  },
+
+  refreshIcons(root = document) {
+    if (!window.lucide) return;
+    const nodes = root.querySelectorAll ? root.querySelectorAll('i[data-lucide]') : [];
+    if (nodes.length) lucide.createIcons({ nodes });
+  },
+
   jsString(value) {
     return `'${String(value ?? '')
       .replace(/&/g, '&amp;')
@@ -1173,7 +1233,7 @@ const ASDFL = {
     textWrap.textContent = msg;
     t.append(iconWrap, textWrap);
     container.appendChild(t);
-    if (window.lucide) lucide.createIcons();
+    this.refreshIcons();
     setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); }, 3500);
   },
 
@@ -1204,7 +1264,7 @@ const ASDFL = {
 
   getAvatarHTML(user, sizeClass = '', extraStyle = '') {
     if (!user) return `<div class="${this.escapeAttr(sizeClass)}" style="${this.escapeAttr(extraStyle)}">?</div>`;
-    const avatarUrl = user.avatar_url || user.avatarUrl;
+    const avatarUrl = this.safeURL(user.avatar_url || user.avatarUrl, { allowBlob: true });
     const initials = this.escapeHTML(user.initials || this.getInitials(user.name || 'U'));
     const position = user.avatar_position || user.avatarPosition || '50% 50%';
     
@@ -1671,7 +1731,7 @@ const ASDFL = {
           </div>
           <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
         `;
-        setTimeout(() => lucide.createIcons(), 10);
+        setTimeout(() => this.refreshIcons(), 10);
       }
     } else {
       // Inline script zaten "Giriş Yap" butonunu çizdiyse, yeniden yazma
@@ -1684,7 +1744,7 @@ const ASDFL = {
           <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
           <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
         `;
-        setTimeout(() => lucide.createIcons(), 10);
+        setTimeout(() => this.refreshIcons(), 10);
       }
     }
     
@@ -1716,7 +1776,7 @@ const ASDFL = {
           }
         }
         if (changed) {
-          setTimeout(() => lucide.createIcons(), 10);
+          setTimeout(() => this.refreshIcons(), 10);
         }
       } else {
         let changed = false;
@@ -1729,7 +1789,7 @@ const ASDFL = {
           changed = true;
         }
         if (changed) {
-          setTimeout(() => lucide.createIcons(), 10);
+          setTimeout(() => this.refreshIcons(), 10);
         }
       }
     }
@@ -1748,7 +1808,7 @@ const ASDFL = {
         document.body.classList.toggle('nav-open', isOpen);
       });
     }
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => this.refreshIcons(), 10);
   },
 
   async logout() {

@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="css/animations.css">
-<script src="https://unpkg.com/lucide@0.577.0"></script>
+<script src="assets/vendor/lucide.js"></script>
+<script src="js/bootstrap.js"></script>
 <style>
 /* =========================================================================
    ASDFL MEZUNLAR DERNEĞİ — TOPLULUK (SOCIAL WALL) PREMIUM DESIGN SYSTEM
@@ -877,19 +878,19 @@
               const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : '';
               const avatarUrl = user.avatar_url || user.avatarUrl || '';
               const avatarHTML = avatarUrl 
-                ? `<div class="profile-avatar" style="background-image: url('${avatarUrl}'); background-size: cover; background-position: center; border: 1.5px solid var(--gold-500);"></div>`
-                : `<div class="profile-avatar">${initials}</div>`;
+                ? `<div class="profile-avatar" style="background-image: url('${window.safeURL(avatarUrl)}'); background-size: cover; background-position: center; border: 1.5px solid var(--gold-500);"></div>`
+                : `<div class="profile-avatar">${window.safeHTML(initials)}</div>`;
               container.innerHTML = `
                 <div class="user-profile" onclick="this.classList.toggle('open')">
                   <button class="profile-btn">
                     ${avatarHTML}
-                    <span class="user-name-span">${user.name}</span>
+                    <span class="user-name-span">${window.safeHTML(user.name)}</span>
                     <i data-lucide="chevron-down" style="width:14px;height:14px"></i>
                   </button>
                   <div class="profile-menu">
                     <div style="padding:.5rem 1rem;border-bottom:1px solid var(--glass-border);margin-bottom:.25rem">
-                      <strong style="color:var(--text-primary);display:block">${user.name}</strong>
-                      <span style="font-size:.75rem;color:var(--text-muted)">${user.role}</span>
+                      <strong style="color:var(--text-primary);display:block">${window.safeHTML(user.name)}</strong>
+                      <span style="font-size:.75rem;color:var(--text-muted)">${window.safeHTML(user.role)}</span>
                     </div>
                     <a href="profil.html" style="display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;color:var(--text-secondary);text-decoration:none;transition:all .2s"><i data-lucide="user" style="width:16px;height:16px"></i> Profilim</a>
                     <button onclick="ASDFL.logout()" class="logout"><i data-lucide="log-out" style="width:16px;height:16px"></i> Çıkış Yap</button>
@@ -1256,7 +1257,7 @@ function toggleRegFields(role) {
 </div>
 
 <div class="toast-container"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/vendor/supabase.js"></script>
 <script src="js/app.js?v=1.4"></script>
 <script src="js/topluluk.js"></script>
 <script>

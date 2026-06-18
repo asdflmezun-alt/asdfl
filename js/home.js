@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </a>`;
     }).join('');
     ASDFL.initReveal();
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   // Render featured alumni (mentor olanlar)
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap / Üye Ol</button>
         </div>
       `;
-      setTimeout(() => lucide.createIcons(), 10);
+      setTimeout(() => ASDFL.refreshIcons(), 10);
       return;
     }
     
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>`;
     }).join('');
     ASDFL.initReveal();
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   // Render social feed preview
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap / Üye Ol</button>
         </div>
       `;
-      setTimeout(() => lucide.createIcons(), 10);
+      setTimeout(() => ASDFL.refreshIcons(), 10);
       return;
     }
     
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>`;
     }).join('');
     ASDFL.initReveal();
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   window.handleCreatePost = async function() {
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     btn.innerHTML = 'Paylaş <i data-lucide="send" style="width:1em;height:1em"></i>';
     btn.disabled = false;
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   };
 
   // Particle effect in hero
@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         iconEl.innerHTML = `<i data-lucide="${icon}" style="width:1.2rem;height:1.2rem"></i>`;
       }
     });
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   // Render Alumni Map
@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <button class="btn btn-primary" onclick="ASDFL.openModal('loginModal')">Giriş Yap / Üye Ol</button>
         </div>
       `;
-      setTimeout(() => lucide.createIcons(), 10);
+      setTimeout(() => ASDFL.refreshIcons(), 10);
       return;
     }
 
@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <p style="font-size:0.85rem; max-width:300px; line-height:1.5;">Harita servis sağlayıcısına ulaşılamadı. Lütfen internet bağlantınızı kontrol edip sayfayı yenileyin.</p>
             </div>
           `;
-          setTimeout(() => lucide.createIcons(), 5);
+          setTimeout(() => ASDFL.refreshIcons(), 5);
         }
         return;
       }
@@ -370,7 +370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Re-init lucide icons inside popup when it opens
         marker.on('popupopen', () => {
-          setTimeout(() => lucide.createIcons(), 5);
+          setTimeout(() => ASDFL.refreshIcons(), 5);
         });
       });
 
@@ -378,7 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       map.invalidateSize();
     }, 100);
 
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   renderHomeEvents(events);

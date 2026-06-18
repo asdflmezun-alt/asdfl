@@ -54,7 +54,7 @@
     if (!ASDFL.currentUser || !ASDFL.supabase) return;
     const { data } = await ASDFL.supabase
       .from('profiles')
-      .select('*')
+      .select('id,name,role,grad_year,class_section,job,avatar_url,avatar_position,academic_title,specialization')
       .eq('id', ASDFL.currentUser.id)
       .single();
     myProfile = data;
@@ -92,7 +92,7 @@
         <span>${gradYear}-${section} Sınıfı</span>
       </div>` : ''}
     `;
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   /* ---------- Feed Switch ---------- */
@@ -132,7 +132,7 @@
           <p style="color:var(--text-secondary);font-size:1rem;font-weight:500">Paylaşımları görebilmek için giriş yapmalısınız.</p>
         </div>
       `;
-      setTimeout(() => lucide.createIcons(), 10);
+      setTimeout(() => ASDFL.refreshIcons(), 10);
       return;
     }
 
@@ -167,12 +167,12 @@
     const { data: posts, error } = await query;
     if (error || !posts || posts.length === 0) {
       container.innerHTML = `<div class="feed-empty"><i data-lucide="message-circle" style="width:3rem;height:3rem;opacity:.3"></i><p>Henüz paylaşım yok. İlk paylaşımı sen yap!</p></div>`;
-      setTimeout(() => lucide.createIcons(), 10);
+      setTimeout(() => ASDFL.refreshIcons(), 10);
       return;
     }
 
     container.innerHTML = posts.map(post => renderPost(post)).join('');
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   function renderPost(post) {
@@ -390,7 +390,7 @@
 
     btn.disabled = false;
     btn.innerHTML = 'Paylaş <i data-lucide="send" style="width:1em;height:1em"></i>';
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   };
 
   /* ---------- Audience Change ---------- */
@@ -436,9 +436,9 @@
           ${ASDFL.getAvatarHTML({ initials: c.initials, avatar_url: c.authorAvatarUrl, avatar_position: c.authorAvatarPosition, name: c.authorName }, 'comment-avatar')}
           <div class="comment-content-area">
             <div class="comment-author-row">
-              <strong class="comment-author-name">${c.authorName}</strong>
-              <span class="comment-author-meta">${c.authorMeta}</span>
-              <span class="comment-time">${timeAgo(c.created_at)}</span>
+              <strong class="comment-author-name">${escapeHtml(c.authorName)}</strong>
+              <span class="comment-author-meta">${escapeHtml(c.authorMeta)}</span>
+              <span class="comment-time">${escapeHtml(timeAgo(c.created_at))}</span>
             </div>
             <p class="comment-text">${escapeHtml(c.content)}</p>
           </div>
@@ -446,7 +446,7 @@
       `;
     }).join('');
     
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   async function getCommentsForPost(postId) {
@@ -819,7 +819,7 @@
     }
 
     previewArea.innerHTML = html;
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   // Opens Image Lightbox

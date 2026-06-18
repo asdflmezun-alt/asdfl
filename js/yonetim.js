@@ -69,7 +69,7 @@ async function loadAdminData() {
     
     // 1. Üyeler (profiles)
     try {
-      const { data, error } = await ASDFL.supabase.from('profiles').select('*').order('name');
+      const { data, error } = await ASDFL.supabase.rpc('list_profiles_admin', { result_limit: 200 });
       if (error) console.error('profiles fetch error:', error.message);
       allMembers = data || [];
     } catch (e) {
@@ -79,10 +79,10 @@ async function loadAdminData() {
 
     // 2. Etkinlikler (events)
     try {
-      const { data, error } = await ASDFL.supabase.from('events').select('*').order('created_at', { ascending: false });
+      const { data, error } = await ASDFL.supabase.from('events').select('id,title,event_date,event_time,location,type,description,upcoming,created_at').order('created_at', { ascending: false }).limit(200);
       if (error) {
         // created_at yoksa date ile tekrar dene
-        const { data: data2, error: error2 } = await ASDFL.supabase.from('events').select('*');
+        const { data: data2, error: error2 } = await ASDFL.supabase.from('events').select('id,title,event_date,event_time,location,type,description,upcoming').limit(200);
         if (error2) console.error('events fetch error:', error2.message);
         allEvents = data2 || [];
       } else {
@@ -95,9 +95,9 @@ async function loadAdminData() {
 
     // 3. Burslar (scholarships)
     try {
-      const { data, error } = await ASDFL.supabase.from('scholarships').select('*').order('created_at', { ascending: false });
+      const { data, error } = await ASDFL.supabase.from('scholarships').select('id,title,amount,deadline,description,sponsor,active,created_at').order('created_at', { ascending: false }).limit(200);
       if (error) {
-        const { data: data2 } = await ASDFL.supabase.from('scholarships').select('*');
+        const { data: data2 } = await ASDFL.supabase.from('scholarships').select('id,title,amount,deadline,description,sponsor,active').limit(200);
         allScholarships = data2 || [];
       } else {
         allScholarships = data || [];
@@ -111,7 +111,8 @@ async function loadAdminData() {
     try {
       const { data, error } = await ASDFL.supabase
         .from('applications')
-        .select('*')
+        .select('id,user_id,type,title,details,status,created_at')
+        .limit(200)
         .order('created_at', { ascending: false });
       if (error) {
         console.error('applications fetch error:', error.message);
@@ -142,7 +143,7 @@ async function loadAdminData() {
 
     // 6. Kişisel veri talepleri
     try {
-      const { data, error } = await ASDFL.supabase.from('data_requests').select('*').order('created_at', { ascending: false });
+      const { data, error } = await ASDFL.supabase.from('data_requests').select('id,user_id,request_type,description,status,admin_note,resolved_at,created_at').order('created_at', { ascending: false }).limit(200);
       if (error) console.error('data_requests fetch error:', error.message);
       allDataRequests = (data || []).map(request => ({ ...request, profile: allMembers.find(member => member.id === request.user_id) || null }));
     } catch (e) {
@@ -280,7 +281,7 @@ function renderAllPanels() {
   }
 
   setTimeout(() => {
-    lucide.createIcons();
+    ASDFL.refreshIcons();
     if (typeof ASDFL !== 'undefined' && ASDFL.initReveal) {
       ASDFL.initReveal();
     }
@@ -381,11 +382,11 @@ function renderDashboardOverview() {
           <div style="display:flex;align-items:center;gap:.75rem">
             ${ASDFL.getAvatarHTML(m, 'avatar', 'width:36px;height:36px;font-size:.85rem')}
             <div>
-              <strong style="font-size:.88rem;color:var(--text-primary);display:block">${m.name}</strong>
-              <span style="font-size:.75rem;color:var(--text-muted)">${m.role} ${m.grad_year ? '- ' + m.grad_year : ''}</span>
+              <strong style="font-size:.88rem;color:var(--text-primary);display:block">${ASDFL.escapeHTML(m.name)}</strong>
+              <span style="font-size:.75rem;color:var(--text-muted)">${ASDFL.escapeHTML(m.role)} ${m.grad_year ? '- ' + ASDFL.escapeHTML(m.grad_year) : ''}</span>
             </div>
           </div>
-          <span class="badge ${m.role === 'Admin' ? 'badge-gold' : 'badge-blue'}" style="font-size:.7rem">${m.role}</span>
+          <span class="badge ${m.role === 'Admin' ? 'badge-gold' : 'badge-blue'}" style="font-size:.7rem">${ASDFL.escapeHTML(m.role)}</span>
         </div>
       `).join('');
     }
@@ -444,14 +445,14 @@ function renderMembersTable(list) {
         <div style="display:flex;align-items:center;gap:.75rem">
           ${ASDFL.getAvatarHTML(m, 'avatar', 'width:34px;height:34px;font-size:.8rem')}
           <div>
-            <strong style="color:var(--text-primary);display:block">${m.name}</strong>
-            <span style="font-size:.75rem;color:var(--text-muted)">${m.grad_year ? m.grad_year + ' Mezunu' : 'Üye'} ${m.class_section ? '- ' + m.class_section + ' Şubesi' : ''}</span>
+            <strong style="color:var(--text-primary);display:block">${ASDFL.escapeHTML(m.name)}</strong>
+            <span style="font-size:.75rem;color:var(--text-muted)">${m.grad_year ? ASDFL.escapeHTML(m.grad_year) + ' Mezunu' : 'Üye'} ${m.class_section ? '- ' + ASDFL.escapeHTML(m.class_section) + ' Şubesi' : ''}</span>
           </div>
         </div>
       </td>
       <td>
-        <div style="font-size:.82rem;color:var(--text-secondary)">${m.email}</div>
-        ${m.phone ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:2px"><i data-lucide="phone" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${m.phone}</div>` : ''}
+        <div style="font-size:.82rem;color:var(--text-secondary)">${ASDFL.escapeHTML(m.email || '')}</div>
+        ${m.phone ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:2px"><i data-lucide="phone" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(m.phone)}</div>` : ''}
       </td>
       <td>
         <select class="form-select" style="font-size:.8rem;padding:.2rem .4rem;height:auto" onchange="updateMemberRole('${m.id}', this.value)">
@@ -472,12 +473,15 @@ function renderMembersTable(list) {
     </tr>
   `).join('');
 
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
 window.updateMemberRole = async function(memberId, newRole) {
   if (ASDFL.supabase) {
-    const { error } = await ASDFL.supabase.from('profiles').update({ role: newRole }).eq('id', memberId);
+    const { error } = await ASDFL.supabase.rpc('set_user_role', {
+      target_user_id: memberId,
+      new_role: newRole
+    });
     if (error) {
       ASDFL.toast('Rol güncellenemedi: ' + error.message, 'error');
     } else {
@@ -495,7 +499,10 @@ window.updateMemberRole = async function(memberId, newRole) {
 
 window.toggleMemberMentor = async function(memberId, isMentor) {
   if (ASDFL.supabase) {
-    const { error } = await ASDFL.supabase.from('profiles').update({ mentor: isMentor }).eq('id', memberId);
+    const { error } = await ASDFL.supabase.rpc('set_user_mentor', {
+      target_user_id: memberId,
+      enabled: isMentor
+    });
     if (error) {
       ASDFL.toast('Mentörlük durumu güncellenemedi: ' + error.message, 'error');
     } else {
@@ -562,10 +569,10 @@ function renderEventsTable() {
 
   tbody.innerHTML = allEvents.map(e => `
     <tr>
-      <td><strong style="color:var(--text-primary)">${e.title}</strong></td>
+      <td><strong style="color:var(--text-primary)">${ASDFL.escapeHTML(e.title)}</strong></td>
       <td><span class="badge ${e.type === 'etkinlik' ? 'badge-blue' : 'badge-gold'}">${e.type === 'etkinlik' ? 'Etkinlik' : 'Duyuru'}</span></td>
       <td>${ASDFL.formatDate(e.date)}</td>
-      <td>${e.location || 'Online'}</td>
+      <td>${ASDFL.escapeHTML(e.location || 'Online')}</td>
       <td style="text-align:right;display:flex;gap:.5rem;justify-content:flex-end">
         <button class="btn btn-ghost btn-sm" onclick="openEditEventModal('${e.id}')" style="padding:.25rem"><i data-lucide="edit" style="width:1.1rem;height:1.1rem"></i></button>
         <button class="btn btn-ghost btn-sm" onclick="deleteEvent('${e.id}')" style="color:var(--text-red);padding:.25rem"><i data-lucide="trash-2" style="width:1.1rem;height:1.1rem"></i></button>
@@ -573,7 +580,7 @@ function renderEventsTable() {
     </tr>
   `).join('');
 
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
 window.openAddEventModal = function() {
@@ -585,7 +592,7 @@ window.openAddEventModal = function() {
   document.getElementById('eventFieldLocation').value = '';
   document.getElementById('eventFieldImage').value = '';
   ASDFL.openModal('adminEventModal');
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 };
 
 window.openEditEventModal = function(id) {
@@ -602,7 +609,7 @@ window.openEditEventModal = function(id) {
   document.getElementById('eventFieldImage').value = event.image_url || '';
 
   ASDFL.openModal('adminEventModal');
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 };
 
 window.saveEventFromModal = async function() {
@@ -827,9 +834,9 @@ function renderScholarshipsTable() {
 
     tbody.innerHTML = allScholarships.map(b => `
       <tr>
-        <td><span class="badge badge-gold">${b.sponsor}</span></td>
-        <td><strong style="color:var(--text-primary)">${b.title}</strong></td>
-        <td><strong>${b.amount}</strong></td>
+        <td><span class="badge badge-gold">${ASDFL.escapeHTML(b.sponsor)}</span></td>
+        <td><strong style="color:var(--text-primary)">${ASDFL.escapeHTML(b.title)}</strong></td>
+        <td><strong>${ASDFL.escapeHTML(b.amount)}</strong></td>
         <td>${ASDFL.formatDate(b.deadline)}</td>
         <td><span class="badge ${b.active ? 'badge-teal' : 'badge-red'}">${b.active ? 'Açık' : 'Kapalı'}</span></td>
         <td style="text-align:right;">
@@ -864,14 +871,14 @@ function renderScholarshipsTable() {
             <div style="display:flex;align-items:center;gap:0.5rem">
               ${ASDFL.getAvatarHTML({ initials: ASDFL.getInitials(studentName), name: studentName, avatar_url: a.profiles?.avatar_url }, 'avatar avatar-sm')}
               <div>
-                <strong style="color:var(--text-primary);display:block">${studentName}</strong>
-                <span style="font-size:0.75rem;color:var(--text-muted);">${studentEmail}</span>
+                <strong style="color:var(--text-primary);display:block">${ASDFL.escapeHTML(studentName)}</strong>
+                <span style="font-size:0.75rem;color:var(--text-muted);">${ASDFL.escapeHTML(studentEmail)}</span>
               </div>
             </div>
           </td>
-          <td><strong style="color:var(--text-primary)">${a.title}</strong></td>
-          <td><span class="badge badge-gold" style="font-weight:600">${studentGPA}</span></td>
-          <td><span style="font-size:0.85rem">${studentGrade}</span></td>
+          <td><strong style="color:var(--text-primary)">${ASDFL.escapeHTML(a.title)}</strong></td>
+          <td><span class="badge badge-gold" style="font-weight:600">${ASDFL.escapeHTML(studentGPA)}</span></td>
+          <td><span style="font-size:0.85rem">${ASDFL.escapeHTML(studentGrade)}</span></td>
           <td><span style="font-size:0.85rem">${dateFormatted}</span></td>
           <td><span class="badge badge-gold">Bekliyor</span></td>
           <td style="text-align:right;">
@@ -912,19 +919,19 @@ function renderScholarshipsTable() {
             <div style="display:flex;align-items:center;gap:0.5rem">
               <div class="avatar avatar-sm">${ASDFL.getInitials(studentName)}</div>
               <div>
-                <strong style="color:var(--text-primary);display:block">${studentName}</strong>
+                <strong style="color:var(--text-primary);display:block">${ASDFL.escapeHTML(studentName)}</strong>
                 <span style="font-size:0.75rem;color:var(--text-muted);">${a.details?.gpa ? `Not Ort: ${a.details.gpa}` : ''}</span>
               </div>
             </div>
           </td>
-          <td><strong style="color:var(--text-primary)">${a.title}</strong></td>
+          <td><strong style="color:var(--text-primary)">${ASDFL.escapeHTML(a.title)}</strong></td>
           <td>
-            <span class="badge badge-gold" style="display:inline-block;margin-bottom:0.15rem">${sponsor}</span>
-            <span style="display:block;font-size:0.8rem;color:var(--text-secondary);font-weight:600">${amount}</span>
+            <span class="badge badge-gold" style="display:inline-block;margin-bottom:0.15rem">${ASDFL.escapeHTML(sponsor)}</span>
+            <span style="display:block;font-size:0.8rem;color:var(--text-secondary);font-weight:600">${ASDFL.escapeHTML(amount)}</span>
           </td>
           <td>
-            <div style="font-size:0.85rem;color:var(--text-secondary)">${studentEmail}</div>
-            <div style="font-size:0.75rem;color:var(--text-muted)">${studentPhone}</div>
+            <div style="font-size:0.85rem;color:var(--text-secondary)">${ASDFL.escapeHTML(studentEmail)}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">${ASDFL.escapeHTML(studentPhone)}</div>
           </td>
           <td><span style="font-size:0.85rem">${dateFormatted}</span></td>
           <td style="text-align:right;">
@@ -938,7 +945,7 @@ function renderScholarshipsTable() {
     }).join('');
   }
 
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
 window.stopScholarship = async function(appId) {
@@ -1036,7 +1043,7 @@ window.openBursApplicationDetails = function(appId) {
     <!-- Scholarship Info -->
     <div class="card" style="padding:0.75rem 1rem; background:rgba(244,168,54,0.03); border:1px solid rgba(244,168,54,0.15); border-radius:var(--radius-md); margin-bottom:1.25rem">
       <span style="font-size:0.7rem; color:var(--gold-500); font-weight:600; text-transform:uppercase; display:block; margin-bottom:0.25rem">Tercih Edilen Burs Programı</span>
-      <h5 style="margin:0 0 0.25rem 0; font-size:1rem; color:var(--text-primary);">${app.title}</h5>
+      <h5 style="margin:0 0 0.25rem 0; font-size:1rem; color:var(--text-primary);">${ASDFL.escapeHTML(app.title)}</h5>
       <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
         <span style="color:var(--text-muted)">Sponsor: <strong style="color:var(--text-secondary)">${sponsor}</strong></span>
         <span style="color:var(--gold-500); font-weight:600;">Destek Miktarı: ${amount}</span>
@@ -1059,7 +1066,7 @@ window.openBursApplicationDetails = function(appId) {
   `;
 
   ASDFL.openModal('adminBursApplicationDetailsModal');
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 };
 
 window.updateApplicationStatusAndReload = async function(appId, newStatus) {
@@ -1164,7 +1171,7 @@ window.openAddScholarshipModal = function() {
   document.getElementById('bursFieldDeadline').value = '';
   document.getElementById('bursFieldActive').checked = true;
   ASDFL.openModal('adminScholarshipModal');
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 };
 
 window.openEditScholarshipModal = function(id) {
@@ -1181,7 +1188,7 @@ window.openEditScholarshipModal = function(id) {
   document.getElementById('bursFieldActive').checked = burs.active;
 
   ASDFL.openModal('adminScholarshipModal');
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 };
 
 window.saveScholarshipFromModal = async function() {
@@ -1349,7 +1356,7 @@ function renderApplicationsList() {
     `;
   }).join('');
 
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
 window.updateApplicationStatus = async function(appId, newStatus) {
@@ -1363,7 +1370,7 @@ window.updateApplicationStatus = async function(appId, newStatus) {
       // If a Mentorship registration request is approved, let's automatically toggle their profile mentor status to TRUE!
       const app = allApplications.find(a => a.id == appId);
       if (app && app.type === 'MentorlukKaydi' && newStatus === 'Approved') {
-        await ASDFL.supabase.from('profiles').update({ mentor: true }).eq('id', app.user_id);
+        await ASDFL.supabase.rpc('set_user_mentor', { target_user_id: app.user_id, enabled: true });
       }
 
       loadAdminData().then(() => renderAllPanels());
@@ -1408,11 +1415,11 @@ function renderAnnouncementsPanel() {
         <div style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius: var(--radius-md); display: flex; justify-content: center; align-items: center; min-height: 100px;">
           <div class="floating-card" style="position: static; transform: none; animation: none; backdrop-filter: blur(10px); background: rgba(19, 34, 54, 0.9); border: 1px solid rgba(244, 168, 54, 0.2); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1.2rem; border-radius: var(--radius-lg); color: var(--text-primary); font-size: 0.85rem; font-weight: 500;">
             <div class="fc-icon" style="font-size: 1.4rem; display: flex; align-items: center; justify-content: center; color: var(--gold-400);" id="previewIconBox-${a.id}">
-              <i data-lucide="${a.icon}" style="width:1.2rem;height:1.2rem"></i>
+              <i data-lucide="${ASDFL.escapeAttr(a.icon)}" style="width:1.2rem;height:1.2rem"></i>
             </div>
             <div>
-              <strong id="previewTitle-${a.id}" style="color: var(--text-primary); font-size: 0.85rem; font-weight: 600; display: block;">${a.title}</strong>
-              <small id="previewSub-${a.id}" style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 1px;">${a.subtitle}</small>
+              <strong id="previewTitle-${a.id}" style="color: var(--text-primary); font-size: 0.85rem; font-weight: 600; display: block;">${ASDFL.escapeHTML(a.title)}</strong>
+              <small id="previewSub-${a.id}" style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 1px;">${ASDFL.escapeHTML(a.subtitle)}</small>
             </div>
           </div>
         </div>
@@ -1420,12 +1427,12 @@ function renderAnnouncementsPanel() {
         <!-- Form Düzenleme -->
         <div class="form-group" style="margin:0">
           <label class="form-label">Başlık</label>
-          <input type="text" class="form-input" id="announceTitle-${a.id}" value="${a.title}" oninput="updateAnnouncementPreview(${a.id})">
+          <input type="text" class="form-input" id="announceTitle-${a.id}" value="${ASDFL.escapeAttr(a.title)}" oninput="updateAnnouncementPreview(${a.id})">
         </div>
 
         <div class="form-group" style="margin:0">
           <label class="form-label">Detay / Alt Başlık</label>
-          <input type="text" class="form-input" id="announceSub-${a.id}" value="${a.subtitle}" oninput="updateAnnouncementPreview(${a.id})">
+          <input type="text" class="form-input" id="announceSub-${a.id}" value="${ASDFL.escapeAttr(a.subtitle)}" oninput="updateAnnouncementPreview(${a.id})">
         </div>
 
         <div class="form-group" style="margin:0">
@@ -1443,7 +1450,7 @@ function renderAnnouncementsPanel() {
     `;
   }).join('');
 
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
 // Canlı Önizleme Güncelleme
@@ -1460,7 +1467,7 @@ window.updateAnnouncementPreview = function(id) {
   if (previewSub) previewSub.textContent = subtitle;
   if (previewIconBox && icon) {
     previewIconBox.innerHTML = `<i data-lucide="${icon}" style="width:1.2rem;height:1.2rem"></i>`;
-    lucide.createIcons();
+    ASDFL.refreshIcons();
   }
 };
 

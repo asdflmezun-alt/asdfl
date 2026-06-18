@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           onclick="ASDFL.openScholarshipModal(${ASDFL.jsString(b.title)}, ${ASDFL.jsString(b.id)})">Başvur <i data-lucide="arrow-right" style="width:1em;height:1em"></i></button>
       </div>`).join('');
     ASDFL.initReveal();
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   function renderBursMentors(allAlumni) {
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Giriş Yap / Üye Ol</button>
         </div>
       `;
-      setTimeout(() => lucide.createIcons(), 10);
+      setTimeout(() => ASDFL.refreshIcons(), 10);
       return;
     }
 
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>`;
     }).join('');
     ASDFL.initReveal();
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   window.selectBagis = function(btn, val) {

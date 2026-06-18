@@ -15,7 +15,7 @@ async function initPortal() {
     const activeWrapper = document.getElementById('mentorActiveWrapper');
     if (authBlock) authBlock.style.display = 'block';
     if (activeWrapper) activeWrapper.style.display = 'none';
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
     return;
   }
 
@@ -108,7 +108,7 @@ async function initPortal() {
     const btnEl = document.getElementById(`btn-tab-${tabId}`);
     if (btnEl) btnEl.classList.add('active');
     
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   };
 
   // Switch to overview initially
@@ -140,7 +140,7 @@ async function refreshPortalData() {
   renderCalendar(currentYear, currentMonth);
   updateSelectedDayAppointments(selectedDate.toISOString().split('T')[0]);
 
-  setTimeout(() => lucide.createIcons(), 15);
+  setTimeout(() => ASDFL.refreshIcons(), 15);
 }
 
 function populateTargetUserDropdown() {
@@ -560,7 +560,7 @@ function updateSelectedDayAppointments(dateStr) {
     `;
   }).join('');
   
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
 // Action Handlers

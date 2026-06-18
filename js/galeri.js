@@ -57,7 +57,7 @@ function renderGaleri() {
   }).join('');
 
   ASDFL.initReveal();
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
 window.openLightbox = function(id) {

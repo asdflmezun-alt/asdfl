@@ -184,7 +184,7 @@ window.filterJobs = function() {
         <p>Arama kriterlerinize uygun iş veya staj ilanı bulunamadı.</p>
       </div>
     `;
-    lucide.createIcons();
+    ASDFL.refreshIcons();
     return;
   }
   
@@ -233,7 +233,7 @@ window.filterJobs = function() {
     `;
   }).join('');
   
-  lucide.createIcons();
+  ASDFL.refreshIcons();
 };
 
 // ==========================================
@@ -285,7 +285,7 @@ window.filterRequests = function() {
         <p>Arama kriterlerinize uygun staj arayış talebi bulunamadı.</p>
       </div>
     `;
-    lucide.createIcons();
+    ASDFL.refreshIcons();
     return;
   }
   
@@ -329,7 +329,7 @@ window.filterRequests = function() {
     `;
   }).join('');
   
-  lucide.createIcons();
+  ASDFL.refreshIcons();
 };
 
 // ==========================================
@@ -416,7 +416,7 @@ async function renderMyPostings() {
         <button class="btn btn-primary btn-sm" style="margin-top:1rem" onclick="openNewPostingModal()">Hemen İlan Ver <i data-lucide="plus"></i></button>
       </div>
     `;
-    lucide.createIcons();
+    ASDFL.refreshIcons();
     return;
   }
   
@@ -452,7 +452,7 @@ async function renderMyPostings() {
     `;
   }).join('');
   
-  lucide.createIcons();
+  ASDFL.refreshIcons();
 }
 
 /**
@@ -474,7 +474,7 @@ async function renderIncomingApplications() {
         <p>İlanlarınıza gelen herhangi bir başvuru bulunmamaktadır.</p>
       </div>
     `;
-    lucide.createIcons();
+    ASDFL.refreshIcons();
     return;
   }
   
@@ -542,7 +542,7 @@ async function renderIncomingApplications() {
     `;
   }).join('');
   
-  lucide.createIcons();
+  ASDFL.refreshIcons();
 }
 
 /**
@@ -565,7 +565,7 @@ async function renderMyRequests() {
         <button class="btn btn-primary btn-sm" style="margin-top:1rem" onclick="openNewRequestModal()">Yeni Talep Oluştur <i data-lucide="plus"></i></button>
       </div>
     `;
-    lucide.createIcons();
+    ASDFL.refreshIcons();
     return;
   }
   
@@ -584,7 +584,7 @@ async function renderMyRequests() {
     `;
   }).join('');
   
-  lucide.createIcons();
+  ASDFL.refreshIcons();
 }
 
 /**
@@ -607,7 +607,7 @@ async function renderMyApplications() {
         <button class="btn btn-primary btn-sm" style="margin-top:1rem" onclick="switchCareerTab('jobs')">İlanları Keşfet</button>
       </div>
     `;
-    lucide.createIcons();
+    ASDFL.refreshIcons();
     return;
   }
   
@@ -638,7 +638,7 @@ async function renderMyApplications() {
     `;
   }).join('');
   
-  lucide.createIcons();
+  ASDFL.refreshIcons();
 }
 
 // ==========================================

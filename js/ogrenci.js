@@ -99,7 +99,7 @@ async function loadDashboardData() {
     
     if (ASDFL.supabase) {
       promises.push(ASDFL.supabase.from('applications').select('*').eq('user_id', student.id));
-      promises.push(ASDFL.supabase.from('mentorships').select('*, mentor:profiles!mentor_id(id, name, email, phone, avatar_url, avatar_position, job, company, university)').eq('student_id', student.id));
+      promises.push(ASDFL.supabase.from('mentorships').select('*, mentor:profiles!mentor_id(id,name,avatar_url,avatar_position,job,company,university)').eq('student_id', student.id));
       promises.push(ASDFL.supabase.from('job_applications').select('*, job_postings(*)').eq('applicant_id', student.id));
     }
     
@@ -216,7 +216,7 @@ function calculateProfileCompletion() {
       txt.innerHTML = `Profiliniz <strong>%${score}</strong> dolu. Harika gidiyorsunuz! Eksik alanları tamamlayarak öne çıkın. <a href="profil.html" style="color:var(--gold-500);font-weight:600">Ayarlara git</a>.`;
     } else {
       txt.innerHTML = `<span style="color:#2ecc71;display:flex;align-items:center;gap:.2rem"><i data-lucide="check-circle" style="width:14px;height:14px"></i> Profiliniz %100 dolu. Mezunlarımız sizi kolayca keşfedebilir!</span>`;
-      setTimeout(() => lucide.createIcons(), 10);
+      setTimeout(() => ASDFL.refreshIcons(), 10);
     }
   }
 }
@@ -333,7 +333,7 @@ function renderScholarships() {
   const active = allScholarships.filter(s => s.active);
   if (active.length === 0) {
     grid.innerHTML = '<div class="card" style="padding:3rem;text-align:center;color:var(--text-muted)"><i data-lucide="award" style="width:3rem;height:3rem;margin-bottom:1rem;opacity:.3"></i><p>Şu an açık burs başvurusu bulunmuyor. Lütfen daha sonra tekrar kontrol edin.</p></div>';
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
     return;
   }
   
@@ -360,7 +360,7 @@ function renderScholarships() {
       </div>
     `;
   }).join('');
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
 // TAB 3: MENTÖRLER RENDERING
@@ -371,7 +371,7 @@ function renderMentors() {
   const mentors = allAlumni.filter(a => a.mentor && a.role !== 'Öğrenci');
   if (mentors.length === 0) {
     grid.innerHTML = '<div class="card" style="padding:3rem;text-align:center;color:var(--text-muted)"><i data-lucide="sparkles" style="width:3rem;height:3rem;margin-bottom:1rem;opacity:.3"></i><p>Sistemde kayıtlı mentör bulunmuyor.</p></div>';
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
     return;
   }
   
@@ -419,7 +419,7 @@ function renderMentors() {
       </div>
     `;
   }).join('');
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
 // TAB 4: STAJ & FIRSATLAR RENDERING
@@ -492,7 +492,7 @@ function renderOpportunities() {
       </div>
     `;
   }
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
 // TAB 5: BAŞVURULARIM RENDERING
@@ -502,7 +502,7 @@ function renderMyApplications() {
   
   if (myScholarshipApps.length === 0 && myMentorships.length === 0 && myInternshipApps.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:3rem;color:var(--text-muted)"><i data-lucide="file-question" style="width:2.5rem;height:2.5rem;margin-bottom:1rem;opacity:.3;display:block;margin-left:auto;margin-right:auto;"></i>Henüz hiçbir başvuru veya eşleşme talebiniz bulunmuyor.</td></tr>';
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
     return;
   }
   
@@ -612,7 +612,7 @@ function renderMentorWidget() {
       </div>
     `;
   }
-  setTimeout(() => lucide.createIcons(), 10);
+  setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
 

@@ -5,7 +5,7 @@ const files = ['index.html', 'mezunlar.html', 'etkinlikler.html', 'galeri.html',
 files.forEach(f => {
   let content = fs.readFileSync(f, 'utf8');
   if (!content.includes('unpkg.com/lucide@0.577.0')) {
-    content = content.replace('</head>', '<script src="https://unpkg.com/lucide@0.577.0"></script>\n</head>');
+    content = content.replace('</head>', '<script src="assets/vendor/lucide.js"></script>\n</head>');
     fs.writeFileSync(f, content);
   }
 });

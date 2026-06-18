@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('pastSection').style.display = filter === 'upcoming' ? 'none' : '';
 
     ASDFL.initReveal();
-    setTimeout(() => lucide.createIcons(), 10);
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   function renderEventCard(ev, isUpcoming) {

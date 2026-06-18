@@ -456,6 +456,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+  // Browsers may restore checkbox/select state after refresh. Always open the
+  // directory unfiltered; URL parameters below are the only intentional filter.
+  const mentorOnlyInput = document.getElementById('mentorOnly');
+  const searchInput = document.getElementById('searchInput');
+  if (mentorOnlyInput) mentorOnlyInput.checked = false;
+  if (searchInput) searchInput.value = '';
+
   populateFilters();
 
   // URL parametresi ile filtreleme desteği (?city=İstanbul vb.)

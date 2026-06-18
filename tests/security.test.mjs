@@ -6,6 +6,7 @@ const migration = await readFile('supabase/migrations/202606180001_security_hard
 const app = await readFile('js/app.js', 'utf8');
 const admin = await readFile('js/yonetim.js', 'utf8');
 const community = await readFile('js/topluluk.js', 'utf8');
+const alumni = await readFile('js/mezunlar.js', 'utf8');
 
 test('profile privilege escalation is blocked in the database', () => {
   assert.match(migration, /protect_profile_privileges/);
@@ -25,6 +26,12 @@ test('public profile reads use the share-safe view', () => {
   assert.doesNotMatch(app, /from\('profiles'\)\.select\('\*'\)/);
   assert.match(app, /share_email: Boolean\(d\.email\)/);
   assert.match(app, /queryWithTimeout\(query, 8000\)/);
+});
+
+test('directory opens unfiltered and mentor status comes from the database', () => {
+  assert.match(alumni, /mentorOnlyInput\.checked = false/);
+  assert.match(app, /select\('role, avatar_url, avatar_position, mentor'\)/);
+  assert.match(app, /mentor: dbMentor/);
 });
 
 test('known stored XSS fields are escaped', () => {

@@ -2152,7 +2152,7 @@
     ASDFL.currentUser.instagram_url = instagram_url;
     ASDFL.currentUser.avatar_position = avatarPosition;
     ASDFL.currentUser.mentor_preference = mentorPreference;
-    ASDFL.currentUser.mentor = ASDFL.currentUser.role !== 'Öğrenci' && mentorPreference === 'yes';
+    // `mentor_preference` is a request; `mentor` remains the admin-approved DB value.
     ASDFL.currentUser.academic_title = academic_title;
     ASDFL.currentUser.specialization = specialization;
 

@@ -1584,11 +1584,12 @@ const ASDFL = {
       let dbRole = session.user.user_metadata?.role || 'Kullanıcı';
       let dbAvatarUrl = session.user.user_metadata?.avatar_url || '';
       let dbAvatarPosition = session.user.user_metadata?.avatar_position || '50% 50%';
+      let dbMentor = false;
       try {
         const { data: profile } = await this.queryWithTimeout(
           this.supabase
             .from('profiles')
-            .select('role, avatar_url, avatar_position')
+            .select('role, avatar_url, avatar_position, mentor')
             .eq('id', session.user.id)
             .single(),
           2000
@@ -1602,6 +1603,7 @@ const ASDFL = {
         if (profile?.avatar_position) {
           dbAvatarPosition = profile.avatar_position;
         }
+        dbMentor = profile?.mentor === true;
       } catch (e) {
         console.error('Error fetching live role:', e);
       }
@@ -1612,6 +1614,7 @@ const ASDFL = {
         name: session.user.user_metadata?.name || session.user.email.split('@')[0],
         email: session.user.email,
         role: dbRole,  // always use fresh DB role, not stale metadata
+        mentor: dbMentor,
         avatar_url: dbAvatarUrl,
         avatar_position: dbAvatarPosition
       };
@@ -1632,10 +1635,11 @@ const ASDFL = {
           let dbRole = session.user.user_metadata?.role || 'Kullanıcı';
           let dbAvatarUrl = session.user.user_metadata?.avatar_url || '';
           let dbAvatarPosition = session.user.user_metadata?.avatar_position || '50% 50%';
+          let dbMentor = false;
           try {
             const { data: profile } = await this.supabase
               .from('profiles')
-              .select('role, avatar_url, avatar_position')
+              .select('role, avatar_url, avatar_position, mentor')
               .eq('id', session.user.id)
               .single();
             if (profile?.role) {
@@ -1647,6 +1651,7 @@ const ASDFL = {
             if (profile?.avatar_position) {
               dbAvatarPosition = profile.avatar_position;
             }
+            dbMentor = profile?.mentor === true;
           } catch (e) {
             console.error('Error fetching live role on change:', e);
           }
@@ -1657,6 +1662,7 @@ const ASDFL = {
             name: session.user.user_metadata?.name || session.user.email.split('@')[0],
             email: session.user.email,
             role: dbRole,  // always use fresh DB role, not stale metadata
+            mentor: dbMentor,
             avatar_url: dbAvatarUrl,
             avatar_position: dbAvatarPosition
           };
@@ -1974,15 +1980,17 @@ const ASDFL = {
         let dbRole = session.user.user_metadata?.role || 'Kullanıcı';
         let dbAvatarUrl = session.user.user_metadata?.avatar_url || '';
         let dbAvatarPosition = session.user.user_metadata?.avatar_position || '50% 50%';
+        let dbMentor = false;
         try {
           const { data: profile } = await this.supabase
             .from('profiles')
-            .select('role, avatar_url, avatar_position')
+            .select('role, avatar_url, avatar_position, mentor')
             .eq('id', session.user.id)
             .single();
           if (profile?.role) dbRole = profile.role;
           if (profile?.avatar_url) dbAvatarUrl = profile.avatar_url;
           if (profile?.avatar_position) dbAvatarPosition = profile.avatar_position;
+          dbMentor = profile?.mentor === true;
         } catch (e) {
           console.error('Error fetching role during login:', e);
         }
@@ -1993,6 +2001,7 @@ const ASDFL = {
           name: session.user.user_metadata?.name || session.user.email.split('@')[0],
           email: session.user.email,
           role: dbRole,
+          mentor: dbMentor,
           avatar_url: dbAvatarUrl,
           avatar_position: dbAvatarPosition
         };

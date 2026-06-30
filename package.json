@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "vendor": "node scripts/copy-vendor.mjs",
+    "build": "npm run vendor && node scripts/build-dist.mjs",
+    "dev": "npx --yes serve . -p 3000",
     "test": "node --test tests/*.test.mjs",
     "verify": "npm run vendor && npm test"
   },

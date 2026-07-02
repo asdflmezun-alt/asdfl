@@ -1,7 +1,5 @@
 // HOME PAGE LOGIC
 document.addEventListener('DOMContentLoaded', async () => {
-  const diagHome = document.getElementById('diag-home-js');
-  if (diagHome) diagHome.innerHTML = '- home.js Yüklenme Durumu: <span style="color:#2ecc71">Yüklendi (Ok)</span>';
   await ASDFL.waitForAuth();
 
   // Fetch all required data in parallel (only fetch alumni and posts if logged in)
@@ -195,11 +193,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Render Alumni Map
   function renderAlumniMap(allAlumni) {
-    const authEl = document.getElementById('diag-auth');
-    if (authEl) {
-      authEl.innerHTML = `- Kullanıcı Oturum Durumu: <span style="color:#2ecc71">${ASDFL.currentUser ? 'Giriş Yapıldı (' + ASDFL.escapeHTML(ASDFL.currentUser.name) + ')' : 'Giriş Yapılmadı'}</span>`;
-    }
-
     const wrapper = document.getElementById('alumniMapWrapper');
     if (!wrapper) return;
 

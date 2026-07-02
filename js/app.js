@@ -1825,6 +1825,13 @@ const ASDFL = {
         document.body.classList.toggle('nav-open', isOpen);
       });
     }
+
+    if (this.currentUser) {
+      this.initNotificationBell();
+    } else if (this._notificationsInitialized) {
+      this.teardownNotifications();
+    }
+
     setTimeout(() => this.refreshIcons(), 10);
   },
 
@@ -1834,9 +1841,185 @@ const ASDFL = {
       await this.supabase.auth.signOut();
     }
     this.currentUser = null;
+    this.teardownNotifications();
     this.toast('Çıkış yapıldı.', 'info');
     this.updateUIForAuth();
     setTimeout(() => window.location.reload(), 500);
+  },
+
+  // ---- Notifications ----
+  notifications: [],
+  unreadNotificationCount: 0,
+  _notificationsInitialized: false,
+  _notificationChannel: null,
+  _notificationPollTimer: null,
+
+  async initNotificationBell() {
+    if (!this.currentUser || !this.supabase) return;
+    const navCta = document.querySelector('.nav-cta');
+    if (!navCta) return;
+
+    if (!navCta.querySelector('.notif-bell')) {
+      const bell = document.createElement('div');
+      bell.className = 'notif-bell';
+      bell.innerHTML = `
+        <button class="notif-bell-btn" onclick="ASDFL.toggleNotificationPanel(event)" aria-label="Bildirimler">
+          <i data-lucide="bell" style="width:1.2rem;height:1.2rem"></i>
+          <span class="notif-badge hidden" id="notifBadge">0</span>
+        </button>
+        <div class="notif-panel" id="notifPanel">
+          <div class="notif-panel-header">
+            <strong>Bildirimler</strong>
+            <button onclick="ASDFL.markAllNotificationsRead(event)">Tümünü okundu işaretle</button>
+          </div>
+          <div class="notif-panel-list" id="notifPanelList">
+            <div class="notif-empty">Yükleniyor...</div>
+          </div>
+        </div>
+      `;
+      navCta.insertBefore(bell, navCta.firstChild);
+      this.refreshIcons(bell);
+      document.addEventListener('click', (e) => {
+        if (!bell.contains(e.target)) bell.classList.remove('open');
+      });
+      // navCta may have been recreated (role/avatar change); repaint any state we already hold.
+      this.updateNotificationBadge();
+      this.renderNotificationList();
+    }
+
+    if (!this._notificationsInitialized) {
+      this._notificationsInitialized = true;
+      await this.fetchNotifications();
+      this.subscribeNotifications();
+      this._notificationPollTimer = setInterval(() => this.fetchNotifications(), 60000);
+    }
+  },
+
+  teardownNotifications() {
+    this._notificationsInitialized = false;
+    this.notifications = [];
+    this.unreadNotificationCount = 0;
+    if (this._notificationChannel && this.supabase) {
+      this.supabase.removeChannel(this._notificationChannel);
+      this._notificationChannel = null;
+    }
+    if (this._notificationPollTimer) {
+      clearInterval(this._notificationPollTimer);
+      this._notificationPollTimer = null;
+    }
+    const bell = document.querySelector('.notif-bell');
+    if (bell) bell.remove();
+  },
+
+  toggleNotificationPanel(e) {
+    if (e) e.stopPropagation();
+    const bell = document.querySelector('.notif-bell');
+    if (!bell) return;
+    const opening = !bell.classList.contains('open');
+    bell.classList.toggle('open');
+    if (opening) this.renderNotificationList();
+  },
+
+  async fetchNotifications() {
+    if (!this.supabase || !this.currentUser) return;
+    try {
+      const { data, error } = await this.queryWithTimeout(
+        this.supabase.from('notifications')
+          .select('id,type,title,body,link,is_read,created_at')
+          .order('created_at', { ascending: false })
+          .limit(30)
+      );
+      if (error || !data) return;
+      this.notifications = data;
+      this.unreadNotificationCount = data.filter(n => !n.is_read).length;
+      this.updateNotificationBadge();
+      this.renderNotificationList();
+    } catch (err) {
+      console.warn('Exception fetching notifications:', err);
+    }
+  },
+
+  updateNotificationBadge() {
+    const badge = document.getElementById('notifBadge');
+    if (!badge) return;
+    if (this.unreadNotificationCount > 0) {
+      badge.textContent = this.unreadNotificationCount > 9 ? '9+' : String(this.unreadNotificationCount);
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  },
+
+  notificationTimeAgo(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'Az önce';
+    if (m < 60) return m + ' dk önce';
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + ' sa önce';
+    const d = Math.floor(h / 24);
+    return d + ' gün önce';
+  },
+
+  renderNotificationList() {
+    const list = document.getElementById('notifPanelList');
+    if (!list) return;
+    if (!this.notifications.length) {
+      list.innerHTML = '<div class="notif-empty">Henüz bildiriminiz yok.</div>';
+      return;
+    }
+    list.innerHTML = this.notifications.map(n => `
+      <a href="${this.escapeAttr(this.safeURL(n.link) || '#')}" class="notif-item${n.is_read ? '' : ' unread'}" onclick="ASDFL.markNotificationRead('${this.escapeAttr(n.id)}')">
+        <div class="notif-item-title">${this.escapeHTML(n.title)}</div>
+        ${n.body ? `<div class="notif-item-body">${this.escapeHTML(n.body)}</div>` : ''}
+        <div class="notif-item-time">${this.notificationTimeAgo(n.created_at)}</div>
+      </a>
+    `).join('');
+  },
+
+  async markNotificationRead(id) {
+    const notif = this.notifications.find(n => n.id === id);
+    if (!notif || notif.is_read) return;
+    notif.is_read = true;
+    this.unreadNotificationCount = Math.max(0, this.unreadNotificationCount - 1);
+    this.updateNotificationBadge();
+    if (this.supabase) {
+      try {
+        await this.supabase.from('notifications').update({ is_read: true }).eq('id', id);
+      } catch (err) {
+        console.warn('Exception marking notification read:', err);
+      }
+    }
+  },
+
+  async markAllNotificationsRead(e) {
+    if (e) e.stopPropagation();
+    if (!this.supabase || !this.unreadNotificationCount) return;
+    this.notifications.forEach(n => { n.is_read = true; });
+    this.unreadNotificationCount = 0;
+    this.updateNotificationBadge();
+    this.renderNotificationList();
+    try {
+      await this.supabase.rpc('mark_all_notifications_read');
+    } catch (err) {
+      console.warn('Exception marking all notifications read:', err);
+    }
+  },
+
+  subscribeNotifications() {
+    if (!this.supabase || !this.currentUser || this._notificationChannel) return;
+    this._notificationChannel = this.supabase
+      .channel('notifications:' + this.currentUser.id)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${this.currentUser.id}`
+      }, (payload) => {
+        this.notifications.unshift(payload.new);
+        this.unreadNotificationCount++;
+        this.updateNotificationBadge();
+        this.renderNotificationList();
+        this.toast(payload.new.title, 'info');
+      })
+      .subscribe();
   },
 
   async handleRegister() {
@@ -2266,9 +2449,6 @@ const ASDFL = {
     this.initCities();
     this.initAutocomplete();
     this.setupSearchableDropdowns();
-
-    const diagApp = document.getElementById('diag-app-js');
-    if (diagApp) diagApp.innerHTML = '- app.js Yüklenme Durumu: <span style="color:#2ecc71">Yüklendi (Ok)</span>';
   }
 };
 

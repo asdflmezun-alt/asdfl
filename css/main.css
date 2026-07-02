@@ -117,6 +117,13 @@ a:hover { color: var(--gold-400); }
 .nav-links a.active { color:var(--gold-400); }
 .nav-cta { display:flex; align-items:center; gap:.75rem; min-height: 44px; }
 
+/* Bildirim çanı navbar'a genişlik ekler; orta boy laptop ekranlarında (1024-1400px) taşmayı önle */
+@media (max-width: 1400px) and (min-width: 769px) {
+  .nav-links a { padding: .5rem .7rem; font-size: .85rem; }
+  .profile-btn .user-name-span { display: none; }
+  .profile-btn { padding: .35rem .5rem; gap: .3rem; }
+}
+
 /* Sabit navbar ikon boyutları - layout shift önleme */
 .navbar [data-lucide], .navbar i[data-lucide], .navbar svg {
   width: 1rem; height: 1rem;
@@ -472,6 +479,30 @@ body.nav-open::after {
 .profile-menu button:hover { background:var(--glass-bg); color:var(--text-primary); }
 .profile-menu button.logout { color:var(--danger); }
 .profile-menu button.logout:hover { background:rgba(248,113,113,.1); }
+
+/* NOTIFICATION BELL */
+.notif-bell { position:relative; }
+.notif-bell-btn { position:relative; display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:var(--radius-full); background:var(--glass-bg); border:1px solid var(--glass-border); color:var(--text-primary); cursor:pointer; transition: background var(--ease-normal), border-color var(--ease-normal); }
+.notif-bell-btn:hover { background:var(--glass-bg-hover); border-color:var(--glass-border-hover); }
+.notif-badge { position:absolute; top:-2px; right:-2px; min-width:16px; height:16px; padding:0 3px; border-radius:var(--radius-full); background:var(--danger); color:#fff; font-family:'Inter',sans-serif; font-size:.62rem; font-weight:700; display:flex; align-items:center; justify-content:center; line-height:1; }
+.notif-panel { position:absolute; top:calc(100% + .5rem); right:0; width:320px; max-width:90vw; max-height:400px; overflow-y:auto; background:var(--navy-800); border:1px solid var(--glass-border); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); opacity:0; pointer-events:none; transform:translateY(-10px); transition: opacity var(--ease-normal), transform var(--ease-normal); z-index: 200; }
+.notif-bell.open .notif-panel { opacity:1; pointer-events:all; transform:translateY(0); }
+.notif-panel-header { display:flex; align-items:center; justify-content:space-between; gap:.5rem; padding:.75rem 1rem; border-bottom:1px solid var(--glass-border); }
+.notif-panel-header strong { color:var(--text-primary); font-size:.85rem; }
+.notif-panel-header button { border:none; background:transparent; color:var(--gold-500); font-family:'Inter',sans-serif; font-size:.72rem; cursor:pointer; padding:0; }
+.notif-panel-header button:hover { text-decoration:underline; }
+.notif-panel-list { display:flex; flex-direction:column; }
+.notif-empty { padding:1.5rem 1rem; text-align:center; color:var(--text-muted); font-size:.82rem; }
+.notif-item { display:block; padding:.7rem 1rem; border-bottom:1px solid var(--glass-border); text-decoration:none; transition:background 150ms ease; }
+.notif-item:last-child { border-bottom:none; }
+.notif-item:hover { background:var(--glass-bg); }
+.notif-item.unread { background:rgba(244,168,54,.06); }
+.notif-item-title { color:var(--text-primary); font-size:.82rem; font-weight:600; margin-bottom:.15rem; }
+.notif-item-body { color:var(--text-secondary); font-size:.78rem; line-height:1.4; margin-bottom:.25rem; }
+.notif-item-time { color:var(--text-muted); font-size:.7rem; }
+@media (max-width: 640px) {
+  .notif-panel { right:-4rem; }
+}
 
 /* DYNAMIC FORM GROUPS */
 .hidden { display: none !important; }

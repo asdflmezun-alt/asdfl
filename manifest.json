@@ -1,0 +1,21 @@
+{
+  "name": "ASDFL Mezunlar Derneği",
+  "short_name": "ASDFL",
+  "description": "Afyon Süleyman Demirel Fen Lisesi mezunları ve öğrencilerini buluşturan platform. Burs, mentörlük, etkinlik ve anılar.",
+  "id": "/index.html",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "lang": "tr",
+  "background_color": "#0D1B2A",
+  "theme_color": "#05111E",
+  "icons": [
+    {
+      "src": "assets/images/logo.png",
+      "sizes": "192x192 512x512 1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

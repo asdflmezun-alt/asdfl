@@ -25,14 +25,6 @@ const EXCLUDE = new Set([
   'README.md',
   '.gitattributes',
   '.gitignore',
-  // Tek seferlik geliştirme scriptleri
-  'add_lucide.js',
-  'add_supabase_cdn.js',
-  'replace_icons.js',
-  'update_home_css.js',
-  'update_modals.js',
-  'update_modals_2.js',
-  'map_logged_in_fixed.png',
 ]);
 
 const EXCLUDE_EXT = new Set(['.sql', '.mjs', '.md', '.png']); // .png var ama assets/vendor/images gerekiyor aşağıda özel handle

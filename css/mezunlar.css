@@ -187,6 +187,12 @@
   flex-direction: column;
   gap: .75rem;
   position: relative;
+  cursor: pointer;
+}
+
+.alumni-card-full:focus-visible {
+  outline: 2px solid var(--gold-500);
+  outline-offset: 2px;
 }
 
 .alumni-card-full .ac-header {
@@ -222,7 +228,83 @@
 .alumni-card-full .ac-actions {
   display: flex;
   gap: .5rem;
-  margin-top: .25rem;
+  margin-top: auto;
+  padding-top: .5rem;
+}
+
+.ac-mentor-badge {
+  font-size: .62rem !important;
+  padding: .15rem .5rem !important;
+  margin-left: .4rem;
+  vertical-align: middle;
+}
+
+/* Active filter chips */
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .3rem .8rem;
+  font-family: 'Inter', sans-serif;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--gold-400);
+  background: rgba(244, 168, 54, .08);
+  border: 1px solid rgba(244, 168, 54, .25);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.filter-chip:hover { background: rgba(244, 168, 54, .16); }
+
+.filter-chip-clear {
+  color: var(--text-muted);
+  background: transparent;
+  border-color: var(--glass-border);
+}
+
+.filter-chip-clear:hover { color: var(--text-primary); background: var(--glass-bg); }
+
+/* Skeleton loading */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .06);
+  border-radius: 6px;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .08), transparent);
+  animation: skeleton-shimmer 1.4s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.skeleton-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.skeleton-line {
+  height: 12px;
+  margin-bottom: .6rem;
 }
 
 /* Year Bazlı */
@@ -230,6 +312,40 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.25rem;
+}
+
+.decade-section { margin-bottom: 3rem; }
+.decade-section:last-child { margin-bottom: 0; }
+
+.decade-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.decade-header h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--gold-400), var(--gold-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  white-space: nowrap;
+}
+
+.decade-header .decade-line {
+  flex: 1;
+  height: 1px;
+  background: var(--glass-border);
+  align-self: center;
+}
+
+.decade-header span {
+  font-size: .8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .yil-card {

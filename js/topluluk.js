@@ -3,14 +3,24 @@
    - Global / Yıla Özel / Şubeye Özel akışlar
    - Beğeni (Like) sistemi
    - Gönderi oluşturma
+   - Anket oluşturma ve oylama sistemi (NEW)
+   - Arama ve hashtag/çip filtreleme (NEW)
+   - Sağ sidebar dinamik widget'ları (NEW)
+   - Kullanıcı mini profil istatistikleri (NEW)
    ===================================================== */
 
 (function () {
   let currentFeed = 'global'; // 'global' | 'year' | 'section'
   let myProfile = null;
   let likedPosts = new Set();
-  let activeAttachment = null; // { type: 'photo'|'video'|'event', value: ... }
+  let activeAttachment = null; // { type: 'photo'|'video'|'event'|'poll', value: ... }
   let activeFeeling = null;     // { emoji: '🥳', text: 'Heyecanlı' }
+  
+  // Arama & Filtreleme State
+  let loadedPosts = [];
+  let searchQuery = '';
+  let activeFilter = 'all'; // 'all' | 'photo' | 'video' | 'poll' | 'event'
+  let pollOptions = [];
 
   /* ---------- Başlat ---------- */
   document.addEventListener('DOMContentLoaded', async () => {
@@ -48,23 +58,121 @@
     buildSidebar();
     await loadFeed('global');
     initComposeAttachments();
+    
+    // Arama Çubuğu Event Listener
+    const searchInput = document.getElementById('feedSearchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value.trim().toLowerCase();
+        filterAndRenderPosts();
+      });
+    }
+
+    // Mini Profil Kartı İstatistikleri
+    if (isLoggedIn) {
+      await loadUserMiniCardStats();
+    }
   });
 
   async function loadMyProfile() {
-    if (!ASDFL.currentUser || !ASDFL.supabase) return;
-    const { data } = await ASDFL.supabase
-      .from('profiles')
-      .select('id,name,role,grad_year,class_section,job,avatar_url,avatar_position,academic_title,specialization')
-      .eq('id', ASDFL.currentUser.id)
-      .single();
-    myProfile = data;
+    if (!ASDFL.currentUser) return;
+    
+    if (ASDFL.supabase) {
+      const { data } = await ASDFL.supabase
+        .from('profiles')
+        .select('id,name,role,grad_year,class_section,job,avatar_url,avatar_position,academic_title,specialization')
+        .eq('id', ASDFL.currentUser.id)
+        .single();
+      myProfile = data;
 
-    // Load my liked posts
-    const { data: likes } = await ASDFL.supabase
-      .from('post_likes')
-      .select('post_id')
-      .eq('user_id', ASDFL.currentUser.id);
-    if (likes) likes.forEach(l => likedPosts.add(l.post_id));
+      // Load my liked posts
+      const { data: likes } = await ASDFL.supabase
+        .from('post_likes')
+        .select('post_id')
+        .eq('user_id', ASDFL.currentUser.id);
+      if (likes) likes.forEach(l => likedPosts.add(l.post_id));
+    } else {
+      // Yerel ortamda beğenilen gönderileri yükle
+      try {
+        const localLikes = JSON.parse(localStorage.getItem('asdfl_local_likes') || '[]');
+        localLikes.forEach(id => likedPosts.add(id));
+      } catch (e) {
+        console.error('Error loading local likes:', e);
+      }
+    }
+  }
+
+  /* ---------- Mini Profil Kartı Yükleme ---------- */
+  async function loadUserMiniCardStats() {
+    const userCard = document.getElementById('userMiniCard');
+    if (!userCard || !ASDFL.currentUser) return;
+
+    userCard.classList.remove('hidden');
+
+    const avatarEl = document.getElementById('userMiniAvatar');
+    if (avatarEl) {
+      ASDFL.setAvatarElement(avatarEl, ASDFL.currentUser);
+    }
+
+    const nameEl = document.getElementById('userMiniName');
+    if (nameEl) nameEl.textContent = ASDFL.currentUser.name || 'Kullanıcı';
+
+    const roleEl = document.getElementById('userMiniRole');
+    if (roleEl) {
+      const role = myProfile?.role || ASDFL.currentUser.role || 'Üye';
+      roleEl.textContent = role;
+      roleEl.className = 'user-mini-role-badge ' + role.toLowerCase().replace('ğ', 'g').replace('ı', 'i');
+    }
+
+    const metaEl = document.getElementById('userMiniMeta');
+    if (metaEl) {
+      const gradYear = myProfile?.grad_year || ASDFL.currentUser.gradYear;
+      const section = myProfile?.class_section || ASDFL.currentUser.classSection;
+      const grade = myProfile?.grade || ASDFL.currentUser.grade;
+      
+      if (gradYear) {
+        metaEl.textContent = `${gradYear} Mezunu` + (section ? ` (${section})` : '');
+      } else if (grade) {
+        metaEl.textContent = `${grade}` + (section ? ` - ${section}` : '');
+      } else {
+        metaEl.textContent = 'ASDFL Topluluğu';
+      }
+    }
+
+    let postsCount = 0;
+    let commentsCount = 0;
+
+    if (ASDFL.supabase) {
+      try {
+        const { count: pCount } = await ASDFL.supabase
+          .from('posts')
+          .select('id', { count: 'exact', head: true })
+          .eq('author_id', ASDFL.currentUser.id);
+        postsCount = pCount || 0;
+
+        const { count: cCount } = await ASDFL.supabase
+          .from('post_comments')
+          .select('id', { count: 'exact', head: true })
+          .eq('author_id', ASDFL.currentUser.id);
+        commentsCount = cCount || 0;
+      } catch (err) {
+        console.warn('Mini kart sayacı yüklenirken hata oluştu:', err);
+      }
+    } else {
+      try {
+        const allComments = JSON.parse(localStorage.getItem('asdfl_post_comments') || '[]');
+        commentsCount = allComments.filter(c => c.author_id === ASDFL.currentUser.id).length;
+        
+        const allPosts = JSON.parse(localStorage.getItem('asdfl_posts') || '[]');
+        postsCount = allPosts.filter(p => p.author_id === ASDFL.currentUser.id).length;
+      } catch (e) {}
+    }
+
+    const postsCountEl = document.getElementById('userMiniPostsCount');
+    if (postsCountEl) postsCountEl.textContent = postsCount;
+
+    const commentsCountEl = document.getElementById('userMiniCommentsCount');
+    if (commentsCountEl) commentsCountEl.textContent = commentsCount;
   }
 
   /* ---------- Sidebar ---------- */
@@ -149,7 +257,7 @@
         post_comments(id)
       `)
       .order('created_at', { ascending: false })
-      .limit(30);
+      .limit(40);
 
     if (type === 'global') {
       query = query.is('target_year', null).is('target_section', null);
@@ -166,13 +274,94 @@
 
     const { data: posts, error } = await query;
     if (error || !posts || posts.length === 0) {
+      loadedPosts = [];
       container.innerHTML = `<div class="feed-empty"><i data-lucide="message-circle" style="width:3rem;height:3rem;opacity:.3"></i><p>Henüz paylaşım yok. İlk paylaşımı sen yap!</p></div>`;
+      setTimeout(() => ASDFL.refreshIcons(), 10);
+      
+      // Sağ sidebar'ı boş haliyle de olsa yükle
+      await loadRightSidebarWidgets();
+      return;
+    }
+
+    loadedPosts = posts;
+    filterAndRenderPosts();
+    
+    // Sağ taraftaki widget'ları güncelle
+    await loadRightSidebarWidgets();
+  }
+
+  /* ---------- Arama ve Filtreleme Uygulama ---------- */
+  function filterAndRenderPosts() {
+    const container = document.getElementById('feedPosts');
+    if (!container) return;
+
+    let filtered = [...loadedPosts];
+
+    // Arama Kelimesi Filtresi
+    if (searchQuery) {
+      filtered = filtered.filter(p => {
+        let textToCheck = p.content || '';
+        if (textToCheck.startsWith('{') && textToCheck.endsWith('}')) {
+          try {
+            const parsed = JSON.parse(p.content);
+            textToCheck = parsed.text || '';
+          } catch(e) {}
+        }
+        const authorName = (p.profiles?.name || '').toLowerCase();
+        return textToCheck.toLowerCase().includes(searchQuery) || authorName.includes(searchQuery);
+      });
+    }
+
+    // Filtre Çipleri Filtresi
+    if (activeFilter !== 'all') {
+      filtered = filtered.filter(p => {
+        let type = 'text';
+        if (p.content && p.content.startsWith('{') && p.content.endsWith('}')) {
+          try {
+            const parsed = JSON.parse(p.content);
+            if (parsed.richPost && parsed.attachment) {
+              type = parsed.attachment.type;
+            }
+          } catch (e) {}
+        }
+        return type === activeFilter;
+      });
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="feed-empty">
+          <i data-lucide="search-code" style="width:2.5rem;height:2.5rem;opacity:.3;margin-bottom:1rem"></i>
+          <p>Kriterlere uygun paylaşım bulunamadı.</p>
+        </div>
+      `;
       setTimeout(() => ASDFL.refreshIcons(), 10);
       return;
     }
 
-    container.innerHTML = posts.map(post => renderPost(post)).join('');
+    container.innerHTML = filtered.map(post => renderPost(post)).join('');
     setTimeout(() => ASDFL.refreshIcons(), 10);
+  }
+
+  /* ---------- Filtre Seçimi & Hashtag Tetikleme ---------- */
+  window.setFilter = function (filter, el) {
+    activeFilter = filter;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    filterAndRenderPosts();
+  };
+
+  window.filterByHashtag = function (tag) {
+    searchQuery = '#' + tag.toLowerCase();
+    const searchInput = document.getElementById('feedSearchInput');
+    if (searchInput) searchInput.value = searchQuery;
+    filterAndRenderPosts();
+  };
+
+  /* ---------- Hashtagleri Tıklanabilir Yapma ve HTML Kaçış ---------- */
+  function formatPostText(str) {
+    const escaped = String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    return escaped.replace(/#([a-zA-Z0-9ĞğÜüŞşİıÖöÇç_]+)/g, '<span class="hashtag" onclick="window.filterByHashtag(\'$1\')">#$1</span>');
   }
 
   function renderPost(post) {
@@ -250,6 +439,44 @@
                   </div>
                 </div>
               `;
+            } else if (att.type === 'poll') {
+              // Anket Rendering
+              const poll = att.value;
+              const hasVoted = poll.options.some(opt => (opt.votes || []).includes(ASDFL.currentUser?.id));
+              const totalVotes = poll.options.reduce((sum, opt) => sum + (opt.votes || []).length, 0);
+
+              const optionsHtml = poll.options.map(opt => {
+                const optVotes = opt.votes || [];
+                const isMyVote = optVotes.includes(ASDFL.currentUser?.id);
+                const pct = totalVotes > 0 ? Math.round((optVotes.length / totalVotes) * 100) : 0;
+
+                if (hasVoted) {
+                  return `
+                    <div class="poll-option-btn disabled ${isMyVote ? 'voted' : ''}">
+                      <div class="poll-option-progress" style="width: ${pct}%"></div>
+                      <span class="poll-option-text">${escapeHtml(opt.text)}</span>
+                      <span class="poll-option-percentage">${pct}% (${optVotes.length} oy)</span>
+                    </div>
+                  `;
+                } else {
+                  return `
+                    <button class="poll-option-btn" onclick="window.votePoll(${safePostId}, '${ASDFL.escapeAttr(opt.id)}')">
+                      <span class="poll-option-text">${escapeHtml(opt.text)}</span>
+                    </button>
+                  `;
+                }
+              }).join('');
+
+              attachmentHtml = `
+                <div class="poll-card">
+                  <h4 class="poll-question">${escapeHtml(poll.question)}</h4>
+                  <div class="poll-options-list">${optionsHtml}</div>
+                  <div class="poll-total-votes">
+                    <i data-lucide="bar-chart-3" style="width:12px;height:12px"></i>
+                    <span>Toplam ${totalVotes} oy kullanıldı</span>
+                  </div>
+                </div>
+              `;
             }
           }
         }
@@ -261,8 +488,10 @@
     return `
       <div class="post-card" id="post-${safePostIdAttr}">
         <div class="post-header">
-          ${ASDFL.getAvatarHTML({ initials, avatar_url: author?.avatar_url, avatar_position: author?.avatar_position, name }, 'post-avatar')}
-          <div class="post-meta">
+          <div style="cursor:pointer" onclick="window.location.href='profil.html?id=${encodeURIComponent(author?.id || '')}'">
+            ${ASDFL.getAvatarHTML({ initials, avatar_url: author?.avatar_url, avatar_position: author?.avatar_position, name }, 'post-avatar')}
+          </div>
+          <div class="post-meta" style="cursor:pointer" onclick="window.location.href='profil.html?id=${encodeURIComponent(author?.id || '')}'">
             <strong class="post-author" style="display:inline-block">${escapeHtml(name)} ${feelingHtml}</strong>
             <span class="post-submeta">${escapeHtml(meta)}</span>
           </div>
@@ -271,7 +500,7 @@
             ${audienceBadge}
           </div>
         </div>
-        <div class="post-body">${escapeHtml(postText)} ${attachmentHtml}</div>
+        <div class="post-body">${formatPostText(postText)} ${attachmentHtml}</div>
         <div class="post-actions">
           <button class="post-action-btn ${liked ? 'liked' : ''}" onclick="window.toggleLike(${safePostId}, this)" id="like-${safePostIdAttr}">
             <i data-lucide="heart" style="width:1.1rem;height:1.1rem"></i>
@@ -300,50 +529,117 @@
     `;
   }
 
-  /* ---------- Like ---------- */
+  /* ---------- Beğeni Oy Verme ---------- */
   window.toggleLike = async function (postId, btn) {
     if (!ASDFL.currentUser) { ASDFL.toast('Beğenmek için giriş yapmalısın!', 'warning'); return; }
 
     const alreadyLiked = likedPosts.has(postId);
     const countEl = btn.querySelector('.like-count');
-    let count = parseInt(countEl.textContent);
+    let count = parseInt(countEl.textContent) || 0;
 
+    // Optimistik Arayüz Güncellemesi (Tıklanır tıklanmaz sayıyı ve stili değiştir)
     if (alreadyLiked) {
       likedPosts.delete(postId);
       btn.classList.remove('liked');
       count = Math.max(0, count - 1);
-      await ASDFL.supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', ASDFL.currentUser.id);
-      await ASDFL.supabase.from('posts').update({ likes_count: count }).eq('id', postId);
     } else {
       likedPosts.add(postId);
       btn.classList.add('liked');
       count += 1;
-      await ASDFL.supabase.from('post_likes').insert({ post_id: postId, user_id: ASDFL.currentUser.id });
-      await ASDFL.supabase.from('posts').update({ likes_count: count }).eq('id', postId);
+    }
+    countEl.textContent = count;
+
+    // Animasyonu tetikle
+    const icon = btn.querySelector('i');
+    if (icon) {
+      icon.style.animation = 'none';
+      setTimeout(() => { icon.style.animation = 'heartPop 0.3s ease-out'; }, 10);
     }
 
-    countEl.textContent = count;
-    // Animate
-    btn.style.transform = 'scale(1.25)';
-    setTimeout(() => { btn.style.transform = ''; }, 200);
+    // Veritabanına ya da LocalStorage'a kaydet
+    if (ASDFL.supabase) {
+      try {
+        if (alreadyLiked) {
+          await ASDFL.supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', ASDFL.currentUser.id);
+          await ASDFL.supabase.from('posts').update({ likes_count: count }).eq('id', postId);
+        } else {
+          await ASDFL.supabase.from('post_likes').insert({ post_id: postId, user_id: ASDFL.currentUser.id });
+          await ASDFL.supabase.from('posts').update({ likes_count: count }).eq('id', postId);
+        }
+      } catch (err) {
+        console.error('Error updating like in Supabase:', err);
+      }
+    } else {
+      // Çevrimdışı mod yerel kaydetme
+      try {
+        let localLikes = JSON.parse(localStorage.getItem('asdfl_local_likes') || '[]');
+        if (alreadyLiked) {
+          localLikes = localLikes.filter(id => id !== postId);
+        } else {
+          localLikes.push(postId);
+        }
+        localStorage.setItem('asdfl_local_likes', JSON.stringify(localLikes));
+
+        // Yerel gönderilerdeki beğeni sayısını da güncelle
+        let localPosts = JSON.parse(localStorage.getItem('asdfl_posts') || '[]');
+        localPosts = localPosts.map(p => {
+          if (p.id === postId) {
+            p.likes_count = count;
+          }
+          return p;
+        });
+        localStorage.setItem('asdfl_posts', JSON.stringify(localPosts));
+      } catch (e) {
+        console.error('Error updating local like:', e);
+      }
+    }
   };
 
-  /* ---------- Share ---------- */
+  /* ---------- Paylaşım ---------- */
   window.sharePost = function (postId) {
     const url = window.location.origin + window.location.pathname + '#post-' + postId;
     navigator.clipboard.writeText(url).then(() => {
-      ASDFL.toast('Bağlantı panoya kopyalandı!', 'success');
+      ASDFL.toast('Bağlantı panoya kopyalandı! 🔗', 'success');
     }).catch(() => {
       ASDFL.toast('Kopyalanamadı, lütfen URL\'yi manuel kopyalayın.', 'info');
     });
   };
 
-  /* ---------- Create Post ---------- */
+  /* ---------- Gönderi Oluşturma ---------- */
   window.handleToplulukPost = async function () {
     if (!ASDFL.currentUser) { ASDFL.toast('Paylaşım yapmak için giriş yapmalısınız!', 'warning'); return; }
 
     const content = document.getElementById('toplulukContent')?.value?.trim();
-    if (!content && !activeAttachment) { ASDFL.toast('Lütfen bir şeyler yazın veya bir medya ekleyin!', 'warning'); return; }
+    const builderActive = !document.getElementById('pollBuilderArea').classList.contains('hidden');
+    
+    // Anket kontrolü
+    if (builderActive) {
+      const question = document.getElementById('pollQuestionInput').value.trim();
+      if (!question) {
+        ASDFL.toast('Lütfen anket sorusunu yazın!', 'warning');
+        return;
+      }
+      
+      const validOptions = pollOptions.filter(o => o.trim() !== '');
+      if (validOptions.length < 2) {
+        ASDFL.toast('Lütfen en az 2 geçerli seçenek ekleyin!', 'warning');
+        return;
+      }
+
+      activeAttachment = {
+        type: 'poll',
+        value: {
+          question: question,
+          options: validOptions.map((opt, i) => ({
+            id: 'opt_' + i + '_' + Math.random().toString(36).substring(2, 6),
+            text: opt.trim(),
+            votes: []
+          }))
+        }
+      };
+    }
+
+    if (!content && !activeAttachment) { ASDFL.toast('Lütfen bir şeyler yazın veya bir medya/anket ekleyin!', 'warning'); return; }
 
     const audienceVal = document.getElementById('postAudience')?.value || 'global';
     const btn = document.getElementById('toplulukPostBtn');
@@ -364,7 +660,7 @@
     if (activeAttachment || activeFeeling) {
       finalContent = JSON.stringify({
         richPost: true,
-        text: content,
+        text: content || (activeAttachment?.type === 'poll' ? activeAttachment.value.question : ''),
         attachment: activeAttachment,
         feeling: activeFeeling
       });
@@ -383,8 +679,12 @@
       document.getElementById('toplulukContent').value = '';
       activeAttachment = null;
       activeFeeling = null;
+      window.cancelPollCreator();
       renderAttachmentPreview();
       ASDFL.toast('Paylaşımın yayınlandı! 🚀', 'success');
+      
+      // Mini Profil Kartı İstatistiklerini yenile
+      await loadUserMiniCardStats();
       await loadFeed(currentFeed);
     }
 
@@ -393,7 +693,7 @@
     setTimeout(() => ASDFL.refreshIcons(), 10);
   };
 
-  /* ---------- Audience Change ---------- */
+  /* ---------- Hedef Kitle Değişimi ---------- */
   window.onAudienceChange = function (sel) {
     const hint = document.getElementById('audienceHint');
     if (!hint) return;
@@ -431,12 +731,15 @@
     }
 
     list.innerHTML = comments.map(c => {
+      const commentAuthorId = c.authorId || c.author_id || '';
       return `
         <div class="comment-item">
-          ${ASDFL.getAvatarHTML({ initials: c.initials, avatar_url: c.authorAvatarUrl, avatar_position: c.authorAvatarPosition, name: c.authorName }, 'comment-avatar')}
+          <div style="cursor:pointer" onclick="window.location.href='profil.html?id=${encodeURIComponent(commentAuthorId)}'">
+            ${ASDFL.getAvatarHTML({ initials: c.initials, avatar_url: c.authorAvatarUrl, avatar_position: c.authorAvatarPosition, name: c.authorName }, 'comment-avatar')}
+          </div>
           <div class="comment-content-area">
             <div class="comment-author-row">
-              <strong class="comment-author-name">${escapeHtml(c.authorName)}</strong>
+              <strong class="comment-author-name" style="cursor:pointer" onclick="window.location.href='profil.html?id=${encodeURIComponent(commentAuthorId)}'">${escapeHtml(c.authorName)}</strong>
               <span class="comment-author-meta">${escapeHtml(c.authorMeta)}</span>
               <span class="comment-time">${escapeHtml(timeAgo(c.created_at))}</span>
             </div>
@@ -466,6 +769,7 @@
         id: c.id,
         content: c.content,
         created_at: c.created_at,
+        authorId: c.author_id,
         authorName: (c.profiles?.academic_title ? c.profiles.academic_title + ' ' : '') + (c.profiles?.name || 'Anonim'),
         authorAvatarUrl: c.profiles?.avatar_url || '',
         authorAvatarPosition: c.profiles?.avatar_position || '',
@@ -506,6 +810,8 @@
         countEl.textContent = count + 1;
       }
       
+      // Mini Profil Kartı istatistiklerini güncelle
+      await loadUserMiniCardStats();
       ASDFL.toast('Yorumunuz yayınlandı! 💬', 'success');
     }
   };
@@ -564,6 +870,186 @@
       localStorage.setItem('asdfl_post_comments', JSON.stringify(allComments));
       return newComment;
     }
+  }
+
+  /* ---------- Anket Oylama Mantığı ---------- */
+  window.votePoll = async function (postId, optionId) {
+    if (!ASDFL.currentUser) {
+      ASDFL.toast('Oy vermek için giriş yapmalısınız.', 'warning');
+      return;
+    }
+
+    const post = loadedPosts.find(p => p.id === postId);
+    if (!post) return;
+
+    try {
+      const parsed = JSON.parse(post.content);
+      if (parsed.richPost && parsed.attachment && parsed.attachment.type === 'poll') {
+        const poll = parsed.attachment.value;
+        
+        // Kullanıcı daha önce oy kullanmış mı?
+        const hasVoted = poll.options.some(opt => (opt.votes || []).includes(ASDFL.currentUser.id));
+        if (hasVoted) {
+          ASDFL.toast('Bu ankete zaten oy verdiniz!', 'info');
+          return;
+        }
+
+        // Oy ekle
+        poll.options.forEach(opt => {
+          if (!opt.votes) opt.votes = [];
+          if (opt.id === optionId) {
+            opt.votes.push(ASDFL.currentUser.id);
+          }
+        });
+
+        const updatedContent = JSON.stringify(parsed);
+
+        // Supabase güncellemesi
+        if (ASDFL.supabase) {
+          const { error } = await ASDFL.supabase
+            .from('posts')
+            .update({ content: updatedContent })
+            .eq('id', postId);
+
+          if (error) {
+            console.error('Oy kaydedilirken hata oluştu:', error);
+            ASDFL.toast('Oy kaydedilemedi: ' + error.message, 'error');
+            return;
+          }
+        } else {
+          let localPosts = JSON.parse(localStorage.getItem('asdfl_posts') || '[]');
+          const idx = localPosts.findIndex(p => p.id === postId);
+          if (idx !== -1) {
+            localPosts[idx].content = updatedContent;
+            localStorage.setItem('asdfl_posts', JSON.stringify(localPosts));
+          }
+        }
+
+        // Cache güncelle ve render et
+        post.content = updatedContent;
+        filterAndRenderPosts();
+        ASDFL.toast('Oyunuz kaydedildi! 🗳️', 'success');
+      }
+    } catch (err) {
+      console.error('Anket oylama hatası:', err);
+    }
+  };
+
+  /* ---------- Sağ Sidebar Widgets Yükleme ---------- */
+  async function loadRightSidebarWidgets() {
+    await Promise.all([
+      loadTrendingHashtags(),
+      loadActiveAlumni(),
+      loadUpcomingEvents()
+    ]);
+  }
+
+  async function loadTrendingHashtags() {
+    const container = document.getElementById('trendingHashtagsList');
+    if (!container) return;
+
+    const hashCounts = {};
+    loadedPosts.forEach(p => {
+      let text = p.content || '';
+      if (text.startsWith('{') && text.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(text);
+          text = parsed.text || '';
+        } catch(e) {}
+      }
+      const tags = text.match(/#([a-zA-Z0-9ĞğÜüŞşİıÖöÇç_]+)/g);
+      if (tags) {
+        tags.forEach(t => {
+          hashCounts[t] = (hashCounts[t] || 0) + 1;
+        });
+      }
+    });
+
+    const sorted = Object.entries(hashCounts)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    if (sorted.length === 0) {
+      container.innerHTML = `
+        <div style="font-size:0.78rem; color:var(--text-muted); text-align:center; padding:0.5rem">
+          Trend konu bulunmuyor. Gönderilerinizde #tag kullanın!
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = sorted.map(item => `
+      <div class="trending-item" onclick="window.filterByHashtag('${item.tag.substring(1)}')">
+        <span class="trending-tag">${escapeHtml(item.tag)}</span>
+        <span class="trending-count">${item.count} gönderi</span>
+      </div>
+    `).join('');
+  }
+
+  async function loadActiveAlumni() {
+    const container = document.getElementById('activeAlumniList');
+    if (!container) return;
+
+    const alumni = await ASDFL.fetchAlumni();
+    if (!alumni || alumni.length === 0) {
+      container.innerHTML = `<div style="font-size:0.78rem; color:var(--text-muted); text-align:center">Aktif üye bulunamadı.</div>`;
+      return;
+    }
+
+    // İlk 4 aktif üyeyi al
+    const list = alumni.slice(0, 4);
+
+    container.innerHTML = list.map(a => {
+      const academicTitle = a.academic_title || '';
+      const fullName = (academicTitle ? academicTitle + ' ' : '') + a.name;
+      const initials = a.initials || ASDFL.getInitials(a.name);
+      const title = [a.job, a.grad_year ? a.grad_year + ' Mezunu' : null].filter(Boolean).join(' · ');
+
+      return `
+        <div class="active-alumni-item">
+          ${ASDFL.getAvatarHTML({ initials, avatar_url: a.avatar_url, avatar_position: a.avatar_position, name: fullName }, 'active-alumni-avatar', 'width:34px;height:34px;font-size:0.75rem')}
+          <div class="active-alumni-info">
+            <span class="active-alumni-name">${escapeHtml(fullName)}</span>
+            <span class="active-alumni-title">${escapeHtml(title)}</span>
+          </div>
+          <a href="profil.html?id=${encodeURIComponent(a.id)}" class="active-alumni-link">İncele</a>
+        </div>
+      `;
+    }).join('');
+    
+    setTimeout(() => ASDFL.refreshIcons(), 10);
+  }
+
+  async function loadUpcomingEvents() {
+    const container = document.getElementById('upcomingEventsMiniList');
+    if (!container) return;
+
+    const events = await ASDFL.fetchEvents();
+    if (!events || events.length === 0) {
+      container.innerHTML = `<div style="font-size:0.78rem; color:var(--text-muted); text-align:center">Yaklaşan etkinlik bulunamadı.</div>`;
+      return;
+    }
+
+    // Gelecekteki etkinlikleri süz
+    const upcoming = events
+      .filter(e => new Date(e.date || e.event_date) >= new Date().setHours(0,0,0,0))
+      .slice(0, 3);
+
+    if (upcoming.length === 0) {
+      container.innerHTML = `<div style="font-size:0.78rem; color:var(--text-muted); text-align:center">Yaklaşan etkinlik bulunamadı.</div>`;
+      return;
+    }
+
+    container.innerHTML = upcoming.map(e => `
+      <div class="mini-event-item">
+        <span class="mini-event-date">${ASDFL.formatDate(e.date || e.event_date)}</span>
+        <a href="etkinlikler.html" class="mini-event-title">${escapeHtml(e.title)}</a>
+        <span class="mini-event-loc"><i data-lucide="map-pin" style="width:12px;height:12px"></i> ${escapeHtml(e.location || 'ASDFL')}</span>
+      </div>
+    `).join('');
+    
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
   /* ---------- Helpers ---------- */
@@ -628,6 +1114,7 @@
       }
 
       activeAttachment = { type: 'photo', value: imageUrl };
+      window.cancelPollCreator(); // Poll builder'ı kapat
       renderAttachmentPreview();
     } catch (err) {
       console.error(err);
@@ -671,6 +1158,7 @@
     }
 
     activeAttachment = { type: 'video', value: videoId };
+    window.cancelPollCreator();
     ASDFL.closeModal('videoAttachModal');
     renderAttachmentPreview();
     ASDFL.toast('Video eklendi! 🎥', 'success');
@@ -723,9 +1211,65 @@
       value: { id: eventId, title, date, location }
     };
 
+    window.cancelPollCreator();
     ASDFL.closeModal('eventAttachModal');
     renderAttachmentPreview();
     ASDFL.toast('Etkinlik iliştirildi! 📅', 'success');
+  };
+
+  // Opens Anket Builder inside Compose Box (NEW)
+  window.openPollCreator = function () {
+    if (!ASDFL.currentUser) {
+      ASDFL.toast('Anket oluşturmak için giriş yapmalısınız.', 'warning');
+      return;
+    }
+    const builder = document.getElementById('pollBuilderArea');
+    if (!builder) return;
+
+    builder.classList.remove('hidden');
+    document.getElementById('pollQuestionInput').value = '';
+    pollOptions = ['', ''];
+    renderPollOptionInputs();
+
+    // Cancel other attachments
+    activeAttachment = null;
+    renderAttachmentPreview();
+  };
+
+  window.cancelPollCreator = function () {
+    const builder = document.getElementById('pollBuilderArea');
+    if (builder) builder.classList.add('hidden');
+    pollOptions = [];
+  };
+
+  function renderPollOptionInputs() {
+    const container = document.getElementById('pollOptionsContainer');
+    if (!container) return;
+
+    container.innerHTML = pollOptions.map((opt, index) => `
+      <div class="poll-option-input-row" id="poll-opt-row-${index}">
+        <input type="text" class="form-input poll-option-input" style="padding:0.45rem 0.75rem; font-size:0.84rem" placeholder="Seçenek ${index + 1}" value="${escapeHtml(opt)}" onchange="window.updatePollOptionText(${index}, this.value)">
+        ${pollOptions.length > 2 ? `<button class="poll-option-remove" onclick="window.removePollOptionField(${index})" title="Seçeneği Sil">✕</button>` : ''}
+      </div>
+    `).join('');
+  }
+
+  window.updatePollOptionText = function(index, value) {
+    pollOptions[index] = value;
+  };
+
+  window.addPollOptionField = function () {
+    if (pollOptions.length >= 6) {
+      ASDFL.toast('En fazla 6 seçenek ekleyebilirsiniz.', 'warning');
+      return;
+    }
+    pollOptions.push('');
+    renderPollOptionInputs();
+  };
+
+  window.removePollOptionField = function (index) {
+    pollOptions.splice(index, 1);
+    renderPollOptionInputs();
   };
 
   // Opens Feeling Selection modal

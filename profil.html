@@ -988,6 +988,14 @@
     (async () => {
       await ASDFL.waitForAuth();
       await loadProfile();
+
+      const tabParam = urlParams.get('tab');
+      if (tabParam && ['social', 'settings', 'requests', 'privacy'].includes(tabParam)) {
+        const isOwnProfile = !targetUserId || targetUserId === ASDFL.currentUser.id;
+        if (isOwnProfile || tabParam === 'social') {
+          switchProfileTab(tabParam);
+        }
+      }
     })();
   });
 
@@ -1200,9 +1208,30 @@
       
       if (error || !data) {
         if (!isOwnProfile) {
-          ASDFL.toast('Profil bulunamadı veya erişim yetkiniz yok.', 'error');
-          window.location.href = 'mezunlar.html';
-          return;
+          // Fallback to local storage mock data if database fetch failed for target user
+          const stored = ASDFL._storage.getItem('asdfl_alumni');
+          let foundLocal = false;
+          if (stored) {
+            try {
+              const alumni = JSON.parse(stored);
+              const localProfile = alumni.find(a => a.id === targetUserId);
+              if (localProfile) {
+                profileData = {
+                  ...localProfile,
+                  share_email: Boolean(localProfile.email),
+                  share_phone: Boolean(localProfile.phone)
+                };
+                foundLocal = true;
+              }
+            } catch(e) {
+              console.error('Error parsing local fallback profiles:', e);
+            }
+          }
+          if (!foundLocal) {
+            ASDFL.toast('Profil bulunamadı veya erişim yetkiniz yok.', 'error');
+            window.location.href = 'mezunlar.html';
+            return;
+          }
         } else {
           // Fallback to local user state if database fetch failed for own profile
           profileData = ASDFL.currentUser;

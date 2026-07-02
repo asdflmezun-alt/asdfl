@@ -99,11 +99,11 @@ BEGIN
   IF TG_OP = 'INSERT' THEN
     SELECT name INTO sender_name FROM public.profiles WHERE id = NEW.sender_id;
     PERFORM public.notify_user(NEW.receiver_id, 'contact_request', 'Yeni iletişim talebi',
-      COALESCE(sender_name, 'Bir kullanıcı') || ' iletişim bilgilerinizi paylaşmanızı talep etti.', 'mezunlar.html');
+      COALESCE(sender_name, 'Bir kullanıcı') || ' iletişim bilgilerinizi paylaşmanızı talep etti.', 'profil.html?tab=requests');
   ELSIF TG_OP = 'UPDATE' AND NEW.status IS DISTINCT FROM OLD.status AND NEW.status <> 'Pending' THEN
     PERFORM public.notify_user(NEW.sender_id, 'contact_request_status',
       CASE WHEN NEW.status = 'Approved' THEN 'İletişim talebiniz onaylandı' ELSE 'İletişim talebiniz reddedildi' END,
-      NULL, 'mezunlar.html');
+      NULL, 'profil.html?tab=requests');
   END IF;
   RETURN NEW;
 END;

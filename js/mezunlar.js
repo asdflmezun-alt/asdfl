@@ -1,6 +1,9 @@
 // MEZUNLAR PAGE LOGIC
 let allAlumni = [];
 let myRequests = [];
+let alumniCursor = null;
+let hasMoreAlumni = false;
+const ALUMNI_PAGE_SIZE = 100;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await ASDFL.waitForAuth();
@@ -27,23 +30,63 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  // Bir sayfalık ham veriyi state'e işler: cursor son kaydın created_at'i,
+  // sayfa doluysa devamı vardır varsayılır.
+  function ingestAlumniPage(page) {
+    if (page.length) alumniCursor = page[page.length - 1].created_at;
+    hasMoreAlumni = page.length >= ALUMNI_PAGE_SIZE;
+    allAlumni = allAlumni.concat(page.filter(a => a.role !== 'Öğrenci'));
+  }
+
+  function renderSkeletons() {
+    const grid = document.getElementById('alumniGrid');
+    if (!grid) return;
+    grid.innerHTML = Array.from({ length: 8 }, () => `
+      <div class="card alumni-card-full">
+        <div class="ac-header">
+          <div class="skeleton skeleton-avatar"></div>
+          <div style="flex:1">
+            <div class="skeleton skeleton-line" style="width:60%"></div>
+            <div class="skeleton skeleton-line" style="width:35%"></div>
+          </div>
+        </div>
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line" style="width:80%"></div>
+        <div class="skeleton skeleton-line" style="width:55%"></div>
+      </div>`).join('');
+  }
+
+  renderSkeletons();
+
   if (ASDFL.supabase) {
-    const [alumniData, requestsData] = await Promise.all([
-      ASDFL.fetchAlumni(),
+    const [alumniPage, requestsData] = await Promise.all([
+      ASDFL.fetchAlumni({ limit: ALUMNI_PAGE_SIZE }),
       ASDFL.supabase
         .from('contact_requests')
         .select('*')
         .or(`sender_id.eq.${ASDFL.currentUser.id},receiver_id.eq.${ASDFL.currentUser.id}`)
     ]);
-    allAlumni = alumniData.filter(a => a.role !== 'Öğrenci');
+    ingestAlumniPage(alumniPage);
     myRequests = requestsData.data || [];
     if (ASDFL.lastAlumniError) {
       ASDFL.toast('Mezun listesi veritabanından alınamadı. Lütfen sayfayı yenileyin.', 'error');
     }
   } else {
-    allAlumni = (await ASDFL.fetchAlumni()).filter(a => a.role !== 'Öğrenci');
+    ingestAlumniPage(await ASDFL.fetchAlumni());
+    hasMoreAlumni = false;
     myRequests = [];
   }
+
+  window.loadMoreAlumni = async function() {
+    const btn = document.getElementById('loadMoreBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Yükleniyor...'; }
+    const page = await ASDFL.fetchAlumni({ limit: ALUMNI_PAGE_SIZE, before: alumniCursor });
+    ingestAlumniPage(page);
+    populateFilters();
+    filterAlumni();
+    renderYillar();
+    renderMentors();
+  };
 
   function getContactHTML(alumnus) {
     if (!ASDFL.currentUser) return '';
@@ -73,7 +116,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       phoneHTML = `
         <div style="font-size:.82rem; color:var(--text-secondary); margin-top:.4rem; display:flex; align-items:center; gap:.4rem;">
           <i data-lucide="phone" style="width:1em;height:1em;color:var(--gold-500)"></i>
-          <span>${alumnus.phone || 'Telefon belirtilmemiş'}</span>
+          <span>${ASDFL.escapeHTML(alumnus.phone || 'Telefon belirtilmemiş')}</span>
         </div>
       `;
     } else if (isPending) {
@@ -86,8 +129,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       phoneHTML = `
         <div style="margin-top:.5rem;">
-          <button class="btn btn-secondary btn-sm" onclick="sendContactRequest('${alumnus.id}')" style="font-size:.75rem; padding:.25rem .75rem; width:100%; display:flex; align-items:center; justify-content:center; gap:.4rem;">
-            <i data-lucide="lock" style="width:.9em;height:.9em"></i> İletişim Bilgilerini Talep Et
+          <button class="btn btn-ghost btn-sm" onclick="sendContactRequest('${alumnus.id}')" style="font-size:.72rem; padding:.2rem .7rem; display:inline-flex; align-items:center; gap:.35rem;">
+            <i data-lucide="lock" style="width:.9em;height:.9em"></i> İletişim Talep Et
           </button>
         </div>
       `;
@@ -97,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       emailHTML = `
         <div style="font-size:.82rem; color:var(--text-secondary); margin-top:.4rem; display:flex; align-items:center; gap:.4rem;">
           <i data-lucide="mail" style="width:1em;height:1em;color:var(--gold-500)"></i>
-          <span>${alumnus.email || 'E-posta belirtilmemiş'}</span>
+          <span>${ASDFL.escapeHTML(alumnus.email || 'E-posta belirtilmemiş')}</span>
         </div>
       `;
     }
@@ -172,50 +215,115 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cf = document.getElementById('cityFilter');
     const uf = document.getElementById('universityFilter');
     const sf = document.getElementById('specializationFilter');
-    
-    if(yf) {
-      yf.innerHTML = '<option value="all">Tüm Yıllar</option>';
-      years.forEach(y => { const o=document.createElement('option'); o.value=y; o.textContent=y+' Mezunu'; yf.appendChild(o); });
+
+    // "Daha fazla yükle" sonrası yeniden doldurulurken mevcut seçim korunur
+    function fill(select, defaultLabel, values, labelFn) {
+      if (!select) return;
+      const current = select.value;
+      select.innerHTML = `<option value="all">${defaultLabel}</option>`;
+      values.forEach(v => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = labelFn ? labelFn(v) : v;
+        select.appendChild(o);
+      });
+      if (current && [...select.options].some(o => o.value === current)) select.value = current;
     }
-    if(cf) {
-      cf.innerHTML = '<option value="all">Tüm Şehirler</option>';
-      cities.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; cf.appendChild(o); });
-    }
-    if(uf) {
-      uf.innerHTML = '<option value="all">Tüm Üniversiteler</option>';
-      universities.forEach(u => { const o=document.createElement('option'); o.value=u; o.textContent=u; uf.appendChild(o); });
-    }
-    if(sf) {
-      sf.innerHTML = '<option value="all">Tüm Uzmanlıklar</option>';
-      specializations.forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s; sf.appendChild(o); });
-    }
+
+    fill(yf, 'Tüm Yıllar', years, y => y + ' Mezunu');
+    fill(cf, 'Tüm Şehirler', cities);
+    fill(uf, 'Tüm Üniversiteler', universities);
+    fill(sf, 'Tüm Uzmanlıklar', specializations);
   }
 
+  let searchDebounceTimer = null;
+  window.onSearchInput = function() {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => filterAlumni(), 250);
+  };
+
+  function getFilterState() {
+    return {
+      q: document.getElementById('searchInput')?.value.trim() || '',
+      year: document.getElementById('yearFilter')?.value || 'all',
+      city: document.getElementById('cityFilter')?.value || 'all',
+      university: document.getElementById('universityFilter')?.value || 'all',
+      specialization: document.getElementById('specializationFilter')?.value || 'all',
+      mentor: document.getElementById('mentorOnly')?.checked || false,
+      sort: document.getElementById('sortFilter')?.value || 'newest'
+    };
+  }
+
+  // Filtre durumu URL'de tutulur: aramalar paylaşılabilir ve geri tuşuyla korunur
+  function syncFiltersToURL(f) {
+    const params = new URLSearchParams();
+    if (f.q) params.set('q', f.q);
+    if (f.year !== 'all') params.set('year', f.year);
+    if (f.city !== 'all') params.set('city', f.city);
+    if (f.university !== 'all') params.set('uni', f.university);
+    if (f.specialization !== 'all') params.set('spec', f.specialization);
+    if (f.mentor) params.set('mentor', '1');
+    if (f.sort !== 'newest') params.set('sort', f.sort);
+    const qs = params.toString();
+    history.replaceState(null, '', qs ? '?' + qs : window.location.pathname);
+  }
+
+  function renderActiveFilterChips(f) {
+    const wrap = document.getElementById('activeFilters');
+    if (!wrap) return;
+    const chips = [];
+    if (f.q) chips.push(['q', 'Arama: "' + f.q + '"']);
+    if (f.year !== 'all') chips.push(['year', f.year + ' Mezunu']);
+    if (f.city !== 'all') chips.push(['city', f.city]);
+    if (f.university !== 'all') chips.push(['university', f.university]);
+    if (f.specialization !== 'all') chips.push(['specialization', f.specialization]);
+    if (f.mentor) chips.push(['mentor', 'Sadece Mentörler']);
+    if (!chips.length) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = chips.map(([key, label]) =>
+      `<button class="filter-chip" onclick="clearFilter('${key}')" aria-label="${ASDFL.escapeAttr(label)} filtresini kaldır">${ASDFL.escapeHTML(label)} <i data-lucide="x" style="width:.85em;height:.85em"></i></button>`
+    ).join('') + `<button class="filter-chip filter-chip-clear" onclick="clearFilter('all')">Tümünü Temizle</button>`;
+    setTimeout(() => ASDFL.refreshIcons(wrap), 10);
+  }
+
+  window.clearFilter = function(key) {
+    const all = key === 'all';
+    if (all || key === 'q') { const el = document.getElementById('searchInput'); if (el) el.value = ''; }
+    if (all || key === 'year') { const el = document.getElementById('yearFilter'); if (el) el.value = 'all'; }
+    if (all || key === 'city') { const el = document.getElementById('cityFilter'); if (el) el.value = 'all'; }
+    if (all || key === 'university') { const el = document.getElementById('universityFilter'); if (el) el.value = 'all'; }
+    if (all || key === 'specialization') { const el = document.getElementById('specializationFilter'); if (el) el.value = 'all'; }
+    if (all || key === 'mentor') { const el = document.getElementById('mentorOnly'); if (el) el.checked = false; }
+    filterAlumni();
+  };
+
   window.filterAlumni = function() {
-    const search = document.getElementById('searchInput')?.value.toLocaleLowerCase('tr') || '';
-    const year = document.getElementById('yearFilter')?.value || 'all';
-    const city = document.getElementById('cityFilter')?.value || 'all';
-    const university = document.getElementById('universityFilter')?.value || 'all';
-    const specialization = document.getElementById('specializationFilter')?.value || 'all';
-    const mentorOnly = document.getElementById('mentorOnly')?.checked || false;
-    
+    const f = getFilterState();
+    const search = f.q.toLocaleLowerCase('tr');
+
     let filtered = allAlumni.filter(a => {
-      const matchSearch = !search || 
-        (a.name && a.name.toLocaleLowerCase('tr').includes(search)) || 
+      const matchSearch = !search ||
+        (a.name && a.name.toLocaleLowerCase('tr').includes(search)) ||
         (a.job && a.job.toLocaleLowerCase('tr').includes(search)) ||
         (a.company && a.company.toLocaleLowerCase('tr').includes(search)) ||
         (a.university && a.university.toLocaleLowerCase('tr').includes(search)) ||
         (a.specialization && a.specialization.toLocaleLowerCase('tr').includes(search)) ||
         (a.academic_title && a.academic_title.toLocaleLowerCase('tr').includes(search));
-        
-      const matchYear = year === 'all' || a.grad_year == year;
-      const matchCity = city === 'all' || a.city === city;
-      const matchUniversity = university === 'all' || a.university === university;
-      const matchSpecialization = specialization === 'all' || a.specialization === specialization;
-      const matchMentor = !mentorOnly || (a.mentor && a.role !== 'Öğrenci');
-      
+
+      const matchYear = f.year === 'all' || a.grad_year == f.year;
+      const matchCity = f.city === 'all' || a.city === f.city;
+      const matchUniversity = f.university === 'all' || a.university === f.university;
+      const matchSpecialization = f.specialization === 'all' || a.specialization === f.specialization;
+      const matchMentor = !f.mentor || (a.mentor && a.role !== 'Öğrenci');
+
       return matchSearch && matchYear && matchCity && matchUniversity && matchSpecialization && matchMentor;
     });
+
+    if (f.sort === 'name') filtered.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
+    else if (f.sort === 'year-desc') filtered.sort((a, b) => (b.grad_year || 0) - (a.grad_year || 0));
+    else if (f.sort === 'year-asc') filtered.sort((a, b) => (a.grad_year || 0) - (b.grad_year || 0));
+    // 'newest': fetch sırası zaten created_at DESC
+
+    syncFiltersToURL(f);
+    renderActiveFilterChips(f);
     renderAlumniGrid(filtered);
   };
 
@@ -224,11 +332,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const count = document.getElementById('alumniCount');
     if(!grid) return;
     if(count) count.textContent = `${list.length} mezun listeleniyor`;
+
+    const loadMoreWrap = document.getElementById('loadMoreWrap');
+    if (loadMoreWrap) {
+      loadMoreWrap.innerHTML = hasMoreAlumni
+        ? '<button class="btn btn-secondary" id="loadMoreBtn" onclick="loadMoreAlumni()">Daha Fazla Mezun Yükle</button>'
+        : '';
+    }
+
     if(list.length === 0) {
       grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted)">
         <div style="font-size:3rem;margin-bottom:1rem"><i data-lucide="search" style="width:1em;height:1em"></i></div>
         <p>Arama kriterlerinize uygun mezun bulunamadı.</p>
+        <button class="btn btn-secondary btn-sm" style="margin-top:1rem" onclick="clearFilter('all')">Filtreleri Temizle</button>
       </div>`;
+      setTimeout(() => ASDFL.refreshIcons(), 10);
       return;
     }
     grid.innerHTML = list.map(a => {
@@ -239,14 +357,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         jobCompanyText = a.company;
       }
       const safeId = ASDFL.jsString(a.id);
-      
+      const profileUrl = `profil.html?id=${encodeURIComponent(a.id)}`;
+
       return `
-      <div class="card alumni-card-full lift reveal">
+      <div class="card alumni-card-full lift reveal" onclick="if(!event.target.closest('button,a'))window.location.href='${profileUrl}'" role="link" tabindex="0" onkeydown="if(event.key==='Enter'&&!event.target.closest('button,a'))window.location.href='${profileUrl}'">
         <div class="ac-header">
           ${ASDFL.getAvatarHTML(a, 'avatar avatar-lg')}
           <div class="ac-info">
             <strong>${a.academic_title ? ASDFL.escapeHTML(a.academic_title) + ' ' : ''}${ASDFL.escapeHTML(a.name)}</strong>
-            <span>${ASDFL.escapeHTML(a.grad_year || 'Bilinmiyor')} Mezunu</span>
+            <span>${ASDFL.escapeHTML(a.grad_year || 'Bilinmiyor')} Mezunu${a.mentor ? ' <span class="badge badge-teal ac-mentor-badge"><i data-lucide="sparkles" style="width:.9em;height:.9em"></i> Mentör</span>' : ''}</span>
           </div>
         </div>
         ${jobCompanyText ? `<div class="ac-job"><i data-lucide="briefcase" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(jobCompanyText)}</div>` : ''}
@@ -261,16 +380,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
           ` : `<div style="font-size:.82rem;color:var(--text-muted);line-height:1.5">${ASDFL.escapeHTML(a.bio)}</div>`
         ) : ''}
-        
+
         ${getContactHTML(a)}
-        
-        <div class="ac-tags">
-          ${a.mentor ? '<span class="badge badge-teal"><i data-lucide="sparkles" style="width:1em;height:1em"></i> Mentör</span>' : ''}
-          ${a.specialization ? `<span class="badge badge-gold"><i data-lucide="award" style="width:1.1em;height:1.1em;margin-right:2px"></i> ${ASDFL.escapeHTML(a.specialization)}</span>` : ''}
-          ${a.grad_year ? `<span class="badge badge-blue">${ASDFL.escapeHTML(a.grad_year)}</span>` : ''}
-        </div>
+
         <div class="ac-actions">
-          <button class="btn btn-ghost btn-sm" onclick="window.location.href='profil.html?id=${encodeURIComponent(a.id)}'">Profili Gör</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.location.href='${profileUrl}'">Profili Gör</button>
           ${a.mentor ? `<button class="btn btn-secondary btn-sm" onclick="openMentorshipRequestModal(${safeId}, ${ASDFL.jsString(a.name)})">Bağlantı Kur</button>` : ''}
         </div>
       </div>`;
@@ -280,13 +394,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderYillar() {
-    const grid = document.getElementById('yillarGrid');
-    if(!grid) return;
-    const allYears = [];
-    for(let y = 2025; y >= 1992; y--) allYears.push(y);
-    grid.innerHTML = allYears.map(y => {
-      const count = allAlumni.filter(a => a.grad_year == y).length;
-      return `
+    const container = document.getElementById('yillarGrid');
+    if(!container) return;
+
+    // Yıllar onluk dönemlere gruplanır (2020'ler, 2010'lar...) — en yeni dönem üstte
+    const decades = new Map();
+    for(let y = new Date().getFullYear(); y >= 1992; y--) {
+      const d = Math.floor(y / 10) * 10;
+      if (!decades.has(d)) decades.set(d, []);
+      decades.get(d).push(y);
+    }
+
+    container.innerHTML = [...decades.entries()].map(([decade, years]) => {
+      const decadeCount = allAlumni.filter(a => a.grad_year >= decade && a.grad_year <= decade + 9).length;
+      const yearCards = years.map(y => {
+        const count = allAlumni.filter(a => a.grad_year == y).length;
+        return `
         <div class="card yil-card reveal" onclick="openYilModal(${y})">
           <div>
             <div class="yil-number">${y}</div>
@@ -297,7 +420,22 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <div class="yil-arrow"><i data-lucide="chevron-right" style="width:1.2rem;height:1.2rem"></i></div>
         </div>`;
+      }).join('');
+
+      // Onluğun okunuşuna göre çoğul eki: on→lar, yirmi→ler, doksan→lar...
+      const suffixMap = { 0: 'ler', 10: 'lar', 20: 'ler', 30: 'lar', 40: 'lar', 50: 'ler', 60: 'lar', 70: 'ler', 80: 'ler', 90: 'lar' };
+      const suffix = suffixMap[decade % 100];
+      return `
+      <section class="decade-section">
+        <div class="decade-header">
+          <h3>${decade}'${suffix}</h3>
+          <div class="decade-line"></div>
+          <span>${decadeCount > 0 ? decadeCount + ' mezun' : 'Henüz kayıt yok'}</span>
+        </div>
+        <div class="yillar-grid">${yearCards}</div>
+      </section>`;
     }).join('');
+
     ASDFL.initReveal();
     setTimeout(() => ASDFL.refreshIcons(), 10);
   }
@@ -458,14 +596,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   populateFilters();
 
-  // URL parametresi ile filtreleme desteği (?city=İstanbul vb.)
+  // URL parametrelerinden filtre durumunu geri yükle (?q=&year=&city=&uni=&spec=&mentor=&sort=)
   const urlParams = new URLSearchParams(window.location.search);
-  const cityParam = urlParams.get('city');
-  if (cityParam) {
-    const cityFilterEl = document.getElementById('cityFilter');
-    if (cityFilterEl) {
-      cityFilterEl.value = cityParam;
-    }
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+  setVal('searchInput', urlParams.get('q'));
+  setVal('yearFilter', urlParams.get('year'));
+  setVal('cityFilter', urlParams.get('city'));
+  setVal('universityFilter', urlParams.get('uni'));
+  setVal('specializationFilter', urlParams.get('spec'));
+  setVal('sortFilter', urlParams.get('sort'));
+  if (urlParams.get('mentor') === '1') {
+    const el = document.getElementById('mentorOnly');
+    if (el) el.checked = true;
   }
 
   filterAlumni();

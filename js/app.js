@@ -1246,7 +1246,10 @@ const ASDFL = {
   openModal(id) {
     const m = document.getElementById(id);
     if (!m) return;
-    m.classList.add('open');
+    m.style.display = 'flex';
+    setTimeout(() => {
+      m.classList.add('open');
+    }, 10);
     // iOS Safari scroll lock: body'yi fixed yap, scroll atlamasını önle
     const scrollY = window.scrollY;
     document.body.style.top = `-${scrollY}px`;
@@ -1257,6 +1260,11 @@ const ASDFL = {
     const m = document.getElementById(id);
     if (!m) return;
     m.classList.remove('open');
+    setTimeout(() => {
+      if (!m.classList.contains('open')) {
+        m.style.display = 'none';
+      }
+    }, 300);
     // Başka açık modal var mı kontrol et
     const anyOpen = document.querySelector('.modal-overlay.open');
     if (!anyOpen) {
@@ -1266,6 +1274,22 @@ const ASDFL = {
       document.body.style.top = '';
       window.scrollTo(0, scrollY);
     }
+  },
+
+  // Fotoğrafsız avatarlara isimden türetilen tutarlı bir renk verir
+  avatarPalette(name) {
+    const palette = [
+      ['#F4A836', 'rgba(244,168,54,.12)'],
+      ['#2DD4BF', 'rgba(45,212,191,.12)'],
+      ['#60A5FA', 'rgba(96,165,250,.12)'],
+      ['#C084FC', 'rgba(192,132,252,.12)'],
+      ['#FB7185', 'rgba(251,113,133,.12)'],
+      ['#4ADE80', 'rgba(74,222,128,.12)']
+    ];
+    let h = 0;
+    const s = String(name || '');
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return palette[h % palette.length];
   },
 
   getAvatarHTML(user, sizeClass = '', extraStyle = '') {
@@ -1297,7 +1321,14 @@ const ASDFL = {
         </div>
       `;
     }
-    return `<div class="${this.escapeAttr(finalClass)}" style="display: flex; align-items: center; justify-content: center; ${this.escapeAttr(extraStyle)}">${initials}</div>`;
+    // Navbar'daki profile-avatar altın markalamasını korur; diğer initials
+    // avatarları isim bazlı renklendirilir.
+    let colorStyle = '';
+    if (!sizeClass.includes('profile-avatar')) {
+      const [fg, bg] = this.avatarPalette(user.name || user.initials);
+      colorStyle = `background: ${bg}; color: ${fg};`;
+    }
+    return `<div class="${this.escapeAttr(finalClass)}" style="display: flex; align-items: center; justify-content: center; ${this.escapeAttr(extraStyle)} ${colorStyle}">${initials}</div>`;
   },
 
   setAvatarElement(element, user) {
@@ -1828,6 +1859,10 @@ const ASDFL = {
 
     if (this.currentUser) {
       this.initNotificationBell();
+      if (!this._consentCheckRun) {
+        this._consentCheckRun = true;
+        this.checkRequiredConsents();
+      }
     } else if (this._notificationsInitialized) {
       this.teardownNotifications();
     }
@@ -2449,6 +2484,198 @@ const ASDFL = {
     this.initCities();
     this.initAutocomplete();
     this.setupSearchableDropdowns();
+  },
+
+  async checkRequiredConsents() {
+    if (!this.currentUser) return;
+    
+    let hasConsents = false;
+    if (this.supabase) {
+      try {
+        const { data, error } = await this.supabase
+          .from('user_legal_consents')
+          .select('document_type, accepted')
+          .eq('user_id', this.currentUser.id)
+          .eq('document_version', this.legalDocumentVersion);
+        
+        if (!error && data) {
+          const kvkk = data.find(c => c.document_type === 'kvkk_notice' && c.accepted);
+          const terms = data.find(c => c.document_type === 'terms_and_community' && c.accepted);
+          if (kvkk && terms) {
+            hasConsents = true;
+          }
+        }
+      } catch (err) {
+        console.warn('Error checking legal consents on Supabase:', err);
+      }
+    } else {
+      // Local check
+      try {
+        const local = JSON.parse(this._storage.getItem('asdfl_legal_consents') || '[]');
+        const userConsents = local.filter(c => c.user_id === this.currentUser.id && c.document_version === this.legalDocumentVersion);
+        const kvkk = userConsents.find(c => c.document_type === 'kvkk_notice' && c.accepted);
+        const terms = userConsents.find(c => c.document_type === 'terms_and_community' && c.accepted);
+        if (kvkk && terms) {
+          hasConsents = true;
+        }
+      } catch (e) {}
+    }
+    
+    if (!hasConsents) {
+      this.showConsentPopup();
+    }
+  },
+
+  showConsentPopup() {
+    if (document.getElementById('legalConsentModal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'legalConsentModal';
+    modal.className = 'modal-overlay open';
+    modal.style.zIndex = '999999';
+
+    modal.innerHTML = `
+      <div class="modal" style="max-width: 520px; width: 100%; padding: 2.5rem; margin-top: 4rem; margin-bottom: 4rem; position: relative;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
+          <div style="width: 42px; height: 42px; background: rgba(212,175,55,0.1); border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; color: var(--gold-500);">
+            <i data-lucide="shield-check" style="width: 22px; height: 22px;"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-primary);">Üyelik İzinleri ve KVKK</h3>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Güncellenme: 18 Haziran 2026</span>
+          </div>
+        </div>
+        
+        <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5; margin-bottom: 1.5rem;">
+          Platformumuzu kullanmaya devam edebilmek için KVKK aydınlatma bildirimini ve kullanım koşullarını kabul etmeniz gerekmektedir. Lütfen aşağıdaki belgeleri inceleyerek onay verin.
+        </p>
+
+        <!-- Belgeler Linkleri -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem;">
+            <span style="color: var(--text-secondary);"><i data-lucide="file-text" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:0.4rem;"></i> KVKK Aydınlatma Bildirimi</span>
+            <a href="profil.html?tab=privacy" target="_blank" style="color: var(--gold-500); font-weight: 600; text-decoration: none;">İncele <i data-lucide="external-link" style="width:12px;height:12px;display:inline-block;"></i></a>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.75rem;">
+            <span style="color: var(--text-secondary);"><i data-lucide="file-text" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:0.4rem;"></i> Kullanım ve Topluluk Kuralları</span>
+            <a href="profil.html?tab=privacy" target="_blank" style="color: var(--gold-500); font-weight: 600; text-decoration: none;">İncele <i data-lucide="external-link" style="width:12px;height:12px;display:inline-block;"></i></a>
+          </div>
+        </div>
+
+        <!-- Onay Checkboxları -->
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem;">
+          <label style="display: flex; gap: 0.75rem; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="consentKvkk" style="margin-top: 0.2rem; cursor: pointer;" onchange="ASDFL.checkConsentValidity()">
+            <span style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
+              <strong>KVKK Aydınlatma Bildirimi</strong>'ni okudum ve onaylıyorum. <span style="color: var(--red-500);">*</span>
+            </span>
+          </label>
+          
+          <label style="display: flex; gap: 0.75rem; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="consentTerms" style="margin-top: 0.2rem; cursor: pointer;" onchange="ASDFL.checkConsentValidity()">
+            <span style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
+              <strong>Kullanım ve Topluluk Kuralları</strong>'nı kabul ediyorum. <span style="color: var(--red-500);">*</span>
+            </span>
+          </label>
+          
+          <label style="display: flex; gap: 0.75rem; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="consentContact" style="margin-top: 0.2rem; cursor: pointer;">
+            <span style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
+              İletişim bilgilerimin (e-posta ve telefon) diğer mezun ve öğrencilerle paylaşılmasına izin veriyorum. (İsteğe Bağlı)
+            </span>
+          </label>
+        </div>
+
+        <button id="btnSubmitConsents" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" disabled onclick="ASDFL.submitConsentsFromPopup()">
+          Onayla ve Devam Et <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    if (this.refreshIcons) this.refreshIcons();
+    document.body.style.overflow = 'hidden';
+  },
+
+  checkConsentValidity() {
+    const kvkk = document.getElementById('consentKvkk');
+    const terms = document.getElementById('consentTerms');
+    const btn = document.getElementById('btnSubmitConsents');
+    if (kvkk && terms && btn) {
+      btn.disabled = !(kvkk.checked && terms.checked);
+    }
+  },
+
+  async submitConsentsFromPopup() {
+    const kvkk = document.getElementById('consentKvkk')?.checked;
+    const terms = document.getElementById('consentTerms')?.checked;
+    const contact = document.getElementById('consentContact')?.checked;
+    const btn = document.getElementById('btnSubmitConsents');
+
+    if (!kvkk || !terms) return;
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block"></span> İşleniyor...';
+    }
+
+    const acceptedAt = new Date().toISOString();
+
+    if (this.supabase) {
+      try {
+        const rows = [
+          { user_id: this.currentUser.id, document_type: 'kvkk_notice', document_version: this.legalDocumentVersion, accepted: true, accepted_at: acceptedAt, source: 'popup' },
+          { user_id: this.currentUser.id, document_type: 'terms_and_community', document_version: this.legalDocumentVersion, accepted: true, accepted_at: acceptedAt, source: 'popup' },
+          { user_id: this.currentUser.id, document_type: 'optional_contact_sharing', document_version: this.legalDocumentVersion, accepted: contact, accepted_at: acceptedAt, source: 'popup' }
+        ];
+
+        const { error } = await this.supabase.from('user_legal_consents').insert(rows);
+        if (error) throw error;
+        
+        // Update user share settings
+        await this.supabase.from('profiles').update({
+          share_email: contact,
+          share_phone: contact
+        }).eq('id', this.currentUser.id);
+        
+      } catch (err) {
+        console.error('Error saving consents:', err);
+        this.toast('Onay kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = 'Onayla ve Devam Et <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>';
+        }
+        return;
+      }
+    } else {
+      // Local mode
+      try {
+        let local = JSON.parse(this._storage.getItem('asdfl_legal_consents') || '[]');
+        const rows = [
+          { user_id: this.currentUser.id, document_type: 'kvkk_notice', document_version: this.legalDocumentVersion, accepted: true, accepted_at: acceptedAt, source: 'popup' },
+          { user_id: this.currentUser.id, document_type: 'terms_and_community', document_version: this.legalDocumentVersion, accepted: true, accepted_at: acceptedAt, source: 'popup' },
+          { user_id: this.currentUser.id, document_type: 'optional_contact_sharing', document_version: this.legalDocumentVersion, accepted: contact, accepted_at: acceptedAt, source: 'popup' }
+        ];
+        local = local.concat(rows);
+        this._storage.setItem('asdfl_legal_consents', JSON.stringify(local));
+
+        // Update local user state
+        this.currentUser.share_email = contact;
+        this.currentUser.share_phone = contact;
+        this.currentUser.shareEmail = contact;
+        this.currentUser.sharePhone = contact;
+        this._storage.setItem('asdfl_user', JSON.stringify(this.currentUser));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    this.toast('İzinleriniz kaydedildi, teşekkürler!', 'success');
+    
+    // Close modal
+    const modal = document.getElementById('legalConsentModal');
+    if (modal) modal.remove();
+    document.body.style.overflow = '';
   }
 };
 

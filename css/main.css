@@ -222,7 +222,7 @@ a:hover { color: var(--gold-400); }
   backdrop-filter: blur(8px); 
   -webkit-backdrop-filter: blur(8px);
   z-index: var(--z-modal); 
-  display: flex; 
+  display: none; 
   align-items: flex-start;
   justify-content: center; 
   padding: 1.5rem;
@@ -233,7 +233,7 @@ a:hover { color: var(--gold-400); }
   opacity: 0; pointer-events: none; 
   transition: opacity var(--ease-normal); 
 }
-.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-overlay.open { display: flex; opacity: 1; pointer-events: all; }
 .modal { 
   background: var(--navy-800); 
   border: 1px solid var(--glass-border); 

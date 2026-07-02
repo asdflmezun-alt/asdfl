@@ -101,23 +101,80 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    const feed = allPosts.slice(0, 4);
+    // Sadece Herkes ile paylaşılan (hedef yılı ve şubesi olmayan) gönderileri göster
+    const publicPosts = allPosts.filter(p => p.target_year === null && p.target_section === null);
+    const feed = publicPosts.slice(0, 4);
     el.innerHTML = feed.map(p => {
       const d = new Date(p.created_at);
       const timeStr = d.toLocaleDateString('tr-TR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+      
+      let postText = p.content || '';
+      let feelingHtml = '';
+      let attachmentLabelHtml = '';
+      
+      if (postText.startsWith('{') && postText.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(postText);
+          if (parsed.richPost) {
+            postText = parsed.text || '';
+            if (parsed.feeling && parsed.feeling.emoji) {
+              feelingHtml = ` <span class="feed-feeling" style="font-size:0.8rem;color:var(--text-muted);font-weight:normal;margin-left:0.25rem;" title="${parsed.feeling.text}">— hissediyor ${parsed.feeling.emoji} ${parsed.feeling.text}</span>`;
+            }
+            if (parsed.attachment) {
+              const att = parsed.attachment;
+              if (att.type === 'photo') {
+                attachmentLabelHtml = `
+                  <div class="feed-att-preview" style="margin-top:0.75rem;border-radius:var(--radius-sm);overflow:hidden;max-height:160px;border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.2);">
+                    <img src="${window.safeURL(att.value)}" style="width:100%;height:100%;object-fit:cover;">
+                  </div>`;
+              } else if (att.type === 'video') {
+                attachmentLabelHtml = `
+                  <div class="feed-att-preview-label" style="font-size:0.75rem;color:var(--gold-500);margin-top:0.5rem;display:flex;align-items:center;gap:0.3rem;">
+                    <i data-lucide="video" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> <span>[Video İçeriği]</span>
+                  </div>`;
+              } else if (att.type === 'poll') {
+                const pollQuestion = att.value?.question || 'Anket';
+                attachmentLabelHtml = `
+                  <div class="feed-att-preview-label" style="font-size:0.75rem;color:var(--gold-500);margin-top:0.5rem;display:flex;align-items:center;gap:0.3rem;">
+                    <i data-lucide="bar-chart-3" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> <span>[Anket] ${ASDFL.escapeHTML(pollQuestion)}</span>
+                  </div>`;
+              } else if (att.type === 'event') {
+                const eventTitle = att.value?.title || 'Etkinlik';
+                attachmentLabelHtml = `
+                  <div class="feed-att-preview-label" style="font-size:0.75rem;color:var(--gold-500);margin-top:0.5rem;display:flex;align-items:center;gap:0.3rem;">
+                    <i data-lucide="calendar" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> <span>[Etkinlik] ${ASDFL.escapeHTML(eventTitle)}</span>
+                  </div>`;
+              }
+            }
+          }
+        } catch (e) {
+          // Not a JSON post
+        }
+      }
+      
+      const authorId = p.author_id || '';
+
       return `
       <div class="card feed-card reveal">
         <div class="feed-header">
-          ${ASDFL.getAvatarHTML({ initials: p.initials, avatar_url: p.profiles?.avatar_url, avatar_position: p.profiles?.avatar_position, name: p.author }, 'post-avatar')}
-          <div class="info">
-            <strong>${ASDFL.escapeHTML(p.author)}</strong>
+          <div style="cursor:pointer" onclick="window.location.href='profil.html?id=${encodeURIComponent(authorId)}'">
+            ${ASDFL.getAvatarHTML({ initials: p.initials, avatar_url: p.profiles?.avatar_url, avatar_position: p.profiles?.avatar_position, name: p.author }, 'post-avatar')}
+          </div>
+          <div class="info" style="cursor:pointer;flex:1" onclick="window.location.href='profil.html?id=${encodeURIComponent(authorId)}'">
+            <div>
+              <strong>${ASDFL.escapeHTML(p.author)}</strong>
+              ${feelingHtml}
+            </div>
             <span>${ASDFL.escapeHTML(p.authorYear || 'Bilinmiyor')} Mezunu · ${ASDFL.escapeHTML(timeStr)}</span>
           </div>
         </div>
-        <div class="feed-body">${ASDFL.escapeHTML(p.content)}</div>
+        <div class="feed-body">
+          <p style="white-space:pre-wrap;margin:0;">${ASDFL.escapeHTML(postText)}</p>
+          ${attachmentLabelHtml}
+        </div>
         <div class="feed-footer">
-          <button class="feed-action" onclick="ASDFL.toast('Beğenildi!','success')"><i data-lucide="heart" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${p.likes || 0}</button>
-          <button class="feed-action"><i data-lucide="message-circle" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> 0</button>
+          <button class="feed-action" onclick="ASDFL.toast('Beğenildi!','success')"><i data-lucide="heart" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${p.likes_count || p.likes || 0}</button>
+          <button class="feed-action" onclick="window.location.href='topluluk.html'"><i data-lucide="message-circle" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> Yorum Yaz</button>
         </div>
       </div>`;
     }).join('');

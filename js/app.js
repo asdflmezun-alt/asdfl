@@ -2065,8 +2065,8 @@ const ASDFL = {
 
   async handleRegister() {
     const role = document.getElementById('regRole').value;
-    const name = document.getElementById('regName').value;
-    const email = document.getElementById('regEmail').value;
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim().toLowerCase();
     const pass = document.getElementById('regPass').value;
     
     const gradYear = document.getElementById('regGradYear')?.value;
@@ -2201,6 +2201,7 @@ const ASDFL = {
 
   async quickLogin(email = 'admin@admin.com', pass = 'admin') {
     if (!email || !pass) { this.toast('Lütfen tüm alanları doldurun.', 'warning'); return; }
+    email = email.trim().toLowerCase();
     
     if (this.supabase) {
       const { data, error } = await this.supabase.auth.signInWithPassword({ email, password: pass });

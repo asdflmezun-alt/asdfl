@@ -560,14 +560,25 @@
     if (ASDFL.supabase) {
       try {
         if (alreadyLiked) {
-          await ASDFL.supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', ASDFL.currentUser.id);
-          await ASDFL.supabase.from('posts').update({ likes_count: count }).eq('id', postId);
+          const { error } = await ASDFL.supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', ASDFL.currentUser.id);
+          if (error) throw error;
         } else {
-          await ASDFL.supabase.from('post_likes').insert({ post_id: postId, user_id: ASDFL.currentUser.id });
-          await ASDFL.supabase.from('posts').update({ likes_count: count }).eq('id', postId);
+          const { error } = await ASDFL.supabase.from('post_likes').insert({ post_id: postId, user_id: ASDFL.currentUser.id });
+          if (error) throw error;
         }
       } catch (err) {
         console.error('Error updating like in Supabase:', err);
+        // Rollback optimistic update on error
+        if (alreadyLiked) {
+          likedPosts.add(postId);
+          btn.classList.add('liked');
+          countEl.textContent = count + 1;
+        } else {
+          likedPosts.delete(postId);
+          btn.classList.remove('liked');
+          countEl.textContent = Math.max(0, count - 1);
+        }
+        ASDFL.toast('Beğeni kaydedilemedi, lütfen tekrar deneyin.', 'error');
       }
     } else {
       // Çevrimdışı mod yerel kaydetme

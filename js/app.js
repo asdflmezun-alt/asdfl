@@ -1744,6 +1744,12 @@ const ASDFL = {
     }
 
     if (this.currentUser) {
+      // Remove login/register modals to prevent aggressive Safari Autofill scans from prompting Keychain credentials
+      const loginM = document.getElementById('loginModal');
+      const registerM = document.getElementById('registerModal');
+      if (loginM) loginM.remove();
+      if (registerM) registerM.remove();
+
       const avatarUrl = this.currentUser.avatar_url || this.currentUser.avatarUrl || '';
       const name = this.currentUser.name || '';
       const role = this.currentUser.role || '';

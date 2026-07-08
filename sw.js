@@ -1,6 +1,6 @@
 // ASDFL Mezunlar Derneği — service worker
 // Bump CACHE_VERSION whenever a deploy should force-invalidate old caches.
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v6';
 const CACHE_NAME = `asdfl-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [

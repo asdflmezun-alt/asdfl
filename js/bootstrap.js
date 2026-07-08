@@ -20,7 +20,21 @@
   };
 
   if ('serviceWorker' in navigator) {
+    const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
     window.addEventListener('load', () => {
+      if (isLocalDev) {
+        // Yerel geliştirmede SW devre dışı: eski kayıt ve önbellekler bayat dosya
+        // servis etmesin diye temizlenir.
+        navigator.serviceWorker.getRegistrations()
+          .then(regs => regs.forEach(reg => reg.unregister()))
+          .catch(() => {});
+        if (window.caches) {
+          caches.keys()
+            .then(keys => keys.forEach(key => { if (key.startsWith('asdfl-')) caches.delete(key); }))
+            .catch(() => {});
+        }
+        return;
+      }
       navigator.serviceWorker.register('sw.js').catch(() => {});
     });
   }

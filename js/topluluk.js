@@ -58,6 +58,10 @@
     buildSidebar();
     await loadFeed('global');
     initComposeAttachments();
+    if (isLoggedIn) {
+      initMentionAutocomplete();
+      subscribeFeedRealtime();
+    }
     
     // Arama Çubuğu Event Listener
     const searchInput = document.getElementById('feedSearchInput');
@@ -80,7 +84,7 @@
     if (ASDFL.supabase) {
       const { data } = await ASDFL.supabase
         .from('profiles')
-        .select('id,name,role,grad_year,class_section,job,avatar_url,avatar_position,academic_title,specialization')
+        .select('id,name,role,grad_year,class_section,job,avatar_url,avatar_position,academic_title,specialization,mentor')
         .eq('id', ASDFL.currentUser.id)
         .single();
       myProfile = data;
@@ -173,6 +177,21 @@
 
     const commentsCountEl = document.getElementById('userMiniCommentsCount');
     if (commentsCountEl) commentsCountEl.textContent = commentsCount;
+
+    // Mevcut sayaçlardan hesaplanan profil rozetleri
+    const badgesEl = document.getElementById('userMiniBadges');
+    if (badgesEl) {
+      const badges = [];
+      if (myProfile?.mentor) badges.push(['sparkles', 'Mentör']);
+      if (postsCount >= 10) badges.push(['flame', 'Aktif Yazar']);
+      else if (postsCount >= 1) badges.push(['pencil', 'İlk Gönderi']);
+      if (commentsCount >= 10) badges.push(['message-circle', 'Sohbetçi']);
+      badgesEl.innerHTML = badges.map(([icon, label]) =>
+        `<span class="user-mini-badge"><i data-lucide="${icon}" style="width:.8rem;height:.8rem"></i> ${label}</span>`
+      ).join('');
+      badgesEl.classList.toggle('hidden', badges.length === 0);
+      setTimeout(() => ASDFL.refreshIcons(badgesEl), 10);
+    }
   }
 
   /* ---------- Sidebar ---------- */
@@ -233,6 +252,11 @@
     if (!container) return;
     container.innerHTML = '<div class="feed-loading"><div class="spinner"></div><span>Yükleniyor...</span></div>';
 
+    // Akış yenilendiğinde "yeni paylaşım" şeridini sıfırla
+    pendingNewPosts = 0;
+    const newPostsBanner = document.getElementById('newPostsBanner');
+    if (newPostsBanner) newPostsBanner.classList.add('hidden');
+
     if (!ASDFL.currentUser) {
       container.innerHTML = `
         <div class="feed-empty">
@@ -252,10 +276,11 @@
     let query = ASDFL.supabase
       .from('posts')
       .select(`
-        id, content, likes_count, created_at, target_year, target_section,
+        id, content, likes_count, created_at, target_year, target_section, pinned,
         profiles!author_id (id, name, job, grad_year, class_section, avatar_url, avatar_position, academic_title, specialization),
         post_comments(id)
       `)
+      .order('pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(40);
 
@@ -341,6 +366,23 @@
 
     container.innerHTML = filtered.map(post => renderPost(post)).join('');
     setTimeout(() => ASDFL.refreshIcons(), 10);
+    handlePostDeepLink();
+  }
+
+  /* ---------- Paylaşılan #post- linkiyle gelen ziyaretçiyi gönderiye götür ---------- */
+  let deepLinkHandled = false;
+  function handlePostDeepLink() {
+    if (deepLinkHandled) return;
+    const hash = window.location.hash || '';
+    if (!hash.startsWith('#post-')) return;
+    const el = document.getElementById(hash.slice(1));
+    if (!el) return; // gönderi bu akış sayfasında yoksa sessizce geç
+    deepLinkHandled = true;
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('highlighted');
+      setTimeout(() => el.classList.remove('highlighted'), 2500);
+    }, 150);
   }
 
   /* ---------- Filtre Seçimi & Hashtag Tetikleme ---------- */
@@ -358,10 +400,31 @@
     filterAndRenderPosts();
   };
 
-  /* ---------- Hashtagleri Tıklanabilir Yapma ve HTML Kaçış ---------- */
-  function formatPostText(str) {
-    const escaped = String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-    return escaped.replace(/#([a-zA-Z0-9ĞğÜüŞşİıÖöÇç_]+)/g, '<span class="hashtag" onclick="window.filterByHashtag(\'$1\')">#$1</span>');
+  /* ---------- Hashtag + @Mention + URL Linkleme ve HTML Kaçış ---------- */
+  function formatPostText(str, mentions = []) {
+    // URL'ler önce yer tutucuya alınır: hashtag/mention işlemleri link içini bozmasın
+    const links = [];
+    const tokenized = String(str ?? '').replace(/https?:\/\/[^\s<>"']+/g, (url) => {
+      links.push(url);
+      return '\u0000LINK' + (links.length - 1) + '\u0000';
+    });
+    const escaped = tokenized.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    let out = escaped.replace(/#([a-zA-Z0-9ĞğÜüŞşİıÖöÇç_]+)/g, '<span class="hashtag" onclick="window.filterByHashtag(\'$1\')">#$1</span>');
+    // @Mention'ları profil linkine çevir (isimler de aynı şekilde escape edilir)
+    (mentions || []).forEach(m => {
+      if (!m || !m.id || !m.name) return;
+      const escName = String(m.name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      out = out.split('@' + escName).join(`<a class="mention-link" href="profil.html?id=${encodeURIComponent(m.id)}">@${escName}</a>`);
+    });
+    // URL'leri güvenli tıklanabilir linklere çevir
+    out = out.replace(/\u0000LINK(\d+)\u0000/g, (_, i) => {
+      const url = links[Number(i)] || '';
+      const safe = ASDFL.safeURL(url);
+      if (!safe) return escapeHtml(url);
+      const display = url.length > 45 ? url.slice(0, 42) + '…' : url;
+      return `<a class="post-link" href="${ASDFL.escapeAttr(safe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(display)}</a>`;
+    });
+    return out;
   }
 
   function renderPost(post) {
@@ -398,13 +461,15 @@
     let postText = post.content || '';
     let attachmentHtml = '';
     let feelingHtml = '';
+    let postMentions = [];
 
     if (postText.trim().startsWith('{') && postText.trim().endsWith('}')) {
       try {
         const parsed = JSON.parse(postText);
         if (parsed.richPost) {
           postText = parsed.text || '';
-          
+          if (Array.isArray(parsed.mentions)) postMentions = parsed.mentions;
+
           if (parsed.feeling) {
             feelingHtml = `<span class="feeling-text">— ${escapeHtml(parsed.feeling.emoji || '')} ${escapeHtml(parsed.feeling.text || '')} hissediyor</span>`;
           }
@@ -485,8 +550,39 @@
       }
     }
 
+    const isAdmin = (myProfile?.role === 'Admin') || (ASDFL.currentUser?.role === 'Admin');
+    const isMyPost = author?.id && author.id === ASDFL.currentUser?.id;
+
+    // Metindeki ilk URL için alan adı etiketli bağlantı kartı
+    let linkCardHtml = '';
+    const firstUrlMatch = String(postText).match(/https?:\/\/[^\s<>"']+/);
+    if (firstUrlMatch) {
+      const safeLink = ASDFL.safeURL(firstUrlMatch[0]);
+      if (safeLink) {
+        let host = '';
+        try { host = new URL(safeLink).hostname.replace(/^www\./, ''); } catch (e) {}
+        linkCardHtml = `
+          <a class="link-attach-card" href="${ASDFL.escapeAttr(safeLink)}" target="_blank" rel="noopener noreferrer">
+            <div class="link-attach-icon"><i data-lucide="globe"></i></div>
+            <div class="link-attach-info">
+              <span class="link-attach-domain">${escapeHtml(host)}</span>
+              <span class="link-attach-url">${escapeHtml(safeLink.length > 60 ? safeLink.slice(0, 57) + '…' : safeLink)}</span>
+            </div>
+            <i data-lucide="external-link" style="width:1rem;height:1rem;color:var(--text-muted);flex-shrink:0"></i>
+          </a>`;
+      }
+    }
+
+    const moderationBtn = (isMyPost || isAdmin)
+      ? `<button class="post-action-btn post-action-danger" style="margin-left:auto" onclick="window.deletePost(${safePostId})" title="Gönderiyi sil">
+           <i data-lucide="trash-2" style="width:1.1rem;height:1.1rem"></i>
+         </button>`
+      : `<button class="post-action-btn" style="margin-left:auto" onclick="window.openReportModal(${safePostId})" title="Gönderiyi şikâyet et">
+           <i data-lucide="flag" style="width:1.1rem;height:1.1rem"></i>
+         </button>`;
+
     return `
-      <div class="post-card" id="post-${safePostIdAttr}">
+      <div class="post-card${post.pinned ? ' pinned' : ''}" id="post-${safePostIdAttr}">
         <div class="post-header">
           <div style="cursor:pointer" onclick="window.location.href='profil.html?id=${encodeURIComponent(author?.id || '')}'">
             ${ASDFL.getAvatarHTML({ initials, avatar_url: author?.avatar_url, avatar_position: author?.avatar_position, name }, 'post-avatar')}
@@ -497,10 +593,11 @@
           </div>
           <div class="post-time-audience">
             <span class="post-time">${escapeHtml(time)}</span>
+            ${post.pinned ? '<span class="pinned-badge"><i data-lucide="pin" style="width:.8rem;height:.8rem"></i> Sabitlendi</span>' : ''}
             ${audienceBadge}
           </div>
         </div>
-        <div class="post-body">${formatPostText(postText)} ${attachmentHtml}</div>
+        <div class="post-body">${formatPostText(postText, postMentions)} ${attachmentHtml} ${linkCardHtml}</div>
         <div class="post-actions">
           <button class="post-action-btn ${liked ? 'liked' : ''}" onclick="window.toggleLike(${safePostId}, this)" id="like-${safePostIdAttr}">
             <i data-lucide="heart" style="width:1.1rem;height:1.1rem"></i>
@@ -514,6 +611,12 @@
             <i data-lucide="share-2" style="width:1.1rem;height:1.1rem"></i>
             <span>Paylaş</span>
           </button>
+          ${isAdmin ? `
+          <button class="post-action-btn" onclick="window.togglePin(${safePostId}, ${!post.pinned})" title="${post.pinned ? 'Sabitlemeyi kaldır' : 'Gönderiyi sabitle'}">
+            <i data-lucide="pin" style="width:1.1rem;height:1.1rem"></i>
+            <span>${post.pinned ? 'Kaldır' : 'Sabitle'}</span>
+          </button>` : ''}
+          ${moderationBtn}
         </div>
         
         <!-- YORUMLAR PANELİ -->
@@ -606,14 +709,120 @@
     }
   };
 
-  /* ---------- Paylaşım ---------- */
-  window.sharePost = function (postId) {
-    const url = window.location.origin + window.location.pathname + '#post-' + postId;
-    navigator.clipboard.writeText(url).then(() => {
-      ASDFL.toast('Bağlantı panoya kopyalandı! 🔗', 'success');
-    }).catch(() => {
-      ASDFL.toast('Kopyalanamadı, lütfen URL\'yi manuel kopyalayın.', 'info');
+  /* ---------- Gönderi Silme (Sahibi veya Admin) ---------- */
+  window.deletePost = async function (postId) {
+    if (!ASDFL.supabase || !ASDFL.currentUser) return;
+    if (!confirm('Bu gönderiyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) return;
+    const { error } = await ASDFL.supabase.from('posts').delete().eq('id', postId);
+    if (error) {
+      ASDFL.toast('Gönderi silinemedi: ' + error.message, 'error');
+      return;
+    }
+    ASDFL.toast('Gönderi silindi.', 'success');
+    await loadUserMiniCardStats();
+    await loadFeed(currentFeed);
+  };
+
+  /* ---------- Gönderi Şikâyet Etme ---------- */
+  window.openReportModal = function (postId) {
+    if (!ASDFL.currentUser) {
+      ASDFL.toast('Şikâyet etmek için giriş yapmalısınız.', 'warning');
+      return;
+    }
+    const idEl = document.getElementById('reportPostId');
+    const reasonEl = document.getElementById('reportReason');
+    if (idEl) idEl.value = postId;
+    if (reasonEl) reasonEl.value = '';
+    ASDFL.openModal('reportModal');
+  };
+
+  window.submitPostReport = async function () {
+    if (!ASDFL.supabase || !ASDFL.currentUser) return;
+    const postId = document.getElementById('reportPostId')?.value;
+    const reason = document.getElementById('reportReason')?.value?.trim();
+    if (!reason) {
+      ASDFL.toast('Lütfen şikâyet nedeninizi kısaca yazın.', 'warning');
+      return;
+    }
+    const { error } = await ASDFL.supabase.from('post_reports').insert({
+      post_id: postId,
+      reporter_id: ASDFL.currentUser.id,
+      reason
     });
+    if (error) {
+      if (error.code === '23505') ASDFL.toast('Bu gönderiyi zaten şikâyet ettiniz.', 'info');
+      else ASDFL.toast('Şikâyet gönderilemedi: ' + error.message, 'error');
+    } else {
+      ASDFL.toast('Şikâyetiniz yönetime iletildi. Teşekkürler. 🛡️', 'success');
+    }
+    ASDFL.closeModal('reportModal');
+  };
+
+  /* ---------- Gönderi Sabitleme (Admin) ---------- */
+  window.togglePin = async function (postId, pin) {
+    if (!ASDFL.supabase) return;
+    const { error } = await ASDFL.supabase.rpc('set_post_pinned', { target_post_id: postId, is_pinned: pin });
+    if (error) {
+      ASDFL.toast('Sabitleme başarısız: ' + error.message, 'error');
+      return;
+    }
+    ASDFL.toast(pin ? 'Gönderi sabitlendi 📌' : 'Sabitleme kaldırıldı', 'success');
+    await loadFeed(currentFeed);
+  };
+
+  /* ---------- Paylaşım ---------- */
+  window.sharePost = async function (postId) {
+    const url = window.location.origin + window.location.pathname + '#post-' + postId;
+
+    // Paylaşım metni: gönderinin ilk 120 karakteri
+    let shareText = 'ASDFL Topluluk paylaşımı';
+    const post = loadedPosts.find(p => p.id === postId);
+    if (post) {
+      let t = post.content || '';
+      if (t.trim().startsWith('{')) {
+        try { t = JSON.parse(t).text || ''; } catch (e) {}
+      }
+      if (t) shareText = t.length > 120 ? t.slice(0, 117) + '...' : t;
+    }
+
+    // 1) Mobilde yerel paylaşım menüsü (WhatsApp, Instagram, SMS...)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'ASDFL Mezunlar Derneği', text: shareText, url });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return; // kullanıcı menüyü kapattı
+        // paylaşım başarısızsa panoya kopyalamaya düş
+      }
+    }
+
+    // 2) Pano API (HTTPS gerektirir)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(url);
+        ASDFL.toast('Bağlantı panoya kopyalandı! 🔗', 'success');
+        return;
+      } catch (e) {}
+    }
+
+    // 3) Eski tarayıcı / güvensiz bağlam için execCommand yedeği
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      if (ok) {
+        ASDFL.toast('Bağlantı panoya kopyalandı! 🔗', 'success');
+        return;
+      }
+    } catch (e) {}
+
+    ASDFL.toast('Bağlantı: ' + url, 'info');
   };
 
   /* ---------- Gönderi Oluşturma ---------- */
@@ -667,13 +876,17 @@
       target_section = myProfile?.class_section || null;
     }
 
+    // Metinde hâlâ geçen @mention'ları doğrula (kullanıcı seçtikten sonra silmiş olabilir)
+    const confirmedMentions = activeMentions.filter(m => (content || '').includes('@' + m.name));
+
     let finalContent = content;
-    if (activeAttachment || activeFeeling) {
+    if (activeAttachment || activeFeeling || confirmedMentions.length) {
       finalContent = JSON.stringify({
         richPost: true,
         text: content || (activeAttachment?.type === 'poll' ? activeAttachment.value.question : ''),
         attachment: activeAttachment,
-        feeling: activeFeeling
+        feeling: activeFeeling,
+        mentions: confirmedMentions.length ? confirmedMentions : undefined
       });
     }
 
@@ -690,6 +903,7 @@
       document.getElementById('toplulukContent').value = '';
       activeAttachment = null;
       activeFeeling = null;
+      activeMentions = [];
       window.cancelPollCreator();
       renderAttachmentPreview();
       ASDFL.toast('Paylaşımın yayınlandı! 🚀', 'success');
@@ -1390,5 +1604,114 @@
   function initComposeAttachments() {
     activeAttachment = null;
     activeFeeling = null;
+  }
+
+  /* ---------- @Mention Autocomplete ---------- */
+  let activeMentions = [];
+  let mentionCandidates = null;
+
+  async function getMentionCandidates() {
+    if (mentionCandidates) return mentionCandidates;
+    try {
+      const alumni = await ASDFL.fetchAlumni({ limit: 200 });
+      mentionCandidates = (alumni || []).filter(a => a.name);
+    } catch (e) {
+      mentionCandidates = [];
+    }
+    return mentionCandidates;
+  }
+
+  function initMentionAutocomplete() {
+    const textarea = document.getElementById('toplulukContent');
+    if (!textarea) return;
+    let box = document.getElementById('mentionSuggestBox');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'mentionSuggestBox';
+      box.className = 'mention-suggest hidden';
+      textarea.parentElement.insertBefore(box, textarea.nextSibling);
+    }
+
+    textarea.addEventListener('input', async () => {
+      const caret = textarea.selectionStart;
+      const before = textarea.value.slice(0, caret);
+      const match = before.match(/@([\p{L}0-9._-]{1,30}(?: [\p{L}0-9._-]{0,30})?)$/u);
+      if (!match) { box.classList.add('hidden'); return; }
+      const q = match[1].toLocaleLowerCase('tr');
+      const candidates = (await getMentionCandidates())
+        .filter(a => a.name.toLocaleLowerCase('tr').includes(q))
+        .slice(0, 5);
+      if (!candidates.length) { box.classList.add('hidden'); return; }
+      box.innerHTML = candidates.map(a => `
+        <div class="mention-suggest-item" onclick="window.pickMention(${ASDFL.jsString(a.id)}, ${ASDFL.jsString(a.name)})">
+          ${ASDFL.getAvatarHTML(a, 'mention-suggest-avatar', 'width:26px;height:26px;font-size:0.65rem;border-radius:6px')}
+          <span>${escapeHtml(a.name)}</span>
+          <small>${escapeHtml(a.grad_year ? a.grad_year + ' Mezunu' : (a.job || ''))}</small>
+        </div>`).join('');
+      box.classList.remove('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!box.contains(e.target) && e.target !== textarea) box.classList.add('hidden');
+    });
+  }
+
+  window.pickMention = function (id, name) {
+    const textarea = document.getElementById('toplulukContent');
+    const box = document.getElementById('mentionSuggestBox');
+    if (!textarea) return;
+    const caret = textarea.selectionStart;
+    const before = textarea.value.slice(0, caret)
+      .replace(/@[\p{L}0-9._-]{0,30}(?: [\p{L}0-9._-]{0,30})?$/u, '@' + name + ' ');
+    textarea.value = before + textarea.value.slice(caret);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = before.length;
+    if (!activeMentions.some(m => m.id === id)) activeMentions.push({ id, name });
+    if (box) box.classList.add('hidden');
+  };
+
+  /* ---------- Canlı Akış (Realtime) ---------- */
+  let pendingNewPosts = 0;
+  let feedRealtimeChannel = null;
+
+  function ensureNewPostsBanner() {
+    let banner = document.getElementById('newPostsBanner');
+    if (banner) return banner;
+    const feed = document.getElementById('feedPosts');
+    if (!feed) return null;
+    banner = document.createElement('button');
+    banner.id = 'newPostsBanner';
+    banner.className = 'new-posts-banner hidden';
+    banner.onclick = async () => {
+      await loadFeed(currentFeed);
+      feed.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    feed.parentElement.insertBefore(banner, feed);
+    return banner;
+  }
+
+  function matchesCurrentFeed(post) {
+    if (currentFeed === 'global') return post.target_year == null && post.target_section == null;
+    if (currentFeed === 'year') return post.target_year == myProfile?.grad_year && post.target_section == null;
+    return post.target_year == myProfile?.grad_year && post.target_section === myProfile?.class_section;
+  }
+
+  function subscribeFeedRealtime() {
+    if (!ASDFL.supabase || typeof ASDFL.supabase.channel !== 'function' || feedRealtimeChannel) return;
+    feedRealtimeChannel = ASDFL.supabase
+      .channel('community-feed')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
+        const post = payload.new;
+        if (!post || post.author_id === ASDFL.currentUser?.id) return;
+        if (!matchesCurrentFeed(post)) return;
+        pendingNewPosts++;
+        const banner = ensureNewPostsBanner();
+        if (banner) {
+          banner.innerHTML = `<i data-lucide="arrow-up" style="width:1rem;height:1rem"></i> ${pendingNewPosts} yeni paylaşım — görmek için tıkla`;
+          banner.classList.remove('hidden');
+          setTimeout(() => ASDFL.refreshIcons(banner), 10);
+        }
+      })
+      .subscribe();
   }
 })();

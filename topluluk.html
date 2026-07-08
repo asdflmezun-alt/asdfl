@@ -1298,6 +1298,200 @@
   color: var(--gold-400);
 }
 
+/* =================== LINK PREVIEW =================== */
+.post-link {
+  color: var(--gold-400);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: rgba(244, 168, 54, 0.35);
+  word-break: break-all;
+}
+
+.post-link:hover { text-decoration-color: var(--gold-400); }
+
+.link-attach-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  padding: 0.85rem 1.1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.link-attach-card:hover {
+  border-color: rgba(244, 168, 54, 0.3);
+  background: rgba(244, 168, 54, 0.04);
+}
+
+.link-attach-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(244, 168, 54, 0.1);
+  color: var(--gold-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.link-attach-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.link-attach-domain {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.link-attach-url {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =================== PROFİL ROZETLERİ =================== */
+.user-mini-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--glass-border);
+}
+
+.user-mini-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.65rem;
+  background: rgba(244, 168, 54, 0.08);
+  border: 1px solid rgba(244, 168, 54, 0.25);
+  border-radius: var(--radius-full);
+  color: var(--gold-400);
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+}
+
+/* =================== MODERASYON =================== */
+.post-action-danger:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #ef4444 !important;
+}
+
+/* =================== PINNED POST =================== */
+.post-card.pinned {
+  border-color: rgba(244, 168, 54, 0.4);
+  box-shadow: 0 10px 30px rgba(244, 168, 54, 0.06);
+}
+
+/* Paylaşılan linkle gelinen gönderi vurgusu */
+.post-card.highlighted {
+  border-color: var(--gold-500);
+  animation: postHighlightPulse 1.2s ease-in-out 2;
+}
+
+@keyframes postHighlightPulse {
+  0%, 100% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+  50% { box-shadow: 0 0 0 4px rgba(244, 168, 54, 0.25), 0 10px 35px rgba(244, 168, 54, 0.15); }
+}
+
+.pinned-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(244, 168, 54, 0.12);
+  color: var(--gold-400);
+  border: 1px solid rgba(244, 168, 54, 0.3);
+  border-radius: var(--radius-full);
+  padding: 0.2rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
+/* =================== @MENTION =================== */
+.mention-suggest {
+  background: var(--navy-800);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  margin-top: 0.35rem;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.mention-suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+  font-size: 0.86rem;
+  color: var(--text-primary);
+  transition: background 0.15s ease;
+}
+
+.mention-suggest-item:hover {
+  background: rgba(244, 168, 54, 0.08);
+}
+
+.mention-suggest-item small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.mention-link {
+  color: var(--gold-400);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mention-link:hover {
+  text-decoration: underline;
+}
+
+/* =================== YENİ PAYLAŞIM ŞERİDİ =================== */
+.new-posts-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.65rem 1rem;
+  background: linear-gradient(135deg, rgba(244, 168, 54, 0.15), rgba(244, 168, 54, 0.05));
+  border: 1px solid rgba(244, 168, 54, 0.35);
+  border-radius: var(--radius-full);
+  color: var(--gold-400);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  animation: slideDown 0.3s ease-out;
+  transition: background 0.2s ease;
+}
+
+.new-posts-banner:hover {
+  background: rgba(244, 168, 54, 0.2);
+}
+
 /* =================== POLL STYLING =================== */
 /* Poll Builder (Compose Card) */
 .poll-builder {
@@ -1541,6 +1735,7 @@
             <span class="user-mini-stat-label">Yorum</span>
           </div>
         </div>
+        <div class="user-mini-badges hidden" id="userMiniBadges"></div>
       </div>
     </div>
 
@@ -1701,7 +1896,7 @@
           <li><a href="kariyer.html">Kariyer Ağı</a></li><li><a href="burs-mentorluk.html#mentor">Mentör Ol</a></li></ul></div>
     <div class="footer-col"><h5>İletişim</h5><ul class="footer-links"><li><a href="mailto:info@asdfl.org">info@asdfl.org</a></li></ul></div>
   </div>
-  <div class="footer-bottom"><span>© 2025 ASDFL Mezunlar Derneği</span><span>💛 ASDFL ruhuyla yapıldı</span></div>
+  <div class="footer-bottom"><span>© 2026 ASDFL Mezunlar Derneği</span><span>💛 ASDFL ruhuyla yapıldı</span></div>
 </div></footer>
 
 <!-- LOGIN MODAL -->
@@ -1942,6 +2137,24 @@ function toggleRegFields(role) {
   </div>
 </div>
 
+<!-- ŞİKÂYET MODAL -->
+<div class="modal-overlay" id="reportModal" onclick="if(event.target===this)ASDFL.closeModal('reportModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="ASDFL.closeModal('reportModal')"><i data-lucide="x" style="width:1em;height:1em"></i></button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2.5rem;margin-bottom:.5rem;color:var(--danger)"><i data-lucide="flag" style="width:1em;height:1em"></i></div>
+      <h3>Gönderiyi Şikâyet Et</h3>
+      <p style="font-size:.9rem;margin-top:.25rem;color:var(--text-muted)">Şikâyetiniz dernek yönetimine iletilir ve gizli tutulur.</p>
+    </div>
+    <input type="hidden" id="reportPostId">
+    <div class="form-group">
+      <label class="form-label">Şikâyet Nedeni</label>
+      <textarea class="form-textarea" id="reportReason" placeholder="Bu gönderiyi neden uygunsuz buluyorsunuz?" style="min-height:100px"></textarea>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="window.submitPostReport()">Şikâyeti Gönder</button>
+  </div>
+</div>
+
 <!-- RESİM BÜYÜTME LIGHTBOX -->
 <div id="imageLightbox" class="image-lightbox" onclick="this.classList.remove('open')">
   <img id="lightboxImg" src="" alt="Büyütülmüş Görsel">
@@ -1949,8 +2162,8 @@ function toggleRegFields(role) {
 
 <div class="toast-container"></div>
 <script src="assets/vendor/supabase.js"></script>
-<script src="js/app.js?v=1.4"></script>
-<script src="js/topluluk.js"></script>
+<script src="js/app.js?v=1.5"></script>
+<script src="js/topluluk.js?v=1.4"></script>
 <script>
   // Authentic social-networking wall initialized async
 </script>

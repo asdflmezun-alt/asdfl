@@ -2,6 +2,11 @@
   "name": "asdfl-mezunlar-dernegi",
   "version": "1.1.0",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/asdflmezun-alt/asdfl.git"
+  },
   "type": "module",
   "scripts": {
     "vendor": "node scripts/copy-vendor.mjs",

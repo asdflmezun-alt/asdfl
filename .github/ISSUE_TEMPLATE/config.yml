@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Güvenlik açığı bildirimi / Security vulnerability
+    url: https://github.com/asdflmezun-alt/asdfl/security/advisories/new
+    about: Güvenlik açıklarını public issue yerine buradan gizli olarak bildirin.

@@ -14,14 +14,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderHomeEvents(allEvents) {
     const el = document.getElementById('homeEventsList');
     if (!el) return;
-    const upcoming = allEvents.filter(e => e.upcoming).slice(0, 3);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const upcoming = allEvents
+      .map(e => ({ ...e, startDate: ASDFL.eventStart(e) || new Date(e.date) }))
+      .filter(e => !isNaN(e.startDate.getTime()) && e.startDate >= now)
+      .sort((a, b) => a.startDate - b.startDate)
+      .slice(0, 3);
+    if (upcoming.length === 0) {
+      el.innerHTML = `
+        <div class="event-item reveal" style="justify-content:center;text-align:center;color:var(--text-muted)">
+          Yaklaşan etkinlik bulunmuyor.
+        </div>
+      `;
+      ASDFL.initReveal();
+      return;
+    }
     el.innerHTML = upcoming.map(ev => {
-      const d = new Date(ev.date);
+      const d = ev.startDate;
       const day = d.getDate();
       const mon = d.toLocaleDateString('tr-TR', { month: 'short' });
-      const typeColors = { bulusma:'badge-teal', gala:'badge-gold', kariyer:'badge-blue', spor:'badge-teal', meziyet:'badge-gold', panel:'badge-blue' };
+      const typeColors = { bulusma:'badge-teal', gala:'badge-gold', kariyer:'badge-blue', spor:'badge-teal', meziyet:'badge-gold', mezuniyet:'badge-gold', panel:'badge-blue' };
+      const count = ev.rsvpCount || 0;
       return `
-        <a href="etkinlikler.html" class="event-item reveal">
+        <a href="etkinlikler.html#event-${ASDFL.escapeAttr(ev.id)}" class="event-item reveal">
           <div class="event-date-box">
             <span class="day">${day}</span>
             <span class="mon">${mon}</span>
@@ -31,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="event-meta">
               <span class="badge ${typeColors[ev.type]||'badge-blue'}">${ASDFL.escapeHTML(ev.type)}</span>
               <span style="font-size:.8rem;color:var(--text-muted)"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(ev.location)}</span>
-              <span style="font-size:.8rem;color:var(--text-muted)"><i data-lucide="clock" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(ev.time)}</span>
+              ${count ? `<span style="font-size:.8rem;color:var(--text-muted)"><i data-lucide="users" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${count} katılımcı</span>` : `<span style="font-size:.8rem;color:var(--text-muted)"><i data-lucide="clock" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(ev.time)}</span>`}
             </div>
           </div>
           <span style="color:var(--text-muted);font-size:1.2rem"><i data-lucide="chevron-right" style="width:1.2rem;height:1.2rem"></i></span>

@@ -195,25 +195,21 @@ function updateStats() {
 
 function calculateProfileCompletion() {
   const student = ASDFL.currentUser;
-  let score = 0;
-  
-  if (student.name) score += 15;
-  if (student.avatar_url || student.avatarUrl) score += 15;
-  if (student.grade) score += 15;
-  if (student.classSection || student.class_section) score += 15;
-  if (student.phone) score += 10;
-  if (student.bio) score += 15;
-  if (student.university) score += 15; // Target/okuduğu university
+  const completion = ASDFL.getProfileCompletion(student);
+  const score = completion.percent;
   
   const bar = document.getElementById('studentProfileProgress');
   const txt = document.getElementById('studentProfileProgressText');
   if (bar) bar.style.width = score + '%';
   
   if (txt) {
+    const missingText = completion.missing.length
+      ? ` Öncelik: ${completion.missing.map(item => ASDFL.escapeHTML(item)).join(', ')}.`
+      : '';
     if (score < 50) {
-      txt.innerHTML = `Profiliniz <strong>%${score}</strong> dolu. Mentorluk ve burs başvuruları için lütfen <a href="profil.html" style="color:var(--gold-500);font-weight:600">profil ayarlarınızdan</a> eksik alanları doldurun.`;
+      txt.innerHTML = `Profiliniz <strong>%${score}</strong> dolu.${missingText} Mentorluk ve burs başvuruları için lütfen <a href="profil.html" style="color:var(--gold-500);font-weight:600">profil ayarlarınızdan</a> eksik alanları doldurun.`;
     } else if (score < 100) {
-      txt.innerHTML = `Profiliniz <strong>%${score}</strong> dolu. Harika gidiyorsunuz! Eksik alanları tamamlayarak öne çıkın. <a href="profil.html" style="color:var(--gold-500);font-weight:600">Ayarlara git</a>.`;
+      txt.innerHTML = `Profiliniz <strong>%${score}</strong> dolu. Harika gidiyorsunuz!${missingText} Eksik alanları tamamlayarak öne çıkın. <a href="profil.html" style="color:var(--gold-500);font-weight:600">Ayarlara git</a>.`;
     } else {
       txt.innerHTML = `<span style="color:#2ecc71;display:flex;align-items:center;gap:.2rem"><i data-lucide="check-circle" style="width:14px;height:14px"></i> Profiliniz %100 dolu. Mezunlarımız sizi kolayca keşfedebilir!</span>`;
       setTimeout(() => ASDFL.refreshIcons(), 10);
@@ -299,7 +295,11 @@ function renderOverview() {
   // 2. Yaklaşan Etkinlikler
   const eventsGrid = document.getElementById('recEventsGrid');
   if (eventsGrid) {
-    const upcoming = allEvents.filter(e => e.upcoming).slice(0, 3);
+    const upcoming = allEvents
+      .map(e => ({ ...e, startDate: ASDFL.eventStart(e) || new Date(e.date) }))
+      .filter(e => ASDFL.eventIsUpcoming(e))
+      .sort((a, b) => a.startDate - b.startDate)
+      .slice(0, 3);
     if (upcoming.length === 0) {
       eventsGrid.innerHTML = '<div class="card" style="padding:1rem;color:var(--text-muted);font-size:.85rem;text-align:center;">Yaklaşan etkinlik bulunmuyor.</div>';
     } else {

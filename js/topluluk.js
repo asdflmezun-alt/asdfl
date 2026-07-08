@@ -72,6 +72,12 @@
       });
     }
 
+    // Hashtag tıklamaları (akış + trend listesi) tek delegated listener'dan yönetilir
+    document.addEventListener('click', (e) => {
+      const tagEl = e.target.closest('[data-tag]');
+      if (tagEl && tagEl.dataset.tag) window.filterByHashtag(tagEl.dataset.tag);
+    });
+
     // Mini Profil Kartı İstatistikleri
     if (isLoggedIn) {
       await loadUserMiniCardStats();
@@ -278,7 +284,8 @@
       .select(`
         id, content, likes_count, created_at, target_year, target_section, pinned,
         profiles!author_id (id, name, job, grad_year, class_section, avatar_url, avatar_position, academic_title, specialization),
-        post_comments(id)
+        post_comments(id),
+        post_poll_votes(option_id, voter_id)
       `)
       .order('pinned', { ascending: false })
       .order('created_at', { ascending: false })
@@ -409,7 +416,8 @@
       return '\u0000LINK' + (links.length - 1) + '\u0000';
     });
     const escaped = tokenized.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-    let out = escaped.replace(/#([a-zA-Z0-9ĞğÜüŞşİıÖöÇç_]+)/g, '<span class="hashtag" onclick="window.filterByHashtag(\'$1\')">#$1</span>');
+    // data-tag + delegation: kullanıcı metni inline JS string'ine gömülmez
+    let out = escaped.replace(/#([a-zA-Z0-9ĞğÜüŞşİıÖöÇç_]+)/g, '<span class="hashtag" data-tag="$1">#$1</span>');
     // @Mention'ları profil linkine çevir (isimler de aynı şekilde escape edilir)
     (mentions || []).forEach(m => {
       if (!m || !m.id || !m.name) return;
@@ -426,6 +434,13 @@
     });
     return out;
   }
+
+  window.expandPostText = function(postId) {
+    const body = document.getElementById(`post-text-${ASDFL.escapeAttr(postId)}`);
+    const btn = document.getElementById(`post-more-${ASDFL.escapeAttr(postId)}`);
+    if (body) body.classList.remove('is-collapsed');
+    if (btn) btn.remove();
+  };
 
   function renderPost(post) {
     const author = post.profiles;
@@ -477,11 +492,12 @@
           if (parsed.attachment) {
             const att = parsed.attachment;
             if (att.type === 'photo') {
-              attachmentHtml = `
+              const photoUrl = ASDFL.safeURL(att.value, { allowBlob: true });
+              attachmentHtml = photoUrl ? `
                 <div class="post-media-attachment">
-                  <img src="${ASDFL.escapeAttr(att.value)}" alt="Paylaşım görseli" onclick="window.openImageLightbox(${ASDFL.jsString(att.value)})">
+                  <img src="${ASDFL.escapeAttr(photoUrl)}" alt="Paylaşım görseli" onclick="window.openImageLightbox(${ASDFL.jsString(photoUrl)})">
                 </div>
-              `;
+              ` : '';
             } else if (att.type === 'video') {
               attachmentHtml = `
                 <div class="post-media-attachment video-attachment">
@@ -505,14 +521,22 @@
                 </div>
               `;
             } else if (att.type === 'poll') {
-              // Anket Rendering
+              // Anket Rendering — oylar post_poll_votes tablosundan okunur; içerik
+              // JSON'unda kalan eski oylarla birleştirilir (geriye uyumluluk).
               const poll = att.value;
-              const hasVoted = poll.options.some(opt => (opt.votes || []).includes(ASDFL.currentUser?.id));
-              const totalVotes = poll.options.reduce((sum, opt) => sum + (opt.votes || []).length, 0);
+              const tableVotes = Array.isArray(post.post_poll_votes) ? post.post_poll_votes : [];
+              const votersFor = (opt) => {
+                const legacy = Array.isArray(opt.votes) ? opt.votes : [];
+                const recorded = tableVotes.filter(v => v.option_id === opt.id).map(v => v.voter_id);
+                return [...new Set([...legacy, ...recorded])];
+              };
+              const myId = ASDFL.currentUser?.id;
+              const hasVoted = poll.options.some(opt => votersFor(opt).includes(myId));
+              const totalVotes = poll.options.reduce((sum, opt) => sum + votersFor(opt).length, 0);
 
               const optionsHtml = poll.options.map(opt => {
-                const optVotes = opt.votes || [];
-                const isMyVote = optVotes.includes(ASDFL.currentUser?.id);
+                const optVotes = votersFor(opt);
+                const isMyVote = optVotes.includes(myId);
                 const pct = totalVotes > 0 ? Math.round((optVotes.length / totalVotes) * 100) : 0;
 
                 if (hasVoted) {
@@ -572,6 +596,13 @@
           </a>`;
       }
     }
+    const shouldCollapseText = String(postText || '').length > 420;
+    const postTextHtml = `
+      <div class="post-text${shouldCollapseText ? ' is-collapsed' : ''}" id="post-text-${safePostIdAttr}">
+        ${formatPostText(postText, postMentions)}
+      </div>
+      ${shouldCollapseText ? `<button class="post-read-more" id="post-more-${safePostIdAttr}" onclick="window.expandPostText(${safePostId})">Devamını oku</button>` : ''}
+    `;
 
     const moderationBtn = (isMyPost || isAdmin)
       ? `<button class="post-action-btn post-action-danger" style="margin-left:auto" onclick="window.deletePost(${safePostId})" title="Gönderiyi sil">
@@ -597,7 +628,7 @@
             ${audienceBadge}
           </div>
         </div>
-        <div class="post-body">${formatPostText(postText, postMentions)} ${attachmentHtml} ${linkCardHtml}</div>
+        <div class="post-body">${postTextHtml} ${attachmentHtml} ${linkCardHtml}</div>
         <div class="post-actions">
           <button class="post-action-btn ${liked ? 'liked' : ''}" onclick="window.toggleLike(${safePostId}, this)" id="like-${safePostIdAttr}">
             <i data-lucide="heart" style="width:1.1rem;height:1.1rem"></i>
@@ -1107,19 +1138,43 @@
     const post = loadedPosts.find(p => p.id === postId);
     if (!post) return;
 
+    // Oy, gönderi içeriği güncellenerek DEĞİL, seçenek doğrulamasını ve tek oy
+    // kuralını sunucuda uygulayan cast_poll_vote RPC'siyle kaydedilir.
+    if (ASDFL.supabase) {
+      const { error } = await ASDFL.supabase.rpc('cast_poll_vote', {
+        target_post_id: postId,
+        target_option_id: optionId
+      });
+
+      if (error) {
+        if (/already voted/i.test(error.message)) {
+          ASDFL.toast('Bu ankete zaten oy verdiniz!', 'info');
+        } else {
+          console.error('Oy kaydedilirken hata oluştu:', error);
+          ASDFL.toast('Oy kaydedilemedi: ' + error.message, 'error');
+        }
+        return;
+      }
+
+      if (!Array.isArray(post.post_poll_votes)) post.post_poll_votes = [];
+      post.post_poll_votes.push({ option_id: optionId, voter_id: ASDFL.currentUser.id });
+      filterAndRenderPosts();
+      ASDFL.toast('Oyunuz kaydedildi! 🗳️', 'success');
+      return;
+    }
+
+    // localStorage fallback (Supabase bağlantısı yok)
     try {
       const parsed = JSON.parse(post.content);
       if (parsed.richPost && parsed.attachment && parsed.attachment.type === 'poll') {
         const poll = parsed.attachment.value;
-        
-        // Kullanıcı daha önce oy kullanmış mı?
+
         const hasVoted = poll.options.some(opt => (opt.votes || []).includes(ASDFL.currentUser.id));
         if (hasVoted) {
           ASDFL.toast('Bu ankete zaten oy verdiniz!', 'info');
           return;
         }
 
-        // Oy ekle
         poll.options.forEach(opt => {
           if (!opt.votes) opt.votes = [];
           if (opt.id === optionId) {
@@ -1128,29 +1183,13 @@
         });
 
         const updatedContent = JSON.stringify(parsed);
-
-        // Supabase güncellemesi
-        if (ASDFL.supabase) {
-          const { error } = await ASDFL.supabase
-            .from('posts')
-            .update({ content: updatedContent })
-            .eq('id', postId);
-
-          if (error) {
-            console.error('Oy kaydedilirken hata oluştu:', error);
-            ASDFL.toast('Oy kaydedilemedi: ' + error.message, 'error');
-            return;
-          }
-        } else {
-          let localPosts = JSON.parse(localStorage.getItem('asdfl_posts') || '[]');
-          const idx = localPosts.findIndex(p => p.id === postId);
-          if (idx !== -1) {
-            localPosts[idx].content = updatedContent;
-            localStorage.setItem('asdfl_posts', JSON.stringify(localPosts));
-          }
+        let localPosts = JSON.parse(localStorage.getItem('asdfl_posts') || '[]');
+        const idx = localPosts.findIndex(p => p.id === postId);
+        if (idx !== -1) {
+          localPosts[idx].content = updatedContent;
+          localStorage.setItem('asdfl_posts', JSON.stringify(localPosts));
         }
 
-        // Cache güncelle ve render et
         post.content = updatedContent;
         filterAndRenderPosts();
         ASDFL.toast('Oyunuz kaydedildi! 🗳️', 'success');
@@ -1205,7 +1244,7 @@
     }
 
     container.innerHTML = sorted.map(item => `
-      <div class="trending-item" onclick="window.filterByHashtag('${item.tag.substring(1)}')">
+      <div class="trending-item" data-tag="${ASDFL.escapeAttr(item.tag.substring(1))}">
         <span class="trending-tag">${escapeHtml(item.tag)}</span>
         <span class="trending-count">${item.count} gönderi</span>
       </div>

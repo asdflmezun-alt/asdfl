@@ -121,6 +121,7 @@
           <button class="admin-tab-btn" id="btn-tab-events" onclick="switchAdminTab('events', this)"><i data-lucide="calendar" style="width:1.2rem;height:1.2rem"></i> Etkinlikler &amp; Duyurular</button>
           <button class="admin-tab-btn" id="btn-tab-burs" onclick="switchAdminTab('burs', this)"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i> Burs Programları</button>
           <button class="admin-tab-btn" id="btn-tab-applications" onclick="switchAdminTab('applications', this)"><i data-lucide="clipboard-check" style="width:1.2rem;height:1.2rem"></i> Başvurular <span class="badge badge-gold" id="pendingAppsBadge" style="margin-left:auto; display:none; padding:.2rem .4rem; font-size:.7rem">0</span></button>
+          <button class="admin-tab-btn" id="btn-tab-moderation" onclick="switchAdminTab('moderation', this)"><i data-lucide="flag" style="width:1.2rem;height:1.2rem"></i> Moderasyon <span class="badge badge-gold" id="pendingReportsBadge" style="margin-left:auto; display:none; padding:.2rem .4rem; font-size:.7rem">0</span></button>
           <button class="admin-tab-btn" id="btn-tab-announcements" onclick="switchAdminTab('announcements', this)"><i data-lucide="bell" style="width:1.2rem;height:1.2rem"></i> Logo Duyuruları</button>
           <button class="admin-tab-btn" id="btn-tab-data-requests" onclick="switchAdminTab('data-requests', this)"><i data-lucide="shield-check" style="width:1.2rem;height:1.2rem"></i> Veri Talepleri <span class="badge badge-gold" id="pendingDataRequestsBadge" style="margin-left:auto;display:none;padding:.2rem .4rem;font-size:.7rem">0</span></button>
         </nav>
@@ -225,6 +226,7 @@
                   <th>Tür</th>
                   <th>Tarih</th>
                   <th>Konum</th>
+                  <th>Katılım</th>
                   <th style="text-align:right">İşlemler</th>
                 </tr>
               </thead>
@@ -389,6 +391,22 @@
           <div id="adminApplicationsList"></div>
         </div>
 
+        <div id="tab-moderation" class="admin-panel-tab" style="display:none">
+          <div class="admin-actions-row">
+            <div>
+              <h2 style="font-size:1.4rem;font-family:'Outfit',sans-serif;font-weight:700;margin-bottom:.25rem">Topluluk Moderasyonu</h2>
+              <p style="color:var(--text-muted);font-size:.85rem">Raporlanan gönderileri inceleyin, kapatın veya gerekli durumlarda gönderiyi kaldırın.</p>
+            </div>
+            <select class="form-select" id="moderationStatusFilter" style="max-width:180px" onchange="renderModerationReports()">
+              <option value="Pending">Bekleyenler</option>
+              <option value="Reviewed">İncelenenler</option>
+              <option value="Dismissed">Kapatılanlar</option>
+              <option value="ALL">Tüm Raporlar</option>
+            </select>
+          </div>
+          <div id="adminModerationReportsList"></div>
+        </div>
+
         <!-- 6. LOGO ANNOUNCEMENTS TAB -->
         <div id="tab-announcements" class="admin-panel-tab" style="display:none">
           <div class="admin-actions-row">
@@ -424,6 +442,12 @@
     <div class="form-group">
       <label class="form-label">Tür</label>
       <select class="form-select" id="eventFieldType">
+        <option value="bulusma">Buluşma</option>
+        <option value="kariyer">Kariyer</option>
+        <option value="gala">Gala</option>
+        <option value="spor">Spor</option>
+        <option value="mezuniyet">Mezuniyet</option>
+        <option value="panel">Panel</option>
         <option value="etkinlik">Etkinlik</option>
         <option value="duyuru">Duyuru</option>
       </select>
@@ -446,9 +470,25 @@
         <input type="text" class="form-input" id="eventFieldLocation" placeholder="Örn: Okul Bahçesi veya Zoom">
       </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Görsel URL (İsteğe bağlı)</label>
-      <input type="url" class="form-input" id="eventFieldImage" placeholder="https://example.com/image.jpg">
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Başlangıç Saati</label>
+        <input type="time" class="form-input" id="eventFieldTime">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bitiş Saati (İsteğe bağlı)</label>
+        <input type="time" class="form-input" id="eventFieldEndTime">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Kontenjan (İsteğe bağlı)</label>
+        <input type="number" min="1" class="form-input" id="eventFieldCapacity" placeholder="Sınırsız için boş bırakın">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kapak Görseli URL (İsteğe bağlı)</label>
+        <input type="url" class="form-input" id="eventFieldImage" placeholder="https://example.com/image.jpg">
+      </div>
     </div>
     <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="saveEventFromModal()">Kaydet ve Yayınla</button>
   </div>
@@ -701,7 +741,7 @@ function toggleRegFields(role) {
 
 <div class="toast-container"></div>
 <script src="assets/vendor/supabase.js"></script>
-<script src="js/app.js?v=1.4"></script>
-<script src="js/yonetim.js"></script>
+<script src="js/app.js?v=1.6"></script>
+<script src="js/yonetim.js?v=1.1"></script>
 </body>
 </html>

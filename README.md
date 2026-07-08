@@ -61,6 +61,21 @@ Dağıtım çıktısı için:
 npm run build    # dist/ klasörünü üretir
 ```
 
+## Rol bazlı ilk 5 dakika
+
+- **Misafir:** Ana sayfada herkese açık duyuru, etkinlik ve genel topluluk alanlarını görür; özel profil, başvuru, mentorluk ve RSVP işlemlerinde giriş ekranına yönlendirilir.
+- **Öğrenci:** Profilini tamamlar, burs başvurusu yapar, mentorluk talebi oluşturur, yaklaşan etkinliklere katılım durumunu takip eder.
+- **Mezun:** Rehber görünürlüğünü ve iletişim izinlerini düzenler, mentorluk verebilir, kariyer ilanlarını ve topluluk paylaşımlarını yönetir.
+- **Admin:** Üyeler, başvurular, etkinlikler, veri talepleri ve raporlanan topluluk içerikleri için arama, filtreleme ve işlem akışlarını yönetir.
+
+## Yayına hazırlık kontrolleri
+
+- `npm test` güvenlik ve ürün regresyonlarını çalıştırır; yeni E2E hazırlık testleri misafir erişimi, kullanıcıya özel veriler, admin moderasyonu, geçmiş/yaklaşan etkinlik ayrımı ve geliştirme cache davranışını kapsar.
+- `npm run verify` vendor dosyalarını ve testleri birlikte doğrular; dağıtım öncesi önerilen komuttur.
+- Supabase migration zinciri staging projesinde `supabase db push` ile denenmeli; `applications`, `contact_requests`, `job_applications`, `mentorships` ve `event_rsvps` için kullanıcı/admin RLS senaryoları ayrıca kontrol edilmelidir.
+- Service worker geliştirme ortamında cache'i bypass eder; üretimde statik dosya cache sürümü değiştikçe kullanıcıya eski JS gösterme riski azaltılır.
+- Yeni özellik eklemeden önce boş durumlar, yükleniyor durumları, işlem sonrası geri bildirimler, klavye ile modal kapatma ve mobil metin taşması hızlıca gözden geçirilmelidir.
+
 ## Proje yapısı
 
 ```

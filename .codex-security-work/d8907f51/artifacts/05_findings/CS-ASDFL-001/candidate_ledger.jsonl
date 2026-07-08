@@ -1,0 +1,3 @@
+﻿{"phase":"discovery","candidate_id":"CS-ASDFL-001","status":"completed","disposition":"reportable","instance_key":"stored-xss:js/galeri.js:45","affected_location":"js/galeri.js:45","evidence":"Promoted during repository-wide discovery: Stored XSS in gallery metadata."}
+{"phase":"validation","candidate_id":"CS-ASDFL-001","status":"completed","disposition":"reportable","method":"static source trace plus existing test-suite negative coverage","evidence":"Source/control/sink tuple validated from repository files. Confidence: high."}
+{"phase":"attack_path","candidate_id":"CS-ASDFL-001","status":"completed","decision":"report","severity":"high","evidence":"Reachable from in-scope ASDFL product workflow. See final report for severity rationale."}

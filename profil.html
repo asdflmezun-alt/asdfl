@@ -43,7 +43,7 @@
     flex: 1;
   }
   .profile-identity h1 {
-    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-size: 2rem;
     margin: 0 0 0.3rem;
     line-height: 1.15;
   }
@@ -53,13 +53,36 @@
     margin: 0;
   }
   .profile-completion {
-    width: 290px;
+    width: 320px;
     max-width: 100%;
     padding: 0.85rem 1.1rem;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     margin-left: auto;
+    flex-shrink: 0;
+  }
+  .profile-completion-tasks {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 0.7rem;
+  }
+  .profile-completion-task {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    line-height: 1.25;
+  }
+  .profile-completion-task i {
+    width: 14px;
+    height: 14px;
+    color: var(--gold-500);
     flex-shrink: 0;
   }
   .profile-avatar-lg {
@@ -94,6 +117,9 @@
     .profile-completion {
       margin-left: 0;
       width: 100%;
+    }
+    .profile-identity h1 {
+      font-size: 1.5rem;
     }
   }
   /* Sub Navigation Tabs */
@@ -589,6 +615,16 @@
 
     <!-- 3. REQUESTS TAB CONTENT -->
     <div id="profile-tab-requests" class="profile-tab-content reveal" style="display:none">
+      <div class="profile-right-grid" style="margin-bottom:1.5rem">
+        <div class="card" style="padding:2rem">
+          <h3 style="margin-top:0;margin-bottom:.75rem;font-family:'Outfit',sans-serif;font-size:1.15rem;display:flex;align-items:center;gap:.5rem"><i data-lucide="calendar-check" style="color:var(--gold-500)"></i> Katıldığım Etkinlikler</h3>
+          <div id="myEventsList"><p style="color:var(--text-muted)">Yükleniyor...</p></div>
+        </div>
+        <div class="card" style="padding:2rem">
+          <h3 style="margin-top:0;margin-bottom:.75rem;font-family:'Outfit',sans-serif;font-size:1.15rem;display:flex;align-items:center;gap:.5rem"><i data-lucide="clipboard-check" style="color:var(--gold-500)"></i> Başvuru Özetim</h3>
+          <div id="myApplicationSummary"><p style="color:var(--text-muted)">Yükleniyor...</p></div>
+        </div>
+      </div>
       <div class="card" style="padding:2rem">
         <h3 style="margin-top:0; margin-bottom:1.5rem; border-bottom:1px solid var(--glass-border); padding-bottom:1rem; font-family:'Outfit',sans-serif; font-weight:600; font-size:1.25rem; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="bell" style="color:var(--gold-500)"></i> Gelen İletişim Talepleri</h3>
         <div id="contactRequestsList">
@@ -661,7 +697,7 @@
 <div class="toast-container"></div>
 <script src="assets/vendor/supabase.js"></script>
 <script src="js/universities.js"></script>
-<script src="js/app.js?v=1.4"></script>
+<script src="js/app.js?v=1.6"></script>
 <script>
   window.goBackToAlumni = function() {
     if (document.referrer && document.referrer.includes('mezunlar.html')) {
@@ -707,61 +743,8 @@
 
   window.updateProfileCompletion = function(profile) {
     if (!profile) return;
-
-    const checklist = [];
-
-    // 1. Fotoğraf eklendi
-    const hasPhoto = !!(profile.avatar_url || profile.avatarUrl);
-    checklist.push({ name: 'Profil Fotoğrafı', completed: hasPhoto, tip: 'Profil fotoğrafı yükleyin.' });
-
-    // 2. Mezuniyet/Eğitim yılı girildi
-    let hasYear = false;
-    if (profile.role === 'Mezun' || profile.role === 'Admin') {
-      hasYear = !!(profile.grad_year || profile.gradYear);
-    } else if (profile.role === 'Öğrenci') {
-      hasYear = !!profile.grade;
-    } else if (profile.role === 'Öğretmen') {
-      hasYear = !!(profile.teaching_year || profile.teachingYear);
-    }
-    checklist.push({ name: 'Mezuniyet Yılı', completed: hasYear, tip: 'Eğitim/mezuniyet yılınızı girin.' });
-
-    // 3. Üniversite girildi
-    let hasUniOrSec = false;
-    if (profile.role === 'Mezun' || profile.role === 'Admin') {
-      hasUniOrSec = !!profile.university;
-    } else if (profile.role === 'Öğrenci') {
-      hasUniOrSec = !!(profile.class_section || profile.classSection);
-    } else if (profile.role === 'Öğretmen') {
-      hasUniOrSec = !!profile.branch;
-    }
-    checklist.push({ name: 'Üniversite', completed: hasUniOrSec, tip: profile.role === 'Öğrenci' ? 'Sınıf şubenizi girin.' : 'Üniversite veya branş bilgisi girin.' });
-
-    // 4. Meslek/şirket girildi
-    let hasJob = false;
-    if (profile.role === 'Mezun' || profile.role === 'Admin') {
-      hasJob = !!(profile.job || profile.company);
-    } else if (profile.role === 'Öğrenci') {
-      hasJob = !!profile.university; // okuduğu/hedeflediği üniversite
-    } else if (profile.role === 'Öğretmen') {
-      hasJob = !!profile.branch; // default true if branch is checked
-    }
-    checklist.push({ name: 'Meslek/Şirket', completed: hasJob, tip: profile.role === 'Öğrenci' ? 'Hedeflediğiniz üniversiteyi seçin.' : 'Meslek veya kurum bilgisi girin.' });
-
-    // 5. Şehir girildi
-    const hasCity = !!profile.city;
-    checklist.push({ name: 'Şehir', completed: hasCity, tip: 'Yaşadığınız şehri belirtin.' });
-
-    // 6. Biyografi yazıldı
-    const hasBio = !!profile.bio;
-    checklist.push({ name: 'Biyografi', completed: hasBio, tip: 'Hakkınızda kısa bir biyografi yazın.' });
-
-    // 7. Mentörlük tercihi seçildi
-    const hasMentorPref = !!(profile.mentor_preference || profile.mentorPreference);
-    checklist.push({ name: 'Mentörlük Tercihi', completed: hasMentorPref, tip: 'Ayarlardan mentörlük tercihinizi seçin.' });
-
-    const total = checklist.length;
-    const completedCount = checklist.filter(c => c.completed).length;
-    const percentage = Math.round((completedCount / total) * 100);
+    const completion = ASDFL.getProfileCompletion(profile);
+    const percentage = completion.percent;
 
     const textEl = document.getElementById('profileCompletionText');
     const barEl = document.getElementById('profileCompletionBar');
@@ -772,12 +755,16 @@
 
     if (tipEl) {
       if (percentage === 100) {
-        tipEl.innerHTML = `<span style="color: var(--success); font-weight: 600;">✨ Tebrikler! Profiliniz %100 tamamlandı.</span>`;
+        tipEl.innerHTML = `<span style="color: var(--success); font-weight: 600;">Profiliniz tamamlandı. Topluluk sizi daha kolay keşfedebilir.</span>`;
       } else {
-        const nextItem = checklist.find(c => !c.completed);
-        if (nextItem) {
-          tipEl.innerHTML = `💡 <span style="font-weight: 500; color: var(--text-secondary);">Öneri:</span> ${nextItem.tip}`;
-        }
+        const missing = completion.missing.length ? completion.missing : ['Profil bilgileri'];
+        tipEl.innerHTML = `
+          <div style="margin-bottom:.45rem;color:var(--text-secondary);font-weight:600">Tamamlanacak alanlar</div>
+          <div class="profile-completion-tasks">
+            ${missing.map(item => `<div class="profile-completion-task"><i data-lucide="circle-dot"></i><span>${ASDFL.escapeHTML(item)}</span></div>`).join('')}
+          </div>
+        `;
+        setTimeout(() => ASDFL.refreshIcons(tipEl), 10);
       }
     }
   };
@@ -1064,7 +1051,68 @@
     document.querySelectorAll('.mezun-tab').forEach(btn => btn.classList.remove('active'));
     const targetBtn = document.getElementById(`btn-tab-${tabName}`);
     if (targetBtn) targetBtn.classList.add('active');
+    if (tabName === 'requests') loadProfileActivitySummary();
     if (tabName === 'privacy') loadPrivacyData();
+  };
+
+  window.loadProfileActivitySummary = async function() {
+    if (!ASDFL.currentUser) return;
+    const eventsEl = document.getElementById('myEventsList');
+    const appsEl = document.getElementById('myApplicationSummary');
+    let events = [], scholarshipApps = [], mentorships = [], jobApps = [];
+
+    try {
+      if (ASDFL.supabase) {
+        const [rsvpsResult, appsResult, mentorshipsResult, jobAppsResult] = await Promise.all([
+          ASDFL.supabase.from('event_rsvps').select('event_id,created_at,events(id,title,event_date,event_time,location,type)').eq('user_id', ASDFL.currentUser.id).order('created_at', { ascending: false }).limit(5),
+          ASDFL.supabase.from('applications').select('id,type,title,status,created_at').eq('user_id', ASDFL.currentUser.id).order('created_at', { ascending: false }).limit(20),
+          ASDFL.supabase.from('mentorships').select('id,status,created_at,mentor:profiles!mentor_id(name)').eq('student_id', ASDFL.currentUser.id).order('created_at', { ascending: false }).limit(20),
+          ASDFL.supabase.from('job_applications').select('id,status,created_at,job_postings(title,company)').eq('applicant_id', ASDFL.currentUser.id).order('created_at', { ascending: false }).limit(20)
+        ]);
+        if (rsvpsResult.error) console.error('Profile event RSVPs failed:', rsvpsResult.error);
+        if (appsResult.error) console.error('Profile applications failed:', appsResult.error);
+        if (mentorshipsResult.error) console.error('Profile mentorships failed:', mentorshipsResult.error);
+        if (jobAppsResult.error) console.error('Profile job applications failed:', jobAppsResult.error);
+        events = (rsvpsResult.data || []).map(row => row.events).filter(Boolean);
+        scholarshipApps = appsResult.data || [];
+        mentorships = mentorshipsResult.data || [];
+        jobApps = jobAppsResult.data || [];
+      } else {
+        const localEvents = JSON.parse(ASDFL._storage.getItem('asdfl_events') || '[]');
+        const localRsvps = JSON.parse(ASDFL._storage.getItem('asdfl_event_rsvps') || '[]').filter(row => row.user_id === ASDFL.currentUser.id);
+        events = localRsvps.map(row => localEvents.find(ev => ev.id === row.event_id)).filter(Boolean);
+        scholarshipApps = JSON.parse(ASDFL._storage.getItem('asdfl_applications') || '[]').filter(row => row.user_id === ASDFL.currentUser.id);
+        mentorships = JSON.parse(ASDFL._storage.getItem('asdfl_mentorships') || '[]').filter(row => row.student_id === ASDFL.currentUser.id || row.mentor_id === ASDFL.currentUser.id);
+        jobApps = JSON.parse(ASDFL._storage.getItem('asdfl_job_apps') || '[]').filter(row => row.applicant_id === ASDFL.currentUser.id);
+      }
+    } catch (e) {
+      console.error('Profile activity summary failed:', e);
+    }
+
+    if (eventsEl) {
+      eventsEl.innerHTML = events.length ? events.slice(0, 5).map(ev => `
+        <a href="etkinlikler.html#event-${ASDFL.escapeAttr(ev.id)}" style="display:flex;justify-content:space-between;gap:1rem;padding:.75rem 0;border-bottom:1px solid var(--glass-border);text-decoration:none">
+          <span style="color:var(--text-primary);font-weight:600">${ASDFL.escapeHTML(ev.title || 'Etkinlik')}</span>
+          <span style="color:var(--text-muted);font-size:.78rem">${ASDFL.escapeHTML(ASDFL.formatDate(ev.event_date || ev.date))}</span>
+        </a>
+      `).join('') : ASDFL.emptyStateHTML({ icon: 'calendar', title: 'Katıldığınız etkinlik yok', body: 'Etkinliğe katıldığınızda burada listelenecek.', actionLabel: 'Etkinliklere Git', action: "window.location.href='etkinlikler.html'" });
+    }
+
+    if (appsEl) {
+      const counts = [
+        ['Burs başvurusu', scholarshipApps.filter(row => row.type === 'Burs').length],
+        ['Mentorluk', mentorships.length],
+        ['Kariyer başvurusu', jobApps.length],
+        ['Bekleyen işlem', [...scholarshipApps, ...mentorships, ...jobApps].filter(row => row.status === 'Pending').length]
+      ];
+      appsEl.innerHTML = counts.map(([label, count]) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:.65rem 0;border-bottom:1px solid var(--glass-border)">
+          <span style="color:var(--text-secondary);font-size:.86rem">${ASDFL.escapeHTML(label)}</span>
+          <strong style="color:var(--gold-500);font-size:1rem">${count}</strong>
+        </div>
+      `).join('');
+    }
+    setTimeout(() => ASDFL.refreshIcons(), 10);
   };
 
   const dataRequestLabels = { information: 'Bilgi talebi', correction: 'Veri düzeltme', data_copy: 'Veri kopyası', withdraw_consent: 'Açık rızayı geri çekme', account_deletion: 'Hesap ve veri silme' };

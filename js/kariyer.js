@@ -6,6 +6,11 @@
 window.allJobs = [];
 window.allRequests = [];
 
+function careerSafeHttpUrl(value) {
+  const safe = ASDFL.safeURL(value);
+  return safe && /^https?:\/\//i.test(safe) ? safe : '';
+}
+
 // ==========================================
 // 1. NAVIGATION & GENERAL TAB CONTROLLERS
 // ==========================================
@@ -300,7 +305,7 @@ window.filterRequests = function() {
       const email = req.studentEmail || 'info@asdfl.org';
       const subject = encodeURIComponent(`ASDFL Kariyer Ağı — Staj Arayışınız Hakkında`);
       const body = encodeURIComponent(`Merhaba ${req.studentName},\n\nASDFL Kariyer Ağı üzerindeki "${req.title}" başlıklı staj arayış talebinizi inceledim. Sizinle staj/mentörlük imkanları hakkında görüşmek isterim.\n\nSaygılarımla,\n${user.name}`);
-      contactBtn = `<a href="mailto:${email}?subject=${subject}&body=${body}" class="btn btn-primary btn-sm"><i data-lucide="mail"></i> İletişime Geç</a>`;
+      contactBtn = `<a href="${ASDFL.escapeAttr(`mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`)}" class="btn btn-primary btn-sm"><i data-lucide="mail"></i> İletişime Geç</a>`;
     } else {
       contactBtn = `<button class="btn btn-secondary btn-sm" style="opacity:0.65;cursor:not-allowed" disabled title="Öğrenci iletişim bilgilerini sadece dernek üyesi mezunlar görüntüleyebilir">Sadece Mezunlar</button>`;
     }
@@ -310,17 +315,17 @@ window.filterRequests = function() {
         <div class="req-header">
           ${ASDFL.getAvatarHTML({ initials, avatar_url: req.studentAvatarUrl, avatar_position: req.studentAvatarPosition, name: req.studentName }, 'avatar')}
           <div class="req-student-info">
-            <strong>${req.studentName}</strong>
-            <span>${req.studentGrade || 'Öğrenci'} ${req.studentClassSection ? `(${req.studentClassSection} Şubesi)` : ''} — ${dateStr}</span>
+            <strong>${ASDFL.escapeHTML(req.studentName)}</strong>
+            <span>${ASDFL.escapeHTML(req.studentGrade || 'Öğrenci')} ${req.studentClassSection ? `(${ASDFL.escapeHTML(req.studentClassSection)} Şubesi)` : ''} — ${dateStr}</span>
           </div>
         </div>
         
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem">
-          <h3 class="req-title" style="font-size:1.05rem">${req.title}</h3>
-          <span class="badge badge-gold" style="font-size:0.75rem">${req.field}</span>
+          <h3 class="req-title" style="font-size:1.05rem">${ASDFL.escapeHTML(req.title)}</h3>
+          <span class="badge badge-gold" style="font-size:0.75rem">${ASDFL.escapeHTML(req.field)}</span>
         </div>
         
-        <p class="req-details">${req.details}</p>
+        <p class="req-details">${ASDFL.escapeHTML(req.details)}</p>
         
         <div style="display:flex;justify-content:flex-end;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--glass-border)">
           ${contactBtn}
@@ -482,6 +487,7 @@ async function renderIncomingApplications() {
     const initials = app.initials || 'Ö';
     const statusText = app.status === 'Pending' ? 'Bekliyor' : (app.status === 'Approved' ? 'Onaylandı' : 'Reddedildi');
     const statusClass = app.status === 'Pending' ? 'status-pending' : (app.status === 'Approved' ? 'status-approved' : 'status-rejected');
+    const resumeUrl = careerSafeHttpUrl(app.resume_url);
     
     const email = app.applicantEmail || 'Gizli';
     const phone = app.applicantPhone || 'Gizli';
@@ -506,8 +512,8 @@ async function renderIncomingApplications() {
           <div class="app-applicant-profile">
             ${ASDFL.getAvatarHTML({ initials, avatar_url: app.applicantAvatarUrl, avatar_position: app.applicantAvatarPosition, name: app.applicantName }, 'avatar')}
             <div>
-              <strong style="color:var(--text-primary);display:block">${app.applicantName}</strong>
-              <span style="font-size:0.75rem;color:var(--text-muted)">Öğrenci ${app.applicantYear ? `(${app.applicantYear} Mezunu/Girişli)` : ''}</span>
+              <strong style="color:var(--text-primary);display:block">${ASDFL.escapeHTML(app.applicantName)}</strong>
+              <span style="font-size:0.75rem;color:var(--text-muted)">Öğrenci ${app.applicantYear ? `(${ASDFL.escapeHTML(app.applicantYear)} Mezunu/Girişli)` : ''}</span>
             </div>
           </div>
           <span class="app-status ${statusClass}">${statusText}</span>
@@ -515,17 +521,17 @@ async function renderIncomingApplications() {
         
         <div class="app-details-body">
           <div style="margin-bottom:0.5rem">
-            <strong style="color:var(--gold-400)">Başvurulan İlan:</strong> <span style="color:var(--text-primary);font-weight:600">${app.jobTitle} (${app.companyName})</span>
+            <strong style="color:var(--gold-400)">Başvurulan İlan:</strong> <span style="color:var(--text-primary);font-weight:600">${ASDFL.escapeHTML(app.jobTitle)} (${ASDFL.escapeHTML(app.companyName)})</span>
           </div>
           <div style="margin-bottom:0.75rem">
             <strong style="color:var(--gold-400)">Ön Yazı / Başvuru Notu:</strong>
             <p style="margin-top:0.25rem;background:rgba(255,255,255,0.02);padding:0.75rem;border-radius:var(--radius-md);border:1px solid var(--glass-border);font-style:italic;color:var(--text-secondary)">
-              "${app.cover_letter}"
+              "${ASDFL.escapeHTML(app.cover_letter)}"
             </p>
           </div>
           <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
             <strong style="color:var(--gold-400)">CV / Özgeçmiş Bağlantısı:</strong>
-            <a href="${app.resume_url}" target="_blank" class="btn btn-secondary btn-sm" style="padding:0.25rem 0.75rem;font-size:0.78rem">
+            <a href="${ASDFL.escapeAttr(resumeUrl || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="padding:0.25rem 0.75rem;font-size:0.78rem">
               CV'yi İncele <i data-lucide="external-link" style="width:12px;height:12px;display:inline-block"></i>
             </a>
           </div>
@@ -533,8 +539,8 @@ async function renderIncomingApplications() {
         
         <div class="app-actions-row">
           <div style="display:flex;gap:1rem;font-size:0.8rem;color:var(--text-muted);flex-wrap:wrap">
-            <span><i data-lucide="mail" style="width:14px;height:14px;display:inline-block;vertical-align:middle"></i> ${email}</span>
-            <span><i data-lucide="phone" style="width:14px;height:14px;display:inline-block;vertical-align:middle"></i> ${phone}</span>
+            <span><i data-lucide="mail" style="width:14px;height:14px;display:inline-block;vertical-align:middle"></i> ${ASDFL.escapeHTML(email)}</span>
+            <span><i data-lucide="phone" style="width:14px;height:14px;display:inline-block;vertical-align:middle"></i> ${ASDFL.escapeHTML(phone)}</span>
           </div>
           ${actionButtons}
         </div>
@@ -574,12 +580,12 @@ async function renderMyRequests() {
       <div class="card" style="padding:1.5rem;margin-bottom:1rem">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem">
           <div>
-            <h4 style="color:var(--text-primary);margin-bottom:0.25rem">${req.title}</h4>
-            <span class="badge badge-gold" style="font-size:0.75rem">${req.field}</span>
+            <h4 style="color:var(--text-primary);margin-bottom:0.25rem">${ASDFL.escapeHTML(req.title)}</h4>
+            <span class="badge badge-gold" style="font-size:0.75rem">${ASDFL.escapeHTML(req.field)}</span>
           </div>
           <span style="font-size:0.8rem;color:var(--text-muted)">Oluşturulma: ${ASDFL.formatDate(req.created_at)}</span>
         </div>
-        <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.75rem;line-height:1.5">${req.details}</p>
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.75rem;line-height:1.5">${ASDFL.escapeHTML(req.details)}</p>
       </div>
     `;
   }).join('');
@@ -614,23 +620,24 @@ async function renderMyApplications() {
   container.innerHTML = myApps.map(app => {
     const statusText = app.status === 'Pending' ? 'Bekliyor' : (app.status === 'Approved' ? 'Onaylandı' : 'Reddedildi');
     const statusClass = app.status === 'Pending' ? 'status-pending' : (app.status === 'Approved' ? 'status-approved' : 'status-rejected');
+    const resumeUrl = careerSafeHttpUrl(app.resume_url);
     
     return `
       <div class="card" style="padding:1.5rem;margin-bottom:1rem">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem">
           <div>
-            <h4 style="color:var(--text-primary);margin-bottom:0.25rem">${app.jobTitle}</h4>
-            <span style="font-size:0.85rem;color:var(--gold-400);font-weight:600">${app.companyName}</span>
+            <h4 style="color:var(--text-primary);margin-bottom:0.25rem">${ASDFL.escapeHTML(app.jobTitle)}</h4>
+            <span style="font-size:0.85rem;color:var(--gold-400);font-weight:600">${ASDFL.escapeHTML(app.companyName)}</span>
           </div>
           <span class="app-status ${statusClass}">${statusText}</span>
         </div>
         <div style="margin-top:0.75rem;font-size:0.82rem;color:var(--text-muted)">
           <div style="margin-bottom:0.25rem"><strong>Başvuru Tarihi:</strong> ${ASDFL.formatDate(app.created_at)}</div>
-          <div style="margin-bottom:0.25rem"><strong>Özgeçmiş Bağlantısı:</strong> <a href="${app.resume_url}" target="_blank" style="color:var(--gold-400)">CV'yi Aç <i data-lucide="external-link" style="width:11px;height:11px;display:inline-block"></i></a></div>
+          <div style="margin-bottom:0.25rem"><strong>Özgeçmiş Bağlantısı:</strong> <a href="${ASDFL.escapeAttr(resumeUrl || '#')}" target="_blank" rel="noopener noreferrer" style="color:var(--gold-400)">CV'yi Aç <i data-lucide="external-link" style="width:11px;height:11px;display:inline-block"></i></a></div>
           <div style="margin-top:0.5rem">
             <strong>Ön Yazınız:</strong>
             <p style="margin-top:0.25rem;font-style:italic;color:var(--text-secondary);background:rgba(255,255,255,0.01);padding:0.5rem;border-radius:var(--radius-sm)">
-              "${app.cover_letter}"
+              "${ASDFL.escapeHTML(app.cover_letter)}"
             </p>
           </div>
         </div>
@@ -784,13 +791,13 @@ window.handleApplyJobSubmit = async function() {
     return;
   }
 
-  // Basic link URL validation check
-  if (!resumeUrl.startsWith('http://') && !resumeUrl.startsWith('https://')) {
+  const normalizedResumeUrl = careerSafeHttpUrl(resumeUrl);
+  if (!normalizedResumeUrl) {
     ASDFL.toast('Lütfen geçerli bir özgeçmiş (URL) bağlantısı girin.', 'warning');
     return;
   }
 
-  const success = await ASDFL.applyToJob(postingId, resumeUrl, coverLetter);
+  const success = await ASDFL.applyToJob(postingId, normalizedResumeUrl, coverLetter);
   if (success) {
     ASDFL.closeModal('applyJobModal');
     

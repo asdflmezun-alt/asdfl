@@ -6,10 +6,21 @@ let allScholarships = [];
 let allApplications = [];
 let allAnnouncements = [];
 let allDataRequests = [];
+let allPostReports = [];
 
 let currentTab = 'dashboard';
 let currentAppFilter = 'ALL';
 let currentAppStatusFilter = 'Pending';
+
+function adminCsvCell(value) {
+  let s = String(value ?? '');
+  if (/^[\s]*[=+\-@]/.test(s)) s = "'" + s;
+  return '"' + s.replace(/"/g, '""') + '"';
+}
+
+function adminEscape(value) {
+  return ASDFL.escapeHTML(value);
+}
 
 function safeSetItem(key, value) {
   try {
@@ -79,14 +90,14 @@ async function loadAdminData() {
 
     // 2. Etkinlikler (events)
     try {
-      const { data, error } = await ASDFL.supabase.from('events').select('id,title,event_date,event_time,location,type,description,upcoming,created_at').order('created_at', { ascending: false }).limit(200);
+      const { data, error } = await ASDFL.supabase.from('events').select('id,title,event_date,event_time,end_time,location,type,description,capacity,cover_url,upcoming,created_at,event_rsvps(count)').order('created_at', { ascending: false }).limit(200);
       if (error) {
-        // created_at yoksa date ile tekrar dene
+        // Yeni kolonlar yoksa (migration uygulanmadıysa) eski şemayla tekrar dene
         const { data: data2, error: error2 } = await ASDFL.supabase.from('events').select('id,title,event_date,event_time,location,type,description,upcoming').limit(200);
         if (error2) console.error('events fetch error:', error2.message);
         allEvents = data2 || [];
       } else {
-        allEvents = data || [];
+        allEvents = (data || []).map(e => ({ ...e, rsvpCount: Array.isArray(e.event_rsvps) ? (e.event_rsvps[0]?.count || 0) : 0 }));
       }
     } catch (e) {
       console.error('events exception:', e);
@@ -151,6 +162,52 @@ async function loadAdminData() {
       allDataRequests = [];
     }
 
+    try {
+      const { data, error } = await ASDFL.supabase
+        .from('post_reports')
+        .select('id,post_id,reporter_id,reason,status,created_at')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) {
+        console.error('post_reports fetch error:', error.message);
+        allPostReports = [];
+      } else {
+        const reports = data || [];
+        const postIds = [...new Set(reports.map(r => r.post_id).filter(Boolean))];
+        const reporterIds = [...new Set(reports.map(r => r.reporter_id).filter(Boolean))];
+        let postsById = new Map();
+        let reportersById = new Map(allMembers.map(m => [m.id, m]));
+
+        if (postIds.length) {
+          const { data: posts, error: postsError } = await ASDFL.supabase
+            .from('posts')
+            .select('id,author_id,content,created_at')
+            .in('id', postIds);
+          if (postsError) console.error('reported posts fetch error:', postsError.message);
+          postsById = new Map((posts || []).map(p => [p.id, p]));
+        }
+
+        const missingReporterIds = reporterIds.filter(id => !reportersById.has(id));
+        if (missingReporterIds.length) {
+          const { data: reporters, error: reportersError } = await ASDFL.supabase
+            .from('public_profiles')
+            .select('id,name,role,grad_year')
+            .in('id', missingReporterIds);
+          if (reportersError) console.error('reporter profiles fetch error:', reportersError.message);
+          reportersById = new Map([...reportersById, ...(reporters || []).map(p => [p.id, p])]);
+        }
+
+        allPostReports = reports.map(report => ({
+          ...report,
+          post: postsById.get(report.post_id) || null,
+          reporter: reportersById.get(report.reporter_id) || null
+        }));
+      }
+    } catch (e) {
+      console.error('post_reports exception:', e);
+      allPostReports = [];
+    }
+
     // Eğer hiç üye yüklenmediyse offline fallback
     if (!allMembers || allMembers.length === 0) {
       loadOfflineFallbackData();
@@ -162,6 +219,7 @@ async function loadAdminData() {
 
 // Fallback when Supabase is offline
 function loadOfflineFallbackData() {
+  allPostReports = [];
   // Members mock
   try {
     const stored = localStorage.getItem('asdfl_alumni');
@@ -274,6 +332,8 @@ function renderAllPanels() {
     renderScholarshipsTable();
   } else if (currentTab === 'applications') {
     renderApplicationsList();
+  } else if (currentTab === 'moderation') {
+    renderModerationReports();
   } else if (currentTab === 'announcements') {
     renderAnnouncementsPanel();
   } else if (currentTab === 'data-requests') {
@@ -332,6 +392,83 @@ window.completeAccountDeletion = async function(requestId, userId) {
   ASDFL.toast('Hesap silindi ve talep sonuçlandırıldı.', 'success'); renderDataRequests(); updateStats();
 };
 
+function renderModerationReports() {
+  const container = document.getElementById('adminModerationReportsList');
+  if (!container) return;
+
+  const statusFilter = document.getElementById('moderationStatusFilter')?.value || 'Pending';
+  const reports = allPostReports.filter(report => statusFilter === 'ALL' || report.status === statusFilter);
+  const statusLabels = { Pending: 'Bekliyor', Reviewed: 'İncelendi', Dismissed: 'Kapatıldı' };
+  const statusBadges = { Pending: 'badge-gold', Reviewed: 'badge-teal', Dismissed: 'badge-blue' };
+
+  if (reports.length === 0) {
+    container.innerHTML = ASDFL.emptyStateHTML({
+      icon: 'flag',
+      title: 'İncelenecek rapor yok',
+      body: 'Seçili filtrede topluluk moderasyonu için bekleyen bir kayıt bulunmuyor.'
+    });
+    setTimeout(() => ASDFL.refreshIcons(), 10);
+    return;
+  }
+
+  container.innerHTML = reports.map(report => {
+    const postText = report.post?.content || 'Gönderi silinmiş veya görüntülenemiyor.';
+    const reporterName = report.reporter?.name || 'Bilinmeyen kullanıcı';
+    const createdAt = report.created_at ? new Date(report.created_at).toLocaleString('tr-TR') : '-';
+    return `
+      <div class="card" style="padding:1rem 1.25rem;margin-bottom:1rem;border:1px solid var(--glass-border);background:var(--glass-bg)">
+        <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap">
+          <div>
+            <span class="badge ${statusBadges[report.status] || 'badge-blue'}">${statusLabels[report.status] || report.status}</span>
+            <h4 style="margin:.55rem 0 .2rem;font-size:1rem;color:var(--text-primary)">Raporlanan gönderi</h4>
+            <p style="margin:0;color:var(--text-secondary);font-size:.88rem;line-height:1.5;white-space:pre-wrap">${adminEscape(postText).slice(0, 500)}</p>
+          </div>
+          <a class="btn btn-ghost btn-sm" href="topluluk.html#post-${ASDFL.escapeAttr(report.post_id)}" style="white-space:nowrap">Gönderiye Git</a>
+        </div>
+        <div style="margin-top:.85rem;padding-top:.85rem;border-top:1px solid var(--glass-border);display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;color:var(--text-muted);font-size:.82rem">
+          <div><strong style="color:var(--text-secondary)">Raporlayan:</strong> ${adminEscape(reporterName)}</div>
+          <div><strong style="color:var(--text-secondary)">Tarih:</strong> ${adminEscape(createdAt)}</div>
+          <div><strong style="color:var(--text-secondary)">Neden:</strong> ${adminEscape(report.reason || 'Neden belirtilmedi')}</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:.5rem;flex-wrap:wrap;margin-top:1rem">
+          <button class="btn btn-secondary btn-sm" onclick="updatePostReportStatus('${ASDFL.escapeAttr(report.id)}', 'Dismissed')">Kapat</button>
+          <button class="btn btn-primary btn-sm" onclick="updatePostReportStatus('${ASDFL.escapeAttr(report.id)}', 'Reviewed')">İncelendi</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--text-red)" onclick="deleteReportedPost('${ASDFL.escapeAttr(report.post_id)}', '${ASDFL.escapeAttr(report.id)}')">Gönderiyi Sil</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  setTimeout(() => ASDFL.refreshIcons(), 10);
+}
+
+window.updatePostReportStatus = async function(reportId, status) {
+  if (!ASDFL.supabase) {
+    allPostReports = allPostReports.map(report => report.id === reportId ? { ...report, status } : report);
+    renderModerationReports();
+    updateStats();
+    return;
+  }
+  const { error } = await ASDFL.supabase.from('post_reports').update({ status }).eq('id', reportId);
+  if (error) { ASDFL.toast('Rapor güncellenemedi: ' + error.message, 'error'); return; }
+  allPostReports = allPostReports.map(report => report.id === reportId ? { ...report, status } : report);
+  ASDFL.toast('Moderasyon durumu güncellendi.', 'success');
+  renderModerationReports();
+  updateStats();
+};
+
+window.deleteReportedPost = async function(postId, reportId) {
+  if (!postId || !confirm('Bu gönderi kalıcı olarak silinecek. Devam edilsin mi?')) return;
+  if (ASDFL.supabase) {
+    const { error } = await ASDFL.supabase.from('posts').delete().eq('id', postId);
+    if (error) { ASDFL.toast('Gönderi silinemedi: ' + error.message, 'error'); return; }
+    await ASDFL.supabase.from('post_reports').update({ status: 'Reviewed' }).eq('id', reportId);
+  }
+  allPostReports = allPostReports.map(report => report.id === reportId ? { ...report, status: 'Reviewed', post: null } : report);
+  ASDFL.toast('Gönderi silindi ve rapor incelendi olarak işaretlendi.', 'success');
+  renderModerationReports();
+  updateStats();
+};
+
 // Render counters and badges
 function updateStats() {
   const totalUsers = allMembers.length;
@@ -345,7 +482,9 @@ function updateStats() {
   const elBurs = document.getElementById('statTotalScholarships');
   const appBadge = document.getElementById('pendingAppsBadge');
   const dataRequestBadge = document.getElementById('pendingDataRequestsBadge');
+  const reportBadge = document.getElementById('pendingReportsBadge');
   const pendingDataRequests = allDataRequests.filter(request => request.status === 'Pending').length;
+  const pendingReports = allPostReports.filter(report => report.status === 'Pending').length;
 
   if (elUsers) elUsers.textContent = totalUsers;
   if (elEvents) elEvents.textContent = totalEvents;
@@ -363,6 +502,10 @@ function updateStats() {
   if (dataRequestBadge) {
     dataRequestBadge.textContent = pendingDataRequests;
     dataRequestBadge.style.display = pendingDataRequests > 0 ? 'inline-flex' : 'none';
+  }
+  if (reportBadge) {
+    reportBadge.textContent = pendingReports;
+    reportBadge.style.display = pendingReports > 0 ? 'inline-flex' : 'none';
   }
 }
 
@@ -563,22 +706,30 @@ function renderEventsTable() {
   if (countEl) countEl.textContent = `${allEvents.length} aktif etkinlik/duyuru`;
 
   if (allEvents.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Henüz etkinlik eklenmemiş.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Henüz etkinlik eklenmemiş.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = allEvents.map(e => `
+  tbody.innerHTML = allEvents.map(e => {
+    const count = e.rsvpCount || 0;
+    const cap = e.capacity != null ? '/' + e.capacity : '';
+    return `
     <tr>
       <td><strong style="color:var(--text-primary)">${ASDFL.escapeHTML(e.title)}</strong></td>
-      <td><span class="badge ${e.type === 'etkinlik' ? 'badge-blue' : 'badge-gold'}">${e.type === 'etkinlik' ? 'Etkinlik' : 'Duyuru'}</span></td>
-      <td>${ASDFL.formatDate(e.date)}</td>
+      <td><span class="badge badge-blue">${ASDFL.escapeHTML(e.type || '-')}</span></td>
+      <td>${ASDFL.formatDate(e.event_date || e.date)}</td>
       <td>${ASDFL.escapeHTML(e.location || 'Online')}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="exportEventAttendees('${e.id}')" title="Katılımcı listesini CSV indir" style="padding:.15rem .4rem">
+          <i data-lucide="users" style="width:1rem;height:1rem"></i> ${count}${cap}
+        </button>
+      </td>
       <td style="text-align:right;display:flex;gap:.5rem;justify-content:flex-end">
         <button class="btn btn-ghost btn-sm" onclick="openEditEventModal('${e.id}')" style="padding:.25rem"><i data-lucide="edit" style="width:1.1rem;height:1.1rem"></i></button>
         <button class="btn btn-ghost btn-sm" onclick="deleteEvent('${e.id}')" style="color:var(--text-red);padding:.25rem"><i data-lucide="trash-2" style="width:1.1rem;height:1.1rem"></i></button>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 
   setTimeout(() => ASDFL.refreshIcons(), 10);
 }
@@ -586,9 +737,13 @@ function renderEventsTable() {
 window.openAddEventModal = function() {
   document.getElementById('adminEventModalTitle').innerHTML = '<i data-lucide="plus"></i> Yeni Etkinlik / Duyuru';
   document.getElementById('eventEditId').value = '';
+  document.getElementById('eventFieldType').value = 'bulusma';
   document.getElementById('eventFieldTitle').value = '';
   document.getElementById('eventFieldDesc').value = '';
   document.getElementById('eventFieldDate').value = '';
+  document.getElementById('eventFieldTime').value = '';
+  document.getElementById('eventFieldEndTime').value = '';
+  document.getElementById('eventFieldCapacity').value = '';
   document.getElementById('eventFieldLocation').value = '';
   document.getElementById('eventFieldImage').value = '';
   ASDFL.openModal('adminEventModal');
@@ -601,12 +756,15 @@ window.openEditEventModal = function(id) {
 
   document.getElementById('adminEventModalTitle').innerHTML = '<i data-lucide="edit"></i> Etkinliği Düzenle';
   document.getElementById('eventEditId').value = event.id;
-  document.getElementById('eventFieldType').value = event.type;
-  document.getElementById('eventFieldTitle').value = event.title;
-  document.getElementById('eventFieldDesc').value = event.desc;
-  document.getElementById('eventFieldDate').value = event.date;
+  document.getElementById('eventFieldType').value = event.type || 'bulusma';
+  document.getElementById('eventFieldTitle').value = event.title || '';
+  document.getElementById('eventFieldDesc').value = event.description ?? event.desc ?? '';
+  document.getElementById('eventFieldDate').value = event.event_date || event.date || '';
+  document.getElementById('eventFieldTime').value = event.event_time || event.time || '';
+  document.getElementById('eventFieldEndTime').value = event.end_time || '';
+  document.getElementById('eventFieldCapacity').value = event.capacity != null ? event.capacity : '';
   document.getElementById('eventFieldLocation').value = event.location || '';
-  document.getElementById('eventFieldImage').value = event.image_url || '';
+  document.getElementById('eventFieldImage').value = event.cover_url || '';
 
   ASDFL.openModal('adminEventModal');
   setTimeout(() => ASDFL.refreshIcons(), 10);
@@ -615,18 +773,22 @@ window.openEditEventModal = function(id) {
 window.saveEventFromModal = async function() {
   const id = document.getElementById('eventEditId').value;
   const type = document.getElementById('eventFieldType').value;
-  const title = document.getElementById('eventFieldTitle').value;
-  const desc = document.getElementById('eventFieldDesc').value;
-  const date = document.getElementById('eventFieldDate').value;
+  const title = document.getElementById('eventFieldTitle').value.trim();
+  const description = document.getElementById('eventFieldDesc').value;
+  const event_date = document.getElementById('eventFieldDate').value;
+  const event_time = document.getElementById('eventFieldTime').value || null;
+  const end_time = document.getElementById('eventFieldEndTime').value || null;
+  const capRaw = document.getElementById('eventFieldCapacity').value;
+  const capacity = capRaw ? Math.max(1, parseInt(capRaw, 10)) : null;
   const location = document.getElementById('eventFieldLocation').value;
-  const imageUrl = document.getElementById('eventFieldImage').value;
+  const cover_url = document.getElementById('eventFieldImage').value || null;
 
-  if (!title || !date) {
+  if (!title || !event_date) {
     ASDFL.toast('Başlık ve Tarih alanları zorunludur.', 'warning');
     return;
   }
 
-  const eventData = { type, title, desc, date, location, image_url: imageUrl };
+  const eventData = { type, title, description, event_date, event_time, end_time, capacity, location, cover_url };
 
   if (ASDFL.supabase) {
     if (id) {
@@ -675,6 +837,39 @@ window.deleteEvent = async function(id) {
     ASDFL.toast('Etkinlik silindi! (Local)', 'success');
     renderAllPanels();
   }
+};
+
+// Etkinliğe katılanların listesini CSV olarak indirir (kapıda yoklama için).
+window.exportEventAttendees = async function(id) {
+  const event = allEvents.find(e => e.id == id);
+  if (!ASDFL.supabase) { ASDFL.toast('Bu özellik yalnızca çevrimiçi modda kullanılabilir.', 'info'); return; }
+
+  // Admin-only RPC: profiles.email/phone kolonlarına yalnızca buradan erişilir.
+  const { data, error } = await ASDFL.supabase.rpc('list_event_attendees', { target_event_id: id });
+
+  if (error) { ASDFL.toast('Katılımcılar alınamadı: ' + error.message, 'error'); return; }
+  if (!data || data.length === 0) { ASDFL.toast('Bu etkinliğe henüz katılan yok.', 'info'); return; }
+
+  const csvCell = (v) => {
+    const s = String(v ?? '');
+    return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const rows = [['Ad Soyad', 'Mezuniyet Yılı', 'E-posta', 'Telefon', 'Kayıt Tarihi']];
+  data.forEach(r => {
+    rows.push([r.name || '', r.grad_year || '', r.email || '', r.phone || '', ASDFL.formatDate(r.created_at)]);
+  });
+  const csv = '\uFEFF' + rows.map(row => row.map(adminCsvCell).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const slug = String(event?.title || 'etkinlik').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'etkinlik';
+  a.href = url;
+  a.download = 'katilimcilar-' + slug + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  ASDFL.toast(`${data.length} katılımcı indirildi.`, 'success');
 };
 
 
@@ -920,7 +1115,7 @@ function renderScholarshipsTable() {
               <div class="avatar avatar-sm">${ASDFL.getInitials(studentName)}</div>
               <div>
                 <strong style="color:var(--text-primary);display:block">${ASDFL.escapeHTML(studentName)}</strong>
-                <span style="font-size:0.75rem;color:var(--text-muted);">${a.details?.gpa ? `Not Ort: ${a.details.gpa}` : ''}</span>
+                <span style="font-size:0.75rem;color:var(--text-muted);">${a.details?.gpa ? `Not Ort: ${ASDFL.escapeHTML(a.details.gpa)}` : ''}</span>
               </div>
             </div>
           </td>
@@ -1002,13 +1197,13 @@ window.openBursApplicationDetails = function(appId) {
   contentDiv.innerHTML = `
     <!-- Student Header -->
     <div style="display:flex; align-items:center; gap:1rem; padding-bottom:1.25rem; border-bottom:1px solid var(--glass-border); margin-bottom:1.25rem;">
-      <div class="avatar" style="width:60px; height:60px; font-size:1.4rem;">${ASDFL.getInitials(studentName)}</div>
+      <div class="avatar" style="width:60px; height:60px; font-size:1.4rem;">${adminEscape(ASDFL.getInitials(studentName))}</div>
       <div>
-        <h4 style="font-size:1.25rem; color:var(--text-primary); margin:0 0 0.25rem 0; font-family:'Outfit',sans-serif; font-weight:600;">${studentName}</h4>
+        <h4 style="font-size:1.25rem; color:var(--text-primary); margin:0 0 0.25rem 0; font-family:'Outfit',sans-serif; font-weight:600;">${adminEscape(studentName)}</h4>
         <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-          <span style="font-size:0.85rem; color:var(--text-muted);">${studentEmail}</span>
+          <span style="font-size:0.85rem; color:var(--text-muted);">${adminEscape(studentEmail)}</span>
           <span style="color:var(--glass-border)">•</span>
-          <span style="font-size:0.85rem; color:var(--text-muted);">${studentPhone}</span>
+          <span style="font-size:0.85rem; color:var(--text-muted);">${adminEscape(studentPhone)}</span>
         </div>
       </div>
     </div>
@@ -1019,11 +1214,11 @@ window.openBursApplicationDetails = function(appId) {
         <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:block; margin-bottom:0.25rem">Eğitim Bilgileri</span>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem">
           <span style="font-size:0.85rem; color:var(--text-secondary)">Sınıf:</span>
-          <strong style="font-size:0.85rem; color:var(--text-primary)">${studentGrade}</strong>
+          <strong style="font-size:0.85rem; color:var(--text-primary)">${adminEscape(studentGrade)}</strong>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center">
           <span style="font-size:0.85rem; color:var(--text-secondary)">Not Ortalaması (GPA):</span>
-          <span class="badge badge-gold" style="font-weight:600">${studentGPA}</span>
+          <span class="badge badge-gold" style="font-weight:600">${adminEscape(studentGPA)}</span>
         </div>
       </div>
 
@@ -1045,8 +1240,8 @@ window.openBursApplicationDetails = function(appId) {
       <span style="font-size:0.7rem; color:var(--gold-500); font-weight:600; text-transform:uppercase; display:block; margin-bottom:0.25rem">Tercih Edilen Burs Programı</span>
       <h5 style="margin:0 0 0.25rem 0; font-size:1rem; color:var(--text-primary);">${ASDFL.escapeHTML(app.title)}</h5>
       <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-        <span style="color:var(--text-muted)">Sponsor: <strong style="color:var(--text-secondary)">${sponsor}</strong></span>
-        <span style="color:var(--gold-500); font-weight:600;">Destek Miktarı: ${amount}</span>
+        <span style="color:var(--text-muted)">Sponsor: <strong style="color:var(--text-secondary)">${adminEscape(sponsor)}</strong></span>
+        <span style="color:var(--gold-500); font-weight:600;">Destek Miktarı: ${adminEscape(amount)}</span>
       </div>
     </div>
 
@@ -1055,7 +1250,7 @@ window.openBursApplicationDetails = function(appId) {
       <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:block; margin-bottom:0.5rem">Başvuru Gerekçesi / Açıklama</span>
       <div style="padding:1rem; background:rgba(255,255,255,0.01); border-radius:var(--radius-md); border:1px solid var(--glass-border); position:relative; overflow:hidden">
         <i data-lucide="quote" style="position:absolute; right:10px; bottom:10px; width:40px; height:40px; color:rgba(255,255,255,0.02); pointer-events:none;"></i>
-        <p style="margin:0; font-size:0.9rem; line-height:1.5; color:var(--text-secondary); white-space:pre-wrap; font-style:italic;">"${studentBio}"</p>
+        <p style="margin:0; font-size:0.9rem; line-height:1.5; color:var(--text-secondary); white-space:pre-wrap; font-style:italic;">"${adminEscape(studentBio)}"</p>
       </div>
     </div>
 
@@ -1100,16 +1295,16 @@ window.exportBursToCSV = function(type) {
     });
 
     filtered.forEach(a => {
-      const name = (a.profiles?.name || a.details?.name || 'Ogrenci').replace(/"/g, '""');
-      const email = (a.profiles?.email || a.details?.email || '-').replace(/"/g, '""');
+      const name = a.profiles?.name || a.details?.name || 'Ogrenci';
+      const email = a.profiles?.email || a.details?.email || '-';
       const gpa = a.details?.gpa || 'Belirtilmemis';
       const grade = a.details?.grade || 'Belirtilmemis';
-      const program = a.title.replace(/"/g, '""');
+      const program = a.title;
       const date = ASDFL.formatDate(a.created_at);
       const status = 'Bekliyor';
-      const bio = (a.details?.bio || '').replace(/"/g, '""').replace(/\n/g, ' ');
+      const bio = (a.details?.bio || '').replace(/\n/g, ' ');
 
-      csvContent += `"${name}","${email}","${gpa}","${grade}","${program}","${date}","${status}","${bio}"\n`;
+      csvContent += [name, email, gpa, grade, program, date, status, bio].map(adminCsvCell).join(',') + '\n';
     });
   } else if (type === 'recipients') {
     filename = 'burs_bursiyerler.csv';
@@ -1133,19 +1328,19 @@ window.exportBursToCSV = function(type) {
     });
 
     filtered.forEach(a => {
-      const name = (a.profiles?.name || a.details?.name || 'Ogrenci').replace(/"/g, '""');
-      const email = (a.profiles?.email || a.details?.email || '-').replace(/"/g, '""');
-      const phone = (a.profiles?.phone || '-').replace(/"/g, '""');
+      const name = a.profiles?.name || a.details?.name || 'Ogrenci';
+      const email = a.profiles?.email || a.details?.email || '-';
+      const phone = a.profiles?.phone || '-';
       const gpa = a.details?.gpa || 'Belirtilmemis';
       const grade = a.details?.grade || 'Belirtilmemis';
-      const program = a.title.replace(/"/g, '""');
+      const program = a.title;
 
       const prog = allScholarships.find(s => s.title === a.title);
-      const sponsor = (prog ? prog.sponsor : 'Sponsor').replace(/"/g, '""');
-      const amount = (prog ? prog.amount : 'Miktar').replace(/"/g, '""');
+      const sponsor = prog ? prog.sponsor : 'Sponsor';
+      const amount = prog ? prog.amount : 'Miktar';
       const date = ASDFL.formatDate(a.created_at);
 
-      csvContent += `"${name}","${email}","${phone}","${gpa}","${grade}","${program}","${sponsor}","${amount}","${date}"\n`;
+      csvContent += [name, email, phone, gpa, grade, program, sponsor, amount, date].map(adminCsvCell).join(',') + '\n';
     });
   }
 
@@ -1289,33 +1484,38 @@ function renderApplicationsList() {
 
   container.innerHTML = filtered.map(a => {
     const dateStr = ASDFL.formatDate(a.created_at);
+    const details = a.details || {};
+    const appTitle = adminEscape(a.title || 'Belirtilmemiş');
+    const profileName = adminEscape(a.profiles?.name || 'Bilinmeyen Üye');
+    const profileGradYear = adminEscape(a.profiles?.grad_year || '');
+    const profilePhone = adminEscape(a.profiles?.phone || '');
     
     // Render dynamic details fields
     let detailsHTML = '';
     if (a.type === 'Burs') {
       detailsHTML = `
         <div class="app-detail-row">
-          <div class="app-detail-item"><strong>Sınıf</strong><span>${a.details?.grade || 'Belirtilmemiş'}</span></div>
-          <div class="app-detail-item"><strong>GPA (Not Ort.)</strong><span>${a.details?.gpa || 'Belirtilmemiş'}</span></div>
-          <div class="app-detail-item"><strong>E-posta</strong><span>${a.details?.email || 'Belirtilmemiş'}</span></div>
+          <div class="app-detail-item"><strong>Sınıf</strong><span>${adminEscape(details.grade || 'Belirtilmemiş')}</span></div>
+          <div class="app-detail-item"><strong>GPA (Not Ort.)</strong><span>${adminEscape(details.gpa || 'Belirtilmemiş')}</span></div>
+          <div class="app-detail-item"><strong>E-posta</strong><span>${adminEscape(details.email || 'Belirtilmemiş')}</span></div>
         </div>
-        ${a.details?.bio ? `<p style="margin-top:.75rem;padding:.75rem;background:rgba(255,255,255,0.01);border-radius:var(--radius-sm);border:1px solid var(--glass-border)"><i data-lucide="quote" style="width:12px;height:12px;display:inline;margin-right:4px"></i> ${a.details.bio}</p>` : ''}
+        ${details.bio ? `<p style="margin-top:.75rem;padding:.75rem;background:rgba(255,255,255,0.01);border-radius:var(--radius-sm);border:1px solid var(--glass-border)"><i data-lucide="quote" style="width:12px;height:12px;display:inline;margin-right:4px"></i> ${adminEscape(details.bio)}</p>` : ''}
       `;
     } else if (a.type === 'MentorlukTalebi') {
       detailsHTML = `
         <div class="app-detail-row">
-          <div class="app-detail-item"><strong>Sınıf</strong><span>${a.details?.grade || 'Belirtilmemiş'}</span></div>
-          <div class="app-detail-item"><strong>Uzmanlık / Branş</strong><span>${a.title || 'Belirtilmemiş'}</span></div>
+          <div class="app-detail-item"><strong>Sınıf</strong><span>${adminEscape(details.grade || 'Belirtilmemiş')}</span></div>
+          <div class="app-detail-item"><strong>Uzmanlık / Branş</strong><span>${appTitle}</span></div>
         </div>
-        ${a.details?.description ? `<p style="margin-top:.75rem;padding:.75rem;background:rgba(255,255,255,0.01);border-radius:var(--radius-sm);border:1px solid var(--glass-border)"><i data-lucide="quote" style="width:12px;height:12px;display:inline;margin-right:4px"></i> ${a.details.description}</p>` : ''}
+        ${details.description ? `<p style="margin-top:.75rem;padding:.75rem;background:rgba(255,255,255,0.01);border-radius:var(--radius-sm);border:1px solid var(--glass-border)"><i data-lucide="quote" style="width:12px;height:12px;display:inline;margin-right:4px"></i> ${adminEscape(details.description)}</p>` : ''}
       `;
     } else if (a.type === 'MentorlukKaydi') {
       detailsHTML = `
         <div class="app-detail-row">
-          <div class="app-detail-item"><strong>Mezuniyet Yılı</strong><span>${a.details?.gradYear || 'Belirtilmemiş'}</span></div>
-          <div class="app-detail-item"><strong>Meslek</strong><span>${a.details?.job || 'Belirtilmemiş'}</span></div>
-          <div class="app-detail-item"><strong>Uzmanlık Alanı</strong><span>${a.title || 'Belirtilmemiş'}</span></div>
-          <div class="app-detail-item"><strong>Haftalık Süre</strong><span>${a.details?.hours || 'Belirtilmemiş'}</span></div>
+          <div class="app-detail-item"><strong>Mezuniyet Yılı</strong><span>${adminEscape(details.gradYear || 'Belirtilmemiş')}</span></div>
+          <div class="app-detail-item"><strong>Meslek</strong><span>${adminEscape(details.job || 'Belirtilmemiş')}</span></div>
+          <div class="app-detail-item"><strong>Uzmanlık Alanı</strong><span>${appTitle}</span></div>
+          <div class="app-detail-item"><strong>Haftalık Süre</strong><span>${adminEscape(details.hours || 'Belirtilmemiş')}</span></div>
         </div>
       `;
     }
@@ -1339,11 +1539,11 @@ function renderApplicationsList() {
         <div class="app-card-header">
           <div>
             <span class="badge ${typeBadges[a.type]}">${typeLabels[a.type]}</span>
-            <h4 class="app-card-title" style="margin-top:.5rem">${a.profiles?.name || 'Bilinmeyen Üye'}</h4>
+            <h4 class="app-card-title" style="margin-top:.5rem">${profileName}</h4>
             <div class="app-card-meta">
               <span>📅 Başvuru: ${dateStr}</span>
-              ${a.profiles?.grad_year ? `<span>🎓 ${a.profiles.grad_year} Mezunu</span>` : ''}
-              ${a.profiles?.phone ? `<span>📞 Tel: ${a.profiles.phone}</span>` : ''}
+              ${a.profiles?.grad_year ? `<span>🎓 ${profileGradYear} Mezunu</span>` : ''}
+              ${a.profiles?.phone ? `<span>📞 Tel: ${profilePhone}</span>` : ''}
             </div>
           </div>
           <span class="badge ${a.status === 'Pending' ? 'badge-gold' : a.status === 'Approved' ? 'badge-teal' : 'badge-red'}">${a.status === 'Pending' ? 'İncelemede' : a.status === 'Approved' ? 'Onaylandı' : 'Reddedildi'}</span>

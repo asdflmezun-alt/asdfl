@@ -1,7 +1,8 @@
 // ASDFL Mezunlar Derneği — service worker
 // Bump CACHE_VERSION whenever a deploy should force-invalidate old caches.
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v9';
 const CACHE_NAME = `asdfl-${CACHE_VERSION}`;
+const DEV_BYPASS_CACHE = ['localhost', '127.0.0.1', '::1'].includes(self.location.hostname);
 
 const PRECACHE_URLS = [
   'index.html',
@@ -26,6 +27,10 @@ const STATIC_EXTENSIONS = new Set([
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
+    if (DEV_BYPASS_CACHE) {
+      self.skipWaiting();
+      return;
+    }
     const cache = await caches.open(CACHE_NAME);
     await Promise.all(PRECACHE_URLS.map(async (url) => {
       try {
@@ -53,6 +58,11 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return; // never intercept Supabase/CDN calls
+
+  if (DEV_BYPASS_CACHE) {
+    event.respondWith(fetch(request).catch(() => caches.match(request)));
+    return;
+  }
 
   // HTML navigations: prefer the network so signed-in state and data stay fresh,
   // fall back to the cache (and finally the shell) when offline.

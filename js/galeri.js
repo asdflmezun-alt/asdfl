@@ -44,16 +44,17 @@ function renderGaleri() {
 
   grid.innerHTML = filtered.map(g => {
     const authorName = g.profiles?.name || 'Bilinmiyor';
+    const imageUrl = ASDFL.safeURL(g.image_url, { allowBlob: true }) || '';
     return `
-    <div class="galeri-item reveal" onclick="openLightbox('${g.id}')">
+    <div class="galeri-item reveal" data-gallery-id="${ASDFL.escapeAttr(g.id)}" onclick="openLightbox(this.dataset.galleryId)">
       <div class="galeri-item-inner">
-        <img src="${g.image_url}" alt="${g.title}" style="width:100%;height:220px;object-fit:cover;border-radius:var(--radius-lg)">
+        <img src="${ASDFL.escapeAttr(imageUrl)}" alt="${ASDFL.escapeAttr(g.title)}" style="width:100%;height:220px;object-fit:cover;border-radius:var(--radius-lg)">
         <div class="galeri-overlay">
-          <h4>${g.title}</h4>
-          <span><i data-lucide="calendar" style="width:1em;height:1em"></i> ${g.year || ''} · <i data-lucide="user" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${authorName}</span>
+          <h4>${ASDFL.escapeHTML(g.title)}</h4>
+          <span><i data-lucide="calendar" style="width:1em;height:1em"></i> ${ASDFL.escapeHTML(g.year || '')} · <i data-lucide="user" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(authorName)}</span>
         </div>
       </div>
-    </div>`
+    </div>`;
   }).join('');
 
   ASDFL.initReveal();
@@ -65,16 +66,17 @@ window.openLightbox = function(id) {
   if(!g) return;
   const lb = document.getElementById('lightbox');
   const authorName = g.profiles?.name || 'Bilinmiyor';
-  
+  const imageUrl = ASDFL.safeURL(g.image_url, { allowBlob: true }) || '';
+
   document.getElementById('lightboxImg').innerHTML = `
-    <img src="${g.image_url}" style="width:100%;max-height:60vh;object-fit:contain;border-radius:var(--radius-lg)">
+    <img src="${ASDFL.escapeAttr(imageUrl)}" alt="${ASDFL.escapeAttr(g.title)}" style="width:100%;max-height:60vh;object-fit:contain;border-radius:var(--radius-lg)">
   `;
   document.getElementById('lightboxInfo').innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-top:1rem">
       <div>
-        <strong style="color:var(--text-primary)">${g.title}</strong><br>
-        <span style="font-size:.82rem"><i data-lucide="calendar" style="width:1em;height:1em"></i> ${g.year || ''} · <i data-lucide="user" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${authorName}</span>
-        <p style="font-size:.85rem;color:var(--text-secondary);margin-top:.5rem">${g.description || ''}</p>
+        <strong style="color:var(--text-primary)">${ASDFL.escapeHTML(g.title)}</strong><br>
+        <span style="font-size:.82rem"><i data-lucide="calendar" style="width:1em;height:1em"></i> ${ASDFL.escapeHTML(g.year || '')} · <i data-lucide="user" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(authorName)}</span>
+        <p style="font-size:.85rem;color:var(--text-secondary);margin-top:.5rem">${ASDFL.escapeHTML(g.description || '')}</p>
       </div>
     </div>`;
   lb.classList.add('open');
@@ -118,7 +120,7 @@ window.handleGalleryUpload = async function() {
     ASDFL.toast('Lütfen bir fotoğraf seçin', 'warning');
     return;
   }
-  
+
   const btn = document.getElementById('uploadBtn');
   btn.textContent = 'Yükleniyor...';
   btn.disabled = true;
@@ -141,8 +143,8 @@ window.handleGalleryUpload = async function() {
     } else {
       ASDFL.toast('Fotoğraf başarıyla paylaşıldı!', 'success');
       ASDFL.closeModal('uploadModal');
-      await loadGallery(); 
-      
+      await loadGallery();
+
       fileInput.value = '';
       document.getElementById('filePreview').innerHTML = '';
       document.getElementById('filePreview').style.display = 'none';

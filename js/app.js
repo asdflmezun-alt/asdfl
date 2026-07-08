@@ -128,11 +128,17 @@ const ASDFL = {
     if (!this.supabase) return [];
     try {
       const { data, error } = await this.queryWithTimeout(
-        this.supabase.from('events').select('id,title,event_date,event_time,location,type,description,upcoming,created_at').order('event_date', { ascending: true }).limit(100)
+        this.supabase.from('events').select('id,title,event_date,event_time,end_time,location,type,description,capacity,cover_url,upcoming,created_at,event_rsvps(count)').order('event_date', { ascending: true }).limit(100)
       );
       if (error || !data) { if (error) console.error('Error fetching events:', error); return []; }
       // Convert to camelCase to match previous demo structures if needed
-      return data.map(d => ({ ...d, date: d.event_date, time: d.event_time }));
+      return data.map(d => ({
+        ...d,
+        date: d.event_date,
+        time: d.event_time,
+        desc: d.description,
+        rsvpCount: Array.isArray(d.event_rsvps) ? (d.event_rsvps[0]?.count || 0) : 0
+      }));
     } catch (err) {
       console.warn('Exception fetching events from Supabase:', err);
       return [];
@@ -617,7 +623,7 @@ const ASDFL = {
         .from('job_postings')
         .select('*, profiles!employer_id(name, role, grad_year, city, job, company, avatar_url, avatar_position, academic_title, specialization)')
         .order('created_at', { ascending: false });
-      if (error) { console.error('Error fetching job postings:', error); return []; }
+      if (error) { console.warn('Job postings could not be loaded; using empty state.', error.message || error); return []; }
       return data.map(jp => ({
         ...jp,
         employerName: (jp.profiles?.academic_title ? jp.profiles.academic_title + ' ' : '') + (jp.profiles?.name || 'Mezun'),
@@ -1246,9 +1252,14 @@ const ASDFL = {
   openModal(id) {
     const m = document.getElementById(id);
     if (!m) return;
+    this._lastFocusedBeforeModal = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    m.setAttribute('role', 'dialog');
+    m.setAttribute('aria-modal', 'true');
+    if (!m.hasAttribute('tabindex')) m.setAttribute('tabindex', '-1');
     m.style.display = 'flex';
     setTimeout(() => {
       m.classList.add('open');
+      this.focusFirstInModal(m);
     }, 10);
     // iOS Safari scroll lock: body'yi fixed yap, scroll atlamasını önle
     const scrollY = window.scrollY;
@@ -1273,6 +1284,10 @@ const ASDFL = {
       document.body.classList.remove('modal-open');
       document.body.style.top = '';
       window.scrollTo(0, scrollY);
+      if (this._lastFocusedBeforeModal && document.contains(this._lastFocusedBeforeModal)) {
+        this._lastFocusedBeforeModal.focus({ preventScroll: true });
+      }
+      this._lastFocusedBeforeModal = null;
     }
   },
 
@@ -1387,6 +1402,168 @@ const ASDFL = {
     if (!dateStr) return '';
     const d = new Date(dateStr);
     return d.toLocaleDateString('tr-TR', { day:'numeric', month:'long', year:'numeric' });
+  },
+
+  emptyStateHTML({ icon = 'info', title = 'Veri bulunmuyor', body = '', actionLabel = '', action = '' } = {}) {
+    const safeIcon = /^[a-z0-9-]+$/i.test(icon) ? icon : 'info';
+    const actionHTML = actionLabel && action
+      ? `<button class="btn btn-secondary btn-sm" type="button" onclick="${this.escapeAttr(action)}">${this.escapeHTML(actionLabel)}</button>`
+      : '';
+    return `
+      <div class="empty-state" style="text-align:center;padding:2rem;border:1px dashed var(--glass-border);border-radius:var(--radius-lg);background:rgba(255,255,255,0.015);color:var(--text-muted)">
+        <i data-lucide="${safeIcon}" style="width:2rem;height:2rem;color:var(--gold-500);margin-bottom:.75rem"></i>
+        <h4 style="margin:.15rem 0 .35rem;color:var(--text-primary);font-family:'Outfit',sans-serif;font-size:1rem">${this.escapeHTML(title)}</h4>
+        ${body ? `<p style="margin:0 auto 1rem;max-width:34rem;font-size:.86rem;line-height:1.55">${this.escapeHTML(body)}</p>` : ''}
+        ${actionHTML}
+      </div>
+    `;
+  },
+
+  getProfileCompletion(profile = {}) {
+    const role = profile.role || '';
+    const checks = [
+      ['name', 'Ad soyad', Boolean(profile.name)],
+      ['avatar', 'Profil fotoğrafı', Boolean(profile.avatar_url || profile.avatarUrl)],
+      ['city', 'Şehir', Boolean(profile.city)],
+      ['phone', 'Telefon', Boolean(profile.phone)],
+      ['bio', 'Kısa tanıtım', Boolean(profile.bio && String(profile.bio).trim().length >= 20)],
+      ['class_section', 'Sınıf/şube', Boolean(profile.class_section || profile.classSection)]
+    ];
+
+    if (role === 'Öğrenci') {
+      checks.push(
+        ['grade', 'Sınıf düzeyi', Boolean(profile.grade)],
+        ['target_university', 'Hedef üniversite', Boolean(profile.target_university || profile.targetUniversity || profile.university)],
+        ['target_job', 'Hedef meslek', Boolean(profile.target_job || profile.targetJob)]
+      );
+    } else if (role === 'Öğretmen') {
+      checks.push(
+        ['branch', 'Branş', Boolean(profile.branch || profile.specialization)],
+        ['teaching_year', 'Göreve başlangıç yılı', Boolean(profile.teaching_year || profile.teachingYear)]
+      );
+    } else {
+      checks.push(
+        ['grad_year', 'Mezuniyet yılı', Boolean(profile.grad_year || profile.gradYear)],
+        ['job', 'Meslek', Boolean(profile.job)],
+        ['university', 'Üniversite', Boolean(profile.university)],
+        ['mentor_preference', 'Mentörlük tercihi', Boolean(profile.mentor || profile.mentor_preference || profile.mentorPreference)]
+      );
+    }
+
+    const completed = checks.filter(([, , ok]) => ok).length;
+    const percent = checks.length ? Math.round((completed / checks.length) * 100) : 0;
+    return {
+      percent,
+      completed,
+      total: checks.length,
+      missing: checks.filter(([, , ok]) => !ok).map(([, label]) => label).slice(0, 3)
+    };
+  },
+
+  eventIsUpcoming(ev, now = new Date()) {
+    const baseline = new Date(now);
+    baseline.setHours(0, 0, 0, 0);
+    const start = this.eventStart(ev) || new Date(ev?.date || ev?.event_date);
+    return !isNaN(start.getTime()) && start >= baseline;
+  },
+
+  // ---- Takvim entegrasyonu (ICS + Google Calendar) ----
+  // Etkinlik başlangıcını event_date + event_time'dan yerel saat olarak kurar.
+  eventStart(ev) {
+    if (!ev) return null;
+    const dateStr = ev.event_date || ev.date;
+    if (!dateStr) return null;
+    const time = (ev.event_time || ev.time || '00:00').trim();
+    const m = time.match(/(\d{1,2}):(\d{2})/);
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return null;
+    d.setHours(m ? Number(m[1]) : 0, m ? Number(m[2]) : 0, 0, 0);
+    return d;
+  },
+
+  eventEnd(ev) {
+    const start = this.eventStart(ev);
+    if (!start) return null;
+    const end = new Date(start);
+    const et = (ev.end_time || '').trim();
+    const m = et.match(/(\d{1,2}):(\d{2})/);
+    if (m) {
+      end.setHours(Number(m[1]), Number(m[2]), 0, 0);
+      if (end <= start) end.setDate(end.getDate() + 1); // bitiş ertesi güne sarktıysa
+    } else {
+      end.setHours(end.getHours() + 2); // varsayılan 2 saat
+    }
+    return end;
+  },
+
+  // UTC damgası: 20260615T160000Z
+  _icsStamp(date) {
+    const p = (n) => String(n).padStart(2, '0');
+    return date.getUTCFullYear() + p(date.getUTCMonth() + 1) + p(date.getUTCDate()) +
+      'T' + p(date.getUTCHours()) + p(date.getUTCMinutes()) + p(date.getUTCSeconds()) + 'Z';
+  },
+
+  _icsEscape(text) {
+    return String(text ?? '')
+      .replace(/\\/g, '\\\\')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,')
+      .replace(/\r?\n/g, '\\n');
+  },
+
+  buildICS(ev) {
+    const start = this.eventStart(ev);
+    const end = this.eventEnd(ev);
+    if (!start) return '';
+    const uid = (ev.id || Math.random().toString(36).slice(2)) + '@asdfl';
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//ASDFL Mezunlar Dernegi//Etkinlikler//TR',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      'UID:' + uid,
+      'DTSTAMP:' + this._icsStamp(new Date()),
+      'DTSTART:' + this._icsStamp(start),
+      'DTEND:' + this._icsStamp(end),
+      'SUMMARY:' + this._icsEscape(ev.title),
+      'DESCRIPTION:' + this._icsEscape(ev.description || ev.desc || ''),
+      'LOCATION:' + this._icsEscape(ev.location || ''),
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ];
+    return lines.join('\r\n');
+  },
+
+  downloadICS(ev) {
+    const ics = this.buildICS(ev);
+    if (!ics) { this.toast('Etkinlik tarihi geçersiz.', 'error'); return; }
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const slug = String(ev.title || 'etkinlik').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'etkinlik';
+    a.href = url;
+    a.download = slug + '.ics';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
+
+  googleCalendarUrl(ev) {
+    const start = this.eventStart(ev);
+    const end = this.eventEnd(ev);
+    if (!start) return '';
+    const dates = this._icsStamp(start) + '/' + this._icsStamp(end);
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: ev.title || 'ASDFL Etkinlik',
+      dates,
+      details: ev.description || ev.desc || '',
+      location: ev.location || ''
+    });
+    return 'https://calendar.google.com/calendar/render?' + params.toString();
   },
 
   getInitials(name) {
@@ -1512,6 +1689,156 @@ const ASDFL = {
       const href = a.getAttribute('href');
       a.classList.toggle('active', href === path || (path === '' && href === 'index.html'));
     });
+    this.updateMobileBottomNav();
+  },
+
+  getMobileNavItems() {
+    const isStudent = this.currentUser?.role === 'Öğrenci';
+    const homeHref = isStudent ? 'ogrenci.html' : 'index.html';
+    const items = [
+      { href: homeHref, label: isStudent ? 'Panel' : 'Ana Sayfa', icon: isStudent ? 'layout-dashboard' : 'home' },
+      { href: 'mezunlar.html', label: 'Mezunlar', icon: 'users' },
+      { href: 'topluluk.html', label: 'Topluluk', icon: 'message-circle' },
+      { href: 'etkinlikler.html', label: 'Etkinlikler', icon: 'calendar-days' }
+    ];
+
+    if (this.currentUser) {
+      items.push({ href: 'profil.html', label: 'Profil', icon: 'user' });
+    } else {
+      items.push({ action: 'login', label: 'Giriş', icon: 'log-in' });
+    }
+
+    return items;
+  },
+
+  initMobileBottomNav() {
+    if (document.getElementById('mobileBottomNav')) {
+      this.updateMobileBottomNav();
+      return;
+    }
+
+    const nav = document.createElement('nav');
+    nav.id = 'mobileBottomNav';
+    nav.className = 'mobile-bottom-nav';
+    nav.setAttribute('aria-label', 'Mobil hızlı gezinme');
+    document.body.appendChild(nav);
+    this.updateMobileBottomNav();
+  },
+
+  updateMobileBottomNav() {
+    const nav = document.getElementById('mobileBottomNav');
+    if (!nav) return;
+    const path = window.location.pathname.split('/').pop() || 'index.html';
+    const items = this.getMobileNavItems();
+
+    nav.innerHTML = items.map(item => {
+      const active = item.href && (item.href === path || (path === '' && item.href === 'index.html'));
+      if (item.action === 'login') {
+        return `<button type="button" onclick="ASDFL.openModal('loginModal')" aria-label="Giriş yap">
+          <i data-lucide="${item.icon}"></i><span>${this.escapeHTML(item.label)}</span>
+        </button>`;
+      }
+      return `<a href="${this.escapeAttr(item.href)}" class="${active ? 'active' : ''}" aria-label="${this.escapeAttr(item.label)}">
+        <i data-lucide="${item.icon}"></i><span>${this.escapeHTML(item.label)}</span>
+      </a>`;
+    }).join('');
+    setTimeout(() => this.refreshIcons(nav), 10);
+  },
+
+  initFormAssist() {
+    document.addEventListener('input', (e) => {
+      const field = e.target.closest('.form-input, .form-select, .form-textarea');
+      if (!field) return;
+      if (field.getAttribute('aria-invalid') === 'true' && field.value.trim()) {
+        field.removeAttribute('aria-invalid');
+      }
+    });
+
+    document.addEventListener('invalid', (e) => {
+      const field = e.target.closest('.form-input, .form-select, .form-textarea');
+      if (!field) return;
+      field.setAttribute('aria-invalid', 'true');
+    }, true);
+  },
+
+  initModalA11y() {
+    document.addEventListener('keydown', (e) => {
+      const openModal = document.querySelector('.modal-overlay.open');
+      if (!openModal) return;
+      if (e.key === 'Escape' && openModal.id && openModal.id !== 'legalConsentModal') {
+        this.closeModal(openModal.id);
+        return;
+      }
+      if (e.key === 'Tab') {
+        this.trapFocusInModal(e, openModal);
+      }
+    });
+  },
+
+  getFocusableElements(root) {
+    return Array.from(root.querySelectorAll([
+      'a[href]',
+      'button:not([disabled])',
+      'textarea:not([disabled])',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])'
+    ].join(','))).filter(el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+  },
+
+  focusFirstInModal(modal) {
+    const focusables = this.getFocusableElements(modal);
+    const target = focusables.find(el => !el.classList.contains('modal-close')) || focusables[0] || modal;
+    target.focus({ preventScroll: true });
+  },
+
+  trapFocusInModal(event, modal) {
+    const focusables = this.getFocusableElements(modal);
+    if (!focusables.length) {
+      event.preventDefault();
+      modal.focus({ preventScroll: true });
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus({ preventScroll: true });
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus({ preventScroll: true });
+    }
+  },
+
+  applyResponsiveTables(root = document) {
+    root.querySelectorAll('table').forEach(table => {
+      const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+      if (!headers.length) return;
+      table.classList.add('responsive-table-carded');
+      table.querySelectorAll('tbody tr').forEach(row => {
+        Array.from(row.children).forEach((cell, index) => {
+          if (!cell.getAttribute('data-label') && headers[index]) {
+            cell.setAttribute('data-label', headers[index]);
+          }
+        });
+      });
+    });
+  },
+
+  initResponsiveTables() {
+    this.applyResponsiveTables();
+    if (!('MutationObserver' in window)) return;
+    const observer = new MutationObserver((entries) => {
+      for (const entry of entries) {
+        entry.addedNodes.forEach(node => {
+          if (node.nodeType !== 1) return;
+          if (node.matches?.('tr') || node.matches?.('td') || node.matches?.('table') || node.querySelector?.('table, tr, td')) {
+            this.applyResponsiveTables(document);
+          }
+        });
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
   },
 
   // ---- Auth State ----
@@ -1865,7 +2192,7 @@ const ASDFL = {
 
     if (this.currentUser) {
       this.initNotificationBell();
-      if (!this._consentCheckRun) {
+      if (this.authReady && !this._consentCheckRun) {
         this._consentCheckRun = true;
         this.checkRequiredConsents();
       }
@@ -1873,6 +2200,7 @@ const ASDFL = {
       this.teardownNotifications();
     }
 
+    this.updateMobileBottomNav();
     setTimeout(() => this.refreshIcons(), 10);
   },
 
@@ -2485,7 +2813,11 @@ const ASDFL = {
     this.initNavbar();
     this.initReveal();
     this.initCounters();
+    this.initMobileBottomNav();
     this.setActiveNav();
+    this.initFormAssist();
+    this.initModalA11y();
+    this.initResponsiveTables();
     this.ensureLegalFooter();
     this.checkAuth();
     this.initCities();
@@ -2495,6 +2827,7 @@ const ASDFL = {
 
   async checkRequiredConsents() {
     if (!this.currentUser) return;
+    if (this.supabase && !this.authReady) return;
     
     let hasConsents = false;
     if (this.supabase) {

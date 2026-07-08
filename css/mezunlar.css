@@ -251,8 +251,10 @@
 .filter-chip {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: .35rem;
-  padding: .3rem .8rem;
+  min-height: 38px;
+  padding: .45rem .85rem;
   font-family: 'Inter', sans-serif;
   font-size: .75rem;
   font-weight: 600;

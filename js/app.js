@@ -1694,13 +1694,16 @@ const ASDFL = {
 
   getMobileNavItems() {
     const isStudent = this.currentUser?.role === 'Öğrenci';
-    const homeHref = isStudent ? 'ogrenci.html' : 'index.html';
     const items = [
-      { href: homeHref, label: isStudent ? 'Panel' : 'Ana Sayfa', icon: isStudent ? 'layout-dashboard' : 'home' },
+      { href: 'index.html', label: 'Ana Sayfa', icon: 'home' },
       { href: 'mezunlar.html', label: 'Mezunlar', icon: 'users' },
       { href: 'topluluk.html', label: 'Topluluk', icon: 'message-circle' },
       { href: 'etkinlikler.html', label: 'Etkinlikler', icon: 'calendar-days' }
     ];
+
+    if (isStudent) {
+      items.splice(1, 0, { href: 'ogrenci.html', label: 'Panel', icon: 'layout-dashboard' });
+    }
 
     if (this.currentUser) {
       items.push({ href: 'profil.html', label: 'Profil', icon: 'user' });
@@ -2051,25 +2054,6 @@ const ASDFL = {
     const navCta = document.querySelector('.nav-cta');
     if (!navCta) return;
 
-    if (this.currentUser && this.currentUser.role === 'Öğrenci') {
-      const isIndex = window.location.pathname === '/' || 
-                      window.location.pathname.endsWith('index.html') || 
-                      window.location.pathname.endsWith('/');
-      if (isIndex) {
-        window.location.href = 'ogrenci.html';
-        return;
-      }
-      
-      const brand = document.querySelector('.nav-brand');
-      if (brand) brand.href = 'ogrenci.html';
-      
-      const homeLink = document.querySelector('.nav-links a[href="index.html"]');
-      if (homeLink) {
-        homeLink.href = 'ogrenci.html';
-        homeLink.innerHTML = '<i data-lucide="layout-dashboard" style="width:1.2rem;height:1.2rem"></i> Öğrenci Paneli';
-      }
-    }
-
     if (this.currentUser) {
       // Remove login/register modals to prevent aggressive Safari Autofill scans from prompting Keychain credentials
       const loginM = document.getElementById('loginModal');
@@ -2133,9 +2117,22 @@ const ASDFL = {
     if (navLinks) {
       const existingAdminLink = navLinks.querySelector('a[href="yonetim.html"]');
       const existingMentorLink = navLinks.querySelector('a[href="mentorluk.html"]');
+      const existingStudentDashboardLink = navLinks.querySelector('a[href="ogrenci.html"]');
       
       if (this.currentUser) {
         let changed = false;
+        if (this.currentUser.role === 'Öğrenci') {
+          if (!existingStudentDashboardLink) {
+            const liStudent = document.createElement('li');
+            liStudent.innerHTML = '<a href="ogrenci.html"><i data-lucide="layout-dashboard" style="width:1.2rem;height:1.2rem"></i> Öğrenci Paneli</a>';
+            navLinks.appendChild(liStudent);
+            changed = true;
+          }
+        } else if (existingStudentDashboardLink) {
+          existingStudentDashboardLink.parentElement.remove();
+          changed = true;
+        }
+
         if (!existingMentorLink) {
           const liMentor = document.createElement('li');
           liMentor.innerHTML = '<a href="mentorluk.html"><i data-lucide="sparkles" style="width:1.2rem;height:1.2rem"></i> Mentörlük Paneli</a>';
@@ -2161,6 +2158,10 @@ const ASDFL = {
         }
       } else {
         let changed = false;
+        if (existingStudentDashboardLink) {
+          existingStudentDashboardLink.parentElement.remove();
+          changed = true;
+        }
         if (existingMentorLink) {
           existingMentorLink.parentElement.remove();
           changed = true;
@@ -2587,7 +2588,13 @@ const ASDFL = {
     
     this.updateUIForAuth();
     this.toast('Giriş başarılı!', 'success');
-    setTimeout(() => window.location.reload(), 500);
+    setTimeout(() => {
+      if (this.currentUser?.role === 'Öğrenci') {
+        window.location.href = 'ogrenci.html';
+      } else {
+        window.location.reload();
+      }
+    }, 500);
   },
 
   async handleLogin(emailId, passId) {

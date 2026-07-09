@@ -21,6 +21,7 @@
   let searchQuery = '';
   let activeFilter = 'all'; // 'all' | 'photo' | 'video' | 'poll' | 'event'
   let pollOptions = [];
+  let eventRsvpState = new Map();
 
   /* ---------- Başlat ---------- */
   document.addEventListener('DOMContentLoaded', async () => {
@@ -316,6 +317,7 @@
     }
 
     loadedPosts = posts;
+    await loadAttachedEventRsvpState(posts);
     filterAndRenderPosts();
     
     // Sağ taraftaki widget'ları güncelle
@@ -505,6 +507,11 @@
                 </div>
               `;
             } else if (att.type === 'event') {
+              const eventId = String(att.value?.id || '');
+              const eventState = eventRsvpState.get(eventId) || {};
+              const goingCount = Number(eventState.goingCount ?? att.value?.rsvpCount ?? att.value?.goingCount ?? 0);
+              const eventHref = eventId ? `etkinlikler.html#event-${eventId}` : 'etkinlikler.html';
+              const rsvpButton = renderEventAttachmentRsvpButton(eventId, eventState);
               attachmentHtml = `
                 <div class="post-media-attachment">
                   <div class="event-attach-card">
@@ -514,9 +521,11 @@
                       <div class="event-attach-meta">
                         <span><i data-lucide="calendar-days"></i> ${ASDFL.formatDate(att.value.date)}</span>
                         <span><i data-lucide="map-pin"></i> ${escapeHtml(att.value.location || '')}</span>
+                        <span class="event-attach-attendees"><i data-lucide="users"></i> ${goingCount} kişi katılıyor</span>
                       </div>
                     </div>
-                    <a href="etkinlikler.html" class="btn btn-secondary btn-sm event-attach-btn">Etkinliğe Git</a>
+                    ${rsvpButton}
+                    <a href="${ASDFL.escapeAttr(eventHref)}" class="btn btn-secondary btn-sm event-attach-btn">Etkinliğe Git</a>
                   </div>
                 </div>
               `;
@@ -664,6 +673,143 @@
   }
 
   /* ---------- Beğeni Oy Verme ---------- */
+  function getAttachedEventIds(posts) {
+    const ids = new Set();
+    (posts || []).forEach(post => {
+      const text = String(post.content || '').trim();
+      if (!text.startsWith('{') || !text.endsWith('}')) return;
+      try {
+        const parsed = JSON.parse(text);
+        const eventId = parsed.richPost && parsed.attachment?.type === 'event'
+          ? parsed.attachment.value?.id
+          : null;
+        if (eventId) ids.add(String(eventId));
+      } catch (e) {}
+    });
+    return [...ids];
+  }
+
+  async function loadAttachedEventRsvpState(posts) {
+    const ids = getAttachedEventIds(posts);
+    eventRsvpState = new Map(ids.map(id => [id, { going: [], goingCount: 0, iAmGoing: false, capacity: null }]));
+    if (!ids.length) return;
+
+    const myId = ASDFL.currentUser?.id;
+    if (ASDFL.supabase) {
+      try {
+        const { data, error } = await ASDFL.supabase
+          .from('events')
+          .select('id,capacity,event_rsvps(user_id,status)')
+          .in('id', ids);
+        if (error) throw error;
+        (data || []).forEach(ev => {
+          const going = (Array.isArray(ev.event_rsvps) ? ev.event_rsvps : []).filter(r => r.status === 'going');
+          eventRsvpState.set(String(ev.id), {
+            going,
+            goingCount: going.length,
+            iAmGoing: !!(myId && going.some(r => r.user_id === myId)),
+            capacity: ev.capacity ?? null
+          });
+        });
+      } catch (err) {
+        console.error('Etkinlik katılım bilgileri yüklenemedi:', err);
+      }
+      return;
+    }
+
+    try {
+      const localRsvps = JSON.parse(ASDFL._storage.getItem('asdfl_event_rsvps') || '[]');
+      ids.forEach(id => {
+        const going = localRsvps.filter(r => String(r.event_id) === id && (r.status || 'going') === 'going');
+        eventRsvpState.set(id, {
+          going,
+          goingCount: going.length,
+          iAmGoing: !!(myId && going.some(r => r.user_id === myId)),
+          capacity: null
+        });
+      });
+    } catch (err) {
+      console.error('Yerel etkinlik katılım bilgileri okunamadı:', err);
+    }
+  }
+
+  function renderEventAttachmentRsvpButton(eventId, state = {}) {
+    if (!eventId) return '';
+    const idJs = ASDFL.jsString(eventId);
+    const full = state.capacity != null && state.goingCount >= state.capacity && !state.iAmGoing;
+    if (!ASDFL.currentUser) {
+      return `<button class="btn btn-primary btn-sm event-attach-btn" onclick="ASDFL.openModal('loginModal')">Katılmak için giriş yap</button>`;
+    }
+    if (state.iAmGoing) {
+      return `<button class="btn btn-success btn-sm event-attach-btn rsvp-btn going" onclick="window.toggleFeedEventRsvp(${idJs})"><i data-lucide="check-circle" style="width:1.1rem;height:1.1rem"></i> Katılıyorsun</button>`;
+    }
+    if (full) {
+      return `<button class="btn btn-ghost btn-sm event-attach-btn" disabled><i data-lucide="users" style="width:1.1rem;height:1.1rem"></i> Kontenjan doldu</button>`;
+    }
+    return `<button class="btn btn-primary btn-sm event-attach-btn rsvp-btn" onclick="window.toggleFeedEventRsvp(${idJs})"><i data-lucide="plus" style="width:1.1rem;height:1.1rem"></i> Katılıyorum</button>`;
+  }
+
+  window.toggleFeedEventRsvp = async function (eventId) {
+    if (!ASDFL.currentUser) { ASDFL.openModal('loginModal'); return; }
+    eventId = String(eventId || '');
+    if (!eventId) return;
+
+    const myId = ASDFL.currentUser.id;
+    const state = eventRsvpState.get(eventId) || { going: [], goingCount: 0, iAmGoing: false, capacity: null };
+    const wasGoing = !!state.iAmGoing;
+    if (!wasGoing && state.capacity != null && state.goingCount >= state.capacity) {
+      ASDFL.toast('Kontenjan dolu.', 'warning');
+      return;
+    }
+
+    const nextGoing = wasGoing
+      ? (state.going || []).filter(r => r.user_id !== myId)
+      : [...(state.going || []), { user_id: myId, status: 'going' }];
+    eventRsvpState.set(eventId, {
+      ...state,
+      going: nextGoing,
+      goingCount: nextGoing.length,
+      iAmGoing: !wasGoing
+    });
+    filterAndRenderPosts();
+
+    if (ASDFL.supabase) {
+      try {
+        if (wasGoing) {
+          const { error } = await ASDFL.supabase.from('event_rsvps').delete().eq('event_id', eventId).eq('user_id', myId);
+          if (error) throw error;
+          ASDFL.toast('Katılım iptal edildi.', 'info');
+        } else {
+          const { error } = await ASDFL.supabase.from('event_rsvps').insert({ event_id: eventId, user_id: myId, status: 'going' });
+          if (error) throw error;
+          ASDFL.toast('Katılımın kaydedildi!', 'success');
+        }
+        return;
+      } catch (err) {
+        eventRsvpState.set(eventId, state);
+        filterAndRenderPosts();
+        const msg = /capacity/i.test(err.message || '') ? 'Kontenjan doldu.' : 'Katılım kaydedilemedi: ' + (err.message || '');
+        ASDFL.toast(msg, 'error');
+        return;
+      }
+    }
+
+    try {
+      let localRsvps = JSON.parse(ASDFL._storage.getItem('asdfl_event_rsvps') || '[]');
+      if (wasGoing) {
+        localRsvps = localRsvps.filter(r => !(String(r.event_id) === eventId && r.user_id === myId));
+      } else if (!localRsvps.some(r => String(r.event_id) === eventId && r.user_id === myId)) {
+        localRsvps.push({ event_id: eventId, user_id: myId, status: 'going', created_at: new Date().toISOString() });
+      }
+      ASDFL._storage.setItem('asdfl_event_rsvps', JSON.stringify(localRsvps));
+      ASDFL.toast(wasGoing ? 'Katılım iptal edildi.' : 'Katılımın kaydedildi!', wasGoing ? 'info' : 'success');
+    } catch (err) {
+      eventRsvpState.set(eventId, state);
+      filterAndRenderPosts();
+      ASDFL.toast('Katılım yerelde kaydedilemedi.', 'error');
+    }
+  };
+
   window.toggleLike = async function (postId, btn) {
     if (!ASDFL.currentUser) { ASDFL.toast('Beğenmek için giriş yapmalısın!', 'warning'); return; }
 

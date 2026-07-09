@@ -181,6 +181,7 @@ CREATE POLICY "Authenticated users read profiles"
 
 DROP POLICY IF EXISTS "Kullanicilar kendi profilini guncelleyebilir" ON public.profiles;
 DROP POLICY IF EXISTS "Kullanıcılar kendi profilini güncelleyebilir" ON public.profiles;
+DROP POLICY IF EXISTS "Users update own non-privileged profile" ON public.profiles;
 CREATE POLICY "Users update own non-privileged profile"
   ON public.profiles FOR UPDATE TO authenticated
   USING (auth.uid() = id)
@@ -296,6 +297,7 @@ GRANT EXECUTE ON FUNCTION public.can_upload_gallery() TO authenticated;
 
 DROP POLICY IF EXISTS "Kullanicilar galeriye resim yukleyebilir" ON storage.objects;
 DROP POLICY IF EXISTS "Kullanıcılar galeriye resim yükleyebilir" ON storage.objects;
+DROP POLICY IF EXISTS "Users upload images to own gallery path" ON storage.objects;
 CREATE POLICY "Users upload images to own gallery path"
   ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (
@@ -306,6 +308,7 @@ CREATE POLICY "Users upload images to own gallery path"
     AND public.can_upload_gallery()
   );
 
+DROP POLICY IF EXISTS "Users delete own gallery objects" ON storage.objects;
 CREATE POLICY "Users delete own gallery objects"
   ON storage.objects FOR DELETE TO authenticated
   USING (bucket_id = 'gallery' AND owner_id = auth.uid()::TEXT);

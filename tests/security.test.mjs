@@ -144,6 +144,52 @@ test('events page escapes user content and scopes rsvp mutations', async () => {
   assert.match(events, /from\('event_rsvps'\)\.insert\(\{ event_id: eventId, user_id: myId/);
 });
 
+test('community event attachment rsvps are user-scoped', () => {
+  assert.match(community, /from\('events'\)\s*[\s\S]*\.select\('id,capacity,event_rsvps\(user_id,status\)'\)/);
+  assert.match(community, /from\('event_rsvps'\)\.delete\(\)\.eq\('event_id', eventId\)\.eq\('user_id', myId\)/);
+  assert.match(community, /from\('event_rsvps'\)\.insert\(\{ event_id: eventId, user_id: myId, status: 'going' \}\)/);
+});
+
+test('email digest RPCs are service-role only and unsub token stays private', async () => {
+  const email = await readFile('supabase/migrations/202607090001_email_notifications.sql', 'utf8');
+  assert.match(email, /ADD COLUMN IF NOT EXISTS email_notifications BOOLEAN NOT NULL DEFAULT true/);
+  assert.match(email, /ADD COLUMN IF NOT EXISTS email_unsub_token UUID NOT NULL DEFAULT gen_random_uuid\(\)/);
+  assert.match(email, /ADD COLUMN IF NOT EXISTS emailed_at TIMESTAMPTZ/);
+  // Üç RPC de yalnızca service_role: e-posta adresleri authenticated'a sızmaz.
+  assert.match(email, /REVOKE ALL ON FUNCTION public\.list_email_digests/);
+  assert.match(email, /GRANT EXECUTE ON FUNCTION public\.list_email_digests\(INTEGER\) TO service_role/);
+  assert.match(email, /GRANT EXECUTE ON FUNCTION public\.mark_notifications_emailed\(UUID, TIMESTAMPTZ\) TO service_role/);
+  assert.match(email, /GRANT EXECUTE ON FUNCTION public\.email_unsubscribe\(UUID\) TO service_role/);
+  assert.doesNotMatch(email, /GRANT EXECUTE ON FUNCTION public\.(list_email_digests|mark_notifications_emailed|email_unsubscribe)[^;]*TO authenticated/);
+  // Unsubscribe token'ı hiçbir istemci rolüne açılmaz.
+  assert.doesNotMatch(email, /GRANT SELECT \([^)]*email_unsub_token/);
+  // Tercih kolonu kullanıcıya okunabilir olmalı (profil ekranı).
+  assert.match(email, /GRANT SELECT \(email_notifications\) ON public\.profiles TO authenticated/);
+});
+
+test('email digest edge function escapes content and validates links', async () => {
+  const fn = await readFile('supabase/functions/send-email-digest/index.ts', 'utf8');
+  // DB'den gelen her metin e-posta HTML'ine kaçışlanarak yazılır.
+  assert.match(fn, /function escapeHtml/);
+  assert.match(fn, /escapeHtml\(n\.title\)/);
+  assert.match(fn, /escapeHtml\(n\.body\)/);
+  // Bildirim linki yalnızca göreli path olabilir ve attribute içine kaçışlanır.
+  assert.match(fn, /function sanitizeRelativeLink/);
+  assert.match(fn, /escapeHtml\(relLink\)/);
+  // Unsubscribe token'ı UUID formatına zorlanır.
+  assert.match(fn, /UUID_RE\.test\(token\)/);
+  // Gönderim başarısızsa işaretleme yapılmaz (bildirim kaybolmaz).
+  assert.match(fn, /failed\+\+;\s*\n\s*continue;/);
+});
+
+test('profile page persists email notification preference safely', async () => {
+  const profile = await readFile('profil.html', 'utf8');
+  assert.match(profile, /id="editEmailNotifications"/);
+  // Kolon henüz yokken (undefined) varsayılan açık kabul edilir.
+  assert.match(profile, /email_notifications !== false/);
+  assert.match(profile, /email_notifications: emailNotifications/);
+});
+
 test('uploads are restricted on client and storage', () => {
   assert.match(app, /maxImageBytes: 5 \* 1024 \* 1024/);
   assert.match(migration, /file_size_limit = 5242880/);

@@ -605,6 +605,10 @@
           <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--text-secondary); cursor: pointer;">
             <input type="checkbox" id="editShareEmail" style="accent-color: var(--gold-500);"> E-posta adresimi diğer mezunlarla paylaş
           </label>
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--text-secondary); cursor: pointer; margin-top: 0.5rem;">
+            <input type="checkbox" id="editEmailNotifications" style="accent-color: var(--gold-500);"> Bildirimleri e-posta ile al
+          </label>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin: 0.15rem 0 0 1.6rem;">Okumadığın bildirimler (mentorluk, etkinlik, bahsetme…) sana günlük özet e-postası olarak gönderilir. Gönderilen her e-postadan tek tıkla da kapatabilirsin.</p>
         </div>
         
         <div style="text-align:right;margin-top:1.5rem">
@@ -893,6 +897,8 @@
       if (editPhone) editPhone.value = user.phone || '';
       if (editSharePhone) editSharePhone.checked = !!(user.share_phone || user.sharePhone);
       if (editShareEmail) editShareEmail.checked = !!(user.share_email || user.shareEmail);
+      const editEmailNotifications = document.getElementById('editEmailNotifications');
+      if (editEmailNotifications) editEmailNotifications.checked = user.email_notifications !== false;
       if (editBio) editBio.value = user.bio || '';
       if (editUniversity) editUniversity.value = user.university || '';
       if (editStudentUniversity) editStudentUniversity.value = user.target_university || user.targetUniversity || user.university || '';
@@ -1530,7 +1536,10 @@
       document.getElementById('editPhone').value = profileData.phone || '';
       document.getElementById('editSharePhone').checked = !!profileData.share_phone;
       document.getElementById('editShareEmail').checked = !!profileData.share_email;
-      
+      if (document.getElementById('editEmailNotifications')) {
+        document.getElementById('editEmailNotifications').checked = profileData.email_notifications !== false;
+      }
+
       document.getElementById('editBio').value = profileData.bio || '';
       document.getElementById('editUniversity').value = profileData.university || '';
       document.getElementById('editStudentUniversity').value = profileData.target_university || profileData.targetUniversity || profileData.university || '';
@@ -1565,6 +1574,7 @@
           sharePhone: profileData.share_phone,
           share_email: profileData.share_email,
           shareEmail: profileData.share_email,
+          email_notifications: profileData.email_notifications !== false,
           bio: profileData.bio || '',
           university: profileData.university || '',
           target_university: profileData.target_university || '',
@@ -2162,6 +2172,7 @@
     
     const sharePhone = document.getElementById('editSharePhone').checked;
     const shareEmail = document.getElementById('editShareEmail').checked;
+    const emailNotifications = document.getElementById('editEmailNotifications') ? document.getElementById('editEmailNotifications').checked : true;
 
     const bio = document.getElementById('editBio').value;
     const university = (ASDFL.currentUser.role === 'Öğrenci')
@@ -2198,8 +2209,9 @@
           branch,
           teaching_year: teachingYear,
           phone, 
-          share_phone: sharePhone, 
+          share_phone: sharePhone,
           share_email: shareEmail,
+          email_notifications: emailNotifications,
           bio,
           university,
           linkedin_url,
@@ -2223,6 +2235,7 @@
       await ASDFL.supabase.auth.updateUser({
         data: { 
           name, city, job, company, classSection, gradYear, grade, branch, teachingYear, phone, sharePhone, shareEmail,
+          emailNotifications,
           bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition,
           mentor_preference: mentorPreference, academicTitle: academic_title, specialization,
           targetUniversity: targetUniversity, targetJob: targetJob
@@ -2233,6 +2246,7 @@
       const updatedUser = {
         ...ASDFL.currentUser,
         name, city, job, company, classSection, gradYear, grade, branch, teachingYear, phone, sharePhone, shareEmail,
+        email_notifications: emailNotifications,
         bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition,
         mentor: ASDFL.currentUser.role !== 'Öğrenci' && mentorPreference === 'yes',
         mentor_preference: mentorPreference,
@@ -2251,6 +2265,7 @@
         alumni = alumni.map(m => m.id === ASDFL.currentUser.id ? { 
           ...m, 
           name, city, job, company, class_section: classSection, grad_year: gradYear, grade, branch, teaching_year: teachingYear, phone, share_phone: sharePhone, share_email: shareEmail,
+          email_notifications: emailNotifications,
           bio, university, linkedin_url, github_url, instagram_url, avatar_position: avatarPosition,
           mentor: ASDFL.currentUser.role !== 'Öğrenci' && mentorPreference === 'yes',
           mentor_preference: mentorPreference,
@@ -2277,7 +2292,8 @@
     ASDFL.currentUser.phone = phone;
     ASDFL.currentUser.sharePhone = sharePhone;
     ASDFL.currentUser.shareEmail = shareEmail;
-    
+    ASDFL.currentUser.email_notifications = emailNotifications;
+
     ASDFL.currentUser.bio = bio;
     ASDFL.currentUser.university = university;
     ASDFL.currentUser.target_university = targetUniversity;

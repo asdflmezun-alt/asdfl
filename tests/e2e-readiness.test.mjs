@@ -5,6 +5,7 @@ import test from 'node:test';
 const app = await readFile('js/app.js', 'utf8');
 const home = await readFile('js/home.js', 'utf8');
 const student = await readFile('js/ogrenci.js', 'utf8');
+const community = await readFile('js/topluluk.js', 'utf8');
 const profile = await readFile('profil.html', 'utf8');
 const adminHtml = await readFile('yonetim.html', 'utf8');
 const admin = await readFile('js/yonetim.js', 'utf8');
@@ -30,6 +31,13 @@ test('profile has an activity and application summary for signed-in users', () =
   assert.match(profile, /loadProfileActivitySummary/);
   assert.match(profile, /event_rsvps/);
   assert.match(profile, /job_applications/);
+});
+
+test('community event attachments surface live rsvp actions', () => {
+  assert.match(community, /loadAttachedEventRsvpState\(posts\)/);
+  assert.match(community, /event-attach-attendees/);
+  assert.match(community, /Katılıyorum/);
+  assert.match(community, /etkinlikler\.html#event-\$\{eventId\}/);
 });
 
 test('admin moderation is visible and actionable', () => {

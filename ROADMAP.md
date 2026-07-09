@@ -16,7 +16,7 @@ Bu belge projenin planlanan gelişim yönünü özetler. Her başlık için GitH
 ## Orta vade
 
 - [ ] **End-to-end testler** — Kayıt, burs başvurusu, mentorluk ve admin akışları için tarayıcı tabanlı testler (mevcut testler güvenlik odaklıdır).
-- [ ] **Bildirim sistemi genişletmesi** — E-posta bildirimleri (başvuru sonucu, mentorluk randevusu, yeni ilan).
+- [ ] **E-posta bildirimlerinde tür bazlı tercih** — Kullanıcının hangi bildirim türlerini (mentorluk, etkinlik, bahsetme…) e-posta ile alacağını ayrı ayrı seçebilmesi (günlük özet altyapısı tamamlandı, bkz. `docs/email-bildirimleri.md`).
 - [ ] **Yönetim paneli UX iyileştirmeleri** — Toplu işlemler, arama/filtreleme, veri talebi akışının sadeleştirilmesi.
 - [ ] **Migrasyon zincirinin belgelenmesi** — Şemanın tek migrasyon zinciri üzerinde temiz ve belgeli hale getirilmesi (topluluk tabloları için baseline eklendi; profiles, events, burs/kariyer tabloları eksik).
 - [ ] **CSP sıkılaştırması** — Sayfalardaki inline `onclick` handler'ların event delegation'a taşınıp `script-src`'den `'unsafe-inline'`'ın çıkarılması (topluluk hashtag'lerinde başlandı).
@@ -38,3 +38,4 @@ Bu belge projenin planlanan gelişim yönünü özetler. Her başlık için GitH
 - [x] Takvime ekleme: Google Takvim + Apple/Outlook (.ics), mobil ve masaüstü
 - [x] Etkinlik bildirimleri: yeni etkinlik duyurusu + ertesi gün hatırlatması (pg_cron)
 - [x] Yönetim: kontenjan/saat/kapak alanları, katılım sayısı, katılımcı CSV dışa aktarımı
+- [x] E-posta bildirim sistemi: günlük özet (digest), Resend + Edge Function, tek tık abonelik iptali, profilde tercih anahtarı

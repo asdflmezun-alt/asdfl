@@ -121,20 +121,61 @@ async function callRpc<T>(
 
 // ---- HTML sayfa şablonları (abonelik iptali sonucu) ----
 
+const BRAND_LOGO_URL = "https://www.asdflmezun.org/assets/images/logo.png";
+const BRAND_NAME = "ASDFL Mezunlar Derneği";
+
 function resultPage(title: string, message: string, ok: boolean): string {
+  const safeTitle = escapeHtml(title);
+  const safeMessage = escapeHtml(message);
+  const badge = ok ? "#1f8a4c" : "#b3541e";
+  const badgeIcon = ok ? "✓" : "!";
+
   return `<!doctype html>
 <html lang="tr">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${escapeHtml(title)}</title>
+<title>${safeTitle}</title>
 </head>
-<body style="margin:0;padding:0;background:#0a0f24;font-family:Segoe UI,Arial,sans-serif;">
-  <div style="max-width:480px;margin:60px auto;background:#101736;border-radius:12px;padding:40px 32px;text-align:center;border:1px solid #d4af3733;">
-    <div style="font-size:32px;margin-bottom:12px;">${ok ? "✅" : "⚠️"}</div>
-    <h1 style="color:#d4af37;font-size:20px;margin:0 0 12px;">${escapeHtml(title)}</h1>
-    <p style="color:#e6e6e6;font-size:15px;line-height:1.6;margin:0;">${escapeHtml(message)}</p>
-  </div>
+<body style="margin:0;padding:0;background:#eef0f4;font-family:Segoe UI,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef0f4;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e4ea;">
+          <tr>
+            <td align="center" style="background:#0a0f24;padding:28px 24px 24px;">
+              <img src="${BRAND_LOGO_URL}" width="44" height="44" alt="${escapeHtml(BRAND_NAME)}" style="display:block;margin:0 auto 10px;border-radius:8px;" />
+              <span style="color:#ffffff;font-size:15px;font-weight:bold;letter-spacing:0.3px;">${escapeHtml(BRAND_NAME)}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#d4af37;height:3px;line-height:3px;font-size:0;">&nbsp;</td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:36px 32px 12px;">
+              <div style="display:inline-block;width:48px;height:48px;line-height:48px;border-radius:50%;background:${badge};color:#ffffff;font-size:22px;font-weight:bold;text-align:center;">${badgeIcon}</div>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:4px 32px 8px;">
+              <h1 style="color:#0a0f24;font-size:19px;margin:0 0 12px;">${safeTitle}</h1>
+              <p style="color:#4b5563;font-size:14px;line-height:1.7;margin:0;">${safeMessage}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 32px 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #eee;font-size:0;line-height:0;">&nbsp;</td></tr></table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:0 24px 28px;">
+              <p style="color:#9ca3af;font-size:11px;line-height:1.6;margin:0;">Afyon Süleyman Demirel Fen Lisesi Mezunlar Derneği<br />© 2026 ASDFL</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 }
@@ -199,16 +240,65 @@ function buildUnsubscribeUrl(env: Env, unsubToken: string): string {
   return `${env.supabaseUrl}/functions/v1/send-email-digest?action=unsubscribe&token=${unsubToken}`;
 }
 
+// Bildirim türü → e-postada gösterilecek Türkçe etiket. Bilinmeyen bir tür
+// gelirse (yeni eklenmiş ama burada tanımlanmamış bir bildirim türü gibi)
+// genel "Bildirim" etiketine düşer, boş/undefined render edilmez.
+const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
+  mention: "Bahsetme",
+  post_report: "Gönderi Şikâyeti",
+  contact_request: "İletişim Talebi",
+  contact_request_status: "İletişim Talebi",
+  mentorship_request: "Mentorluk Talebi",
+  mentorship_status: "Mentorluk",
+  new_event: "Yeni Etkinlik",
+  event_reminder: "Etkinlik Hatırlatması",
+  system_test: "Sistem Testi",
+};
+
+function notificationTypeLabel(type: string): string {
+  return NOTIFICATION_TYPE_LABELS[type] ?? "Bildirim";
+}
+
+// created_at değerini "9 Temmuz, 14:30" biçiminde biçimlendirir. Veritabanından
+// gelen tarih hatalı/parse edilemez olursa hata fırlatmak yerine boş döner,
+// bildirim satırı tarihsiz gösterilir.
+function formatNotificationDate(createdAt: string): string {
+  try {
+    const date = new Date(createdAt);
+    if (Number.isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat("tr-TR", {
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Istanbul",
+    }).format(date);
+  } catch {
+    return "";
+  }
+}
+
 function buildEmailHtml(env: Env, row: DigestRow): string {
   const safeName = escapeHtml(row.name?.trim() || "Merhaba");
+  const count = row.notifications.length;
+  const preheader = escapeHtml(
+    `Sitede seni bekleyen ${count} bildirim var.`,
+  );
+
   const items = row.notifications
     .map((n) => {
       const safeTitle = escapeHtml(n.title);
       const safeBody = n.body ? escapeHtml(n.body) : "";
       const relLink = sanitizeRelativeLink(n.link);
+      const safeTypeLabel = escapeHtml(notificationTypeLabel(n.type));
+      const safeDate = escapeHtml(formatNotificationDate(n.created_at));
 
       const bodyHtml = safeBody
-        ? `<div style="color:#4b5563;font-size:14px;margin-top:4px;">${safeBody}</div>`
+        ? `<div style="color:#6b7280;font-size:14px;line-height:1.6;margin-top:6px;">${safeBody}</div>`
+        : "";
+
+      const dateHtml = safeDate
+        ? `<div style="color:#9ca3af;font-size:11px;margin-top:10px;">${safeDate}</div>`
         : "";
 
       // relLink attribute içine de kaçışlanarak yazılır (tırnakla attribute'tan çıkma girişimine karşı).
@@ -218,9 +308,18 @@ function buildEmailHtml(env: Env, row: DigestRow): string {
 
       return `
         <tr>
-          <td style="padding:14px 0;border-bottom:1px solid #eee;">
-            ${titleHtml}
-            ${bodyHtml}
+          <td style="padding:0 0 14px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border-radius:8px;">
+              <tr>
+                <td width="3" style="background:#d4af37;border-radius:8px 0 0 8px;font-size:0;line-height:0;">&nbsp;</td>
+                <td style="padding:16px 18px;">
+                  <div style="color:#d4af37;font-size:11px;font-weight:bold;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:6px;">${safeTypeLabel}</div>
+                  ${titleHtml}
+                  ${bodyHtml}
+                  ${dateHtml}
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>`;
     })
@@ -234,36 +333,60 @@ function buildEmailHtml(env: Env, row: DigestRow): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light" />
 </head>
-<body style="margin:0;padding:0;background:#f4f4f6;font-family:Segoe UI,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f6;padding:24px 0;">
+<body style="margin:0;padding:0;background:#eef0f4;font-family:Segoe UI,Arial,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">${preheader}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef0f4;padding:32px 16px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e4ea;">
           <tr>
-            <td style="background:#0a0f24;padding:24px 32px;">
-              <span style="color:#d4af37;font-size:18px;font-weight:bold;letter-spacing:0.5px;">ASDFL Mezunlar Derneği</span>
+            <td align="center" style="background:#0a0f24;padding:28px 32px 24px;">
+              <img src="${BRAND_LOGO_URL}" width="44" height="44" alt="${escapeHtml(BRAND_NAME)}" style="display:block;margin:0 auto 10px;border-radius:8px;" />
+              <span style="color:#ffffff;font-size:16px;font-weight:bold;letter-spacing:0.3px;">${escapeHtml(BRAND_NAME)}</span>
             </td>
           </tr>
           <tr>
-            <td style="padding:28px 32px 8px;">
-              <p style="color:#111;font-size:16px;margin:0 0 4px;">Merhaba ${safeName},</p>
-              <p style="color:#555;font-size:14px;margin:0;">Aşağıda okumadığın bildirimlerin özeti var:</p>
+            <td style="background:#d4af37;height:3px;line-height:3px;font-size:0;">&nbsp;</td>
+          </tr>
+          <tr>
+            <td style="padding:32px 32px 8px;">
+              <p style="color:#0a0f24;font-size:17px;font-weight:bold;margin:0 0 6px;">Merhaba ${safeName},</p>
+              <p style="color:#6b7280;font-size:14px;line-height:1.6;margin:0;">Sitede okumadığın ${count} bildirim var. Aşağıda kısa bir özetini bulabilirsin:</p>
             </td>
           </tr>
           <tr>
-            <td style="padding:8px 32px 0;">
+            <td style="padding:20px 32px 0;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 ${items}
               </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:24px 32px 32px;">
-              <p style="color:#888;font-size:12px;line-height:1.8;margin:0;">
-                <a href="${profileUrl}" style="color:#0a0f24;">Bildirim tercihlerini yönet</a>
+            <td align="center" style="padding:8px 32px 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="border-radius:8px;background:#d4af37;">
+                    <a href="${env.siteUrl}" style="display:inline-block;padding:12px 28px;color:#0a0f24;font-size:14px;font-weight:bold;text-decoration:none;border-radius:8px;">Bildirimleri Görüntüle</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #eee;font-size:0;line-height:0;">&nbsp;</td></tr></table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:20px 24px 28px;">
+              <p style="color:#9ca3af;font-size:11px;line-height:1.9;margin:0;">
+                Afyon Süleyman Demirel Fen Lisesi Mezunlar Derneği<br />
+                <a href="${profileUrl}" style="color:#6b7280;">Bildirim tercihlerini yönet</a>
                 &nbsp;·&nbsp;
-                <a href="${unsubUrl}" style="color:#888;">E-posta bildirimlerini kapat</a>
+                <a href="${unsubUrl}" style="color:#6b7280;">E-posta bildirimlerini kapat</a>
+                <br />© 2026 ASDFL
               </p>
             </td>
           </tr>

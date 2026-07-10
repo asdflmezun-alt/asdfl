@@ -1,6 +1,6 @@
 // ASDFL Mezunlar Derneği — service worker
 // Bump CACHE_VERSION whenever a deploy should force-invalidate old caches.
-const CACHE_VERSION = 'v9';
+const CACHE_VERSION = 'v12';
 const CACHE_NAME = `asdfl-${CACHE_VERSION}`;
 const DEV_BYPASS_CACHE = ['localhost', '127.0.0.1', '::1'].includes(self.location.hostname);
 
@@ -10,6 +10,7 @@ const PRECACHE_URLS = [
   'css/animations.css',
   'css/fonts.css',
   'css/home.css',
+  'css/topluluk.css',
   'js/bootstrap.js',
   'js/app.js',
   'js/home.js',

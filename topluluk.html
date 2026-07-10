@@ -1664,9 +1664,10 @@
 }
 }
 </style>
+  <link rel="stylesheet" href="css/topluluk.css?v=2.2">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 18h8M3 22h18M14 22a7 7 0 1 0-14 0M9 14h2M9 12a3 3 0 0 1-3-3V6a3 3 0 0 1 6 0v3a3 3 0 0 1-3 3ZM12 6l3.5-3.5M17 2l2.5 2.5'/></svg>">
 </head>
-<body>
+<body class="community-page">
 
 <nav class="navbar" id="navbar">
   <a href="index.html" class="nav-brand"><div class="logo-icon"><i data-lucide="microscope" style="width:1em;height:1em"></i></div><div>ASDFL<span class="sub">Mezunlar Derneği</span></div></a>
@@ -1776,10 +1777,10 @@
       <div class="sidebar-title">Kanallar</div>
       <div id="feedSidebar">
         <!-- Dinamik olarak JS tarafından doldurulacak -->
-        <div class="feed-channel active" onclick="window.switchFeed('global', this)">
+        <button type="button" class="feed-channel active" onclick="window.switchFeed('global', this)" aria-current="page">
           <i data-lucide="globe" style="width:1.1rem;height:1.1rem"></i>
           <span>Genel Akış</span>
-        </div>
+        </button>
       </div>
     </div>
   </aside>
@@ -1791,14 +1792,16 @@
     <div class="feed-filter-bar">
       <div class="search-input-wrapper">
         <i data-lucide="search" style="width:1.1rem;height:1.1rem"></i>
-        <input type="text" id="feedSearchInput" class="feed-search-input" placeholder="Gönderilerde veya #taglerde ara...">
+        <label class="sr-only" for="feedSearchInput">Topluluk gönderilerinde ara</label>
+        <input type="search" id="feedSearchInput" class="feed-search-input" placeholder="Gönderi, kişi veya #etiket ara" autocomplete="off" aria-controls="feedPosts" aria-describedby="feedSearchStatus">
+        <span id="feedSearchStatus" class="sr-only" aria-live="polite"></span>
       </div>
       <div class="filter-chips-container">
-        <button class="filter-chip active" data-filter="all" onclick="window.setFilter('all', this)"><i data-lucide="layout-grid" style="width:0.9rem;height:0.9rem"></i> Tümü</button>
-        <button class="filter-chip" data-filter="photo" onclick="window.setFilter('photo', this)"><i data-lucide="image" style="width:0.9rem;height:0.9rem"></i> Fotoğraflar</button>
-        <button class="filter-chip" data-filter="video" onclick="window.setFilter('video', this)"><i data-lucide="video" style="width:0.9rem;height:0.9rem"></i> Videolar</button>
-        <button class="filter-chip" data-filter="poll" onclick="window.setFilter('poll', this)"><i data-lucide="bar-chart-3" style="width:0.9rem;height:0.9rem"></i> Anketler</button>
-        <button class="filter-chip" data-filter="event" onclick="window.setFilter('event', this)"><i data-lucide="calendar" style="width:0.9rem;height:0.9rem"></i> Etkinlikler</button>
+        <button type="button" class="filter-chip active" data-filter="all" onclick="window.setFilter('all', this)" aria-pressed="true"><i data-lucide="layout-grid" style="width:0.9rem;height:0.9rem"></i> Tümü</button>
+        <button type="button" class="filter-chip" data-filter="photo" onclick="window.setFilter('photo', this)" aria-pressed="false"><i data-lucide="image" style="width:0.9rem;height:0.9rem"></i> Fotoğraflar</button>
+        <button type="button" class="filter-chip" data-filter="video" onclick="window.setFilter('video', this)" aria-pressed="false"><i data-lucide="video" style="width:0.9rem;height:0.9rem"></i> Videolar</button>
+        <button type="button" class="filter-chip" data-filter="poll" onclick="window.setFilter('poll', this)" aria-pressed="false"><i data-lucide="bar-chart-3" style="width:0.9rem;height:0.9rem"></i> Anketler</button>
+        <button type="button" class="filter-chip" data-filter="event" onclick="window.setFilter('event', this)" aria-pressed="false"><i data-lucide="calendar" style="width:0.9rem;height:0.9rem"></i> Etkinlikler</button>
       </div>
     </div>
 
@@ -1808,6 +1811,7 @@
         <div class="compose-avatar" id="composeAvatar">?</div>
         <span style="color:var(--text-secondary);font-size:.9rem;font-weight:500">Topluluğa bir şeyler paylaş...</span>
       </div>
+      <label class="sr-only" for="toplulukContent">Paylaşım metni</label>
       <textarea id="toplulukContent" class="compose-textarea" placeholder="Neler düşünüyorsun? Bir anı, duyuru veya soru paylaş..."></textarea>
       
       <!-- HİDDEN PHOTO INPUT -->
@@ -1831,11 +1835,11 @@
       </div>
       
       <div class="compose-toolbar">
-        <div class="compose-tool-btn" onclick="window.handlePhotoClick()"><i data-lucide="image" style="width:1rem;height:1rem;color:var(--success)"></i> Fotoğraf</div>
-        <div class="compose-tool-btn" onclick="window.openVideoModal()"><i data-lucide="video" style="width:1rem;height:1rem;color:#3b82f6"></i> Video</div>
-        <div class="compose-tool-btn" onclick="window.openEventModal()"><i data-lucide="calendar" style="width:1rem;height:1rem;color:var(--gold-500)"></i> Etkinlik</div>
-        <div class="compose-tool-btn" onclick="window.openPollCreator()"><i data-lucide="bar-chart-3" style="width:1rem;height:1rem;color:#a855f7"></i> Anket</div>
-        <div class="compose-tool-btn" onclick="window.openFeelingModal()"><i data-lucide="smile" style="width:1rem;height:1rem;color:#facc15"></i> Hisler</div>
+        <button type="button" class="compose-tool-btn" onclick="window.handlePhotoClick()"><i data-lucide="image" style="width:1rem;height:1rem;color:var(--success)"></i> Fotoğraf</button>
+        <button type="button" class="compose-tool-btn" onclick="window.openVideoModal()"><i data-lucide="video" style="width:1rem;height:1rem;color:#60a5fa"></i> Video</button>
+        <button type="button" class="compose-tool-btn" onclick="window.openEventModal()"><i data-lucide="calendar" style="width:1rem;height:1rem;color:var(--gold-500)"></i> Etkinlik</button>
+        <button type="button" class="compose-tool-btn" onclick="window.openPollCreator()"><i data-lucide="bar-chart-3" style="width:1rem;height:1rem;color:#c084fc"></i> Anket</button>
+        <button type="button" class="compose-tool-btn" onclick="window.openFeelingModal()"><i data-lucide="smile" style="width:1rem;height:1rem;color:#facc15"></i> Hisler</button>
       </div>
       
       <div class="compose-footer">
@@ -2157,15 +2161,15 @@ function toggleRegFields(role) {
       <p style="font-size:.9rem;margin-top:.25rem;color:var(--text-muted)">Şu anki modunu seç ve toplulukla paylaş</p>
     </div>
     <div class="feeling-grid" id="feelingGrid">
-      <div class="feeling-option" onclick="window.submitFeelingAttachment('🥳', 'Heyecanlı')"><span class="emoji">🥳</span><span class="label">Heyecanlı</span></div>
-      <div class="feeling-option" onclick="window.submitFeelingAttachment('😊', 'Mutlu')"><span class="emoji">😊</span><span class="label">Mutlu</span></div>
-      <div class="feeling-option" onclick="window.submitFeelingAttachment('🎓', 'Gururlu')"><span class="emoji">🎓</span><span class="label">Gururlu</span></div>
-      <div class="feeling-option" onclick="window.submitFeelingAttachment('💡', 'İlham Almış')"><span class="emoji">💡</span><span class="label">İlham Almış</span></div>
-      <div class="feeling-option" onclick="window.submitFeelingAttachment('☕', 'Dinleniyor')"><span class="emoji">☕</span><span class="label">Dinleniyor</span></div>
-      <div class="feeling-option" onclick="window.submitFeelingAttachment('📚', 'Çalışkan')"><span class="emoji">📚</span><span class="label">Çalışkan</span></div>
-      <div class="feeling-option" onclick="window.submitFeelingAttachment('🤔', 'Düşünceli')"><span class="emoji">🤔</span><span class="label">Düşünceli</span></div>
-      <div class="feeling-option" onclick="window.submitFeelingAttachment('🌟', 'Umutlu')"><span class="emoji">🌟</span><span class="label">Umutlu</span></div>
-      <div class="feeling-option" onclick="window.submitFeelingAttachment('🎉', 'Kutlama Modunda')"><span class="emoji">🎉</span><span class="label">Kutluyor</span></div>
+      <button type="button" class="feeling-option" onclick="window.submitFeelingAttachment('🥳', 'Heyecanlı')"><span class="emoji">🥳</span><span class="label">Heyecanlı</span></button>
+      <button type="button" class="feeling-option" onclick="window.submitFeelingAttachment('😊', 'Mutlu')"><span class="emoji">😊</span><span class="label">Mutlu</span></button>
+      <button type="button" class="feeling-option" onclick="window.submitFeelingAttachment('🎓', 'Gururlu')"><span class="emoji">🎓</span><span class="label">Gururlu</span></button>
+      <button type="button" class="feeling-option" onclick="window.submitFeelingAttachment('💡', 'İlham Almış')"><span class="emoji">💡</span><span class="label">İlham Almış</span></button>
+      <button type="button" class="feeling-option" onclick="window.submitFeelingAttachment('☕', 'Dinleniyor')"><span class="emoji">☕</span><span class="label">Dinleniyor</span></button>
+      <button type="button" class="feeling-option" onclick="window.submitFeelingAttachment('📚', 'Çalışkan')"><span class="emoji">📚</span><span class="label">Çalışkan</span></button>
+      <button type="button" class="feeling-option" onclick="window.submitFeelingAttachment('🤔', 'Düşünceli')"><span class="emoji">🤔</span><span class="label">Düşünceli</span></button>
+      <button type="button" class="feeling-option" onclick="window.submitFeelingAttachment('🌟', 'Umutlu')"><span class="emoji">🌟</span><span class="label">Umutlu</span></button>
+      <button type="button" class="feeling-option" onclick="window.submitFeelingAttachment('🎉', 'Kutlama Modunda')"><span class="emoji">🎉</span><span class="label">Kutluyor</span></button>
     </div>
   </div>
 </div>
@@ -2189,14 +2193,15 @@ function toggleRegFields(role) {
 </div>
 
 <!-- RESİM BÜYÜTME LIGHTBOX -->
-<div id="imageLightbox" class="image-lightbox" onclick="this.classList.remove('open')">
-  <img id="lightboxImg" src="" alt="Büyütülmüş Görsel">
+<div id="imageLightbox" class="image-lightbox" role="dialog" aria-modal="true" aria-label="Görsel önizleme" aria-hidden="true" onclick="if(event.target===this)window.closeImageLightbox()">
+  <button type="button" id="lightboxCloseBtn" class="lightbox-close-btn" onclick="window.closeImageLightbox()" aria-label="Görsel önizlemeyi kapat"><i data-lucide="x"></i></button>
+  <img id="lightboxImg" alt="Büyütülmüş görsel" onclick="event.stopPropagation()">
 </div>
 
 <div class="toast-container"></div>
 <script src="assets/vendor/supabase.js"></script>
 <script src="js/app.js?v=1.6"></script>
-<script src="js/topluluk.js?v=1.4"></script>
+<script src="js/topluluk.js?v=1.6"></script>
 <script>
   // Authentic social-networking wall initialized async
 </script>

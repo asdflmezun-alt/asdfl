@@ -19,9 +19,12 @@
   // Arama & Filtreleme State
   let loadedPosts = [];
   let searchQuery = '';
+  let searchDebounceTimer = null;
   let activeFilter = 'all'; // 'all' | 'photo' | 'video' | 'poll' | 'event'
   let pollOptions = [];
   let eventRsvpState = new Map();
+
+  const preferredScrollBehavior = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
 
   /* ---------- Başlat ---------- */
   document.addEventListener('DOMContentLoaded', async () => {
@@ -59,6 +62,7 @@
     buildSidebar();
     await loadFeed('global');
     initComposeAttachments();
+    initLightboxAccessibility();
     if (isLoggedIn) {
       initMentionAutocomplete();
       subscribeFeedRealtime();
@@ -68,8 +72,11 @@
     const searchInput = document.getElementById('feedSearchInput');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
-        searchQuery = e.target.value.trim().toLowerCase();
-        filterAndRenderPosts();
+        window.clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = window.setTimeout(() => {
+          searchQuery = e.target.value.trim().toLocaleLowerCase('tr');
+          filterAndRenderPosts();
+        }, 180);
       });
     }
 
@@ -105,7 +112,7 @@
     } else {
       // Yerel ortamda beğenilen gönderileri yükle
       try {
-        const localLikes = JSON.parse(localStorage.getItem('asdfl_local_likes') || '[]');
+        const localLikes = JSON.parse(ASDFL._storage.getItem('asdfl_local_likes') || '[]');
         localLikes.forEach(id => likedPosts.add(id));
       } catch (e) {
         console.error('Error loading local likes:', e);
@@ -171,10 +178,10 @@
       }
     } else {
       try {
-        const allComments = JSON.parse(localStorage.getItem('asdfl_post_comments') || '[]');
+        const allComments = JSON.parse(ASDFL._storage.getItem('asdfl_post_comments') || '[]');
         commentsCount = allComments.filter(c => c.author_id === ASDFL.currentUser.id).length;
         
-        const allPosts = JSON.parse(localStorage.getItem('asdfl_posts') || '[]');
+        const allPosts = JSON.parse(ASDFL._storage.getItem('asdfl_posts') || '[]');
         postsCount = allPosts.filter(p => p.author_id === ASDFL.currentUser.id).length;
       } catch (e) {}
     }
@@ -209,22 +216,24 @@
     const user = ASDFL.currentUser;
     const gradYear = myProfile?.grad_year || user?.gradYear;
     const section = myProfile?.class_section || user?.classSection;
+    const safeGradYear = ASDFL.escapeHTML(String(gradYear ?? ''));
+    const safeSection = ASDFL.escapeHTML(String(section ?? ''));
 
     sidebar.innerHTML = `
-      <div class="feed-channel ${currentFeed === 'global' ? 'active' : ''}" onclick="window.switchFeed('global', this)">
+      <button type="button" class="feed-channel ${currentFeed === 'global' ? 'active' : ''}" onclick="window.switchFeed('global', this)" ${currentFeed === 'global' ? 'aria-current="page"' : ''}>
         <i data-lucide="globe" style="width:1.1rem;height:1.1rem"></i>
         <span>Genel Akış</span>
-      </div>
+      </button>
       ${gradYear ? `
-      <div class="feed-channel ${currentFeed === 'year' ? 'active' : ''}" onclick="window.switchFeed('year', this)">
+      <button type="button" class="feed-channel ${currentFeed === 'year' ? 'active' : ''}" onclick="window.switchFeed('year', this)" ${currentFeed === 'year' ? 'aria-current="page"' : ''}>
         <i data-lucide="graduation-cap" style="width:1.1rem;height:1.1rem"></i>
-        <span>${gradYear} Mezunları</span>
-      </div>` : ''}
+        <span>${safeGradYear} Mezunları</span>
+      </button>` : ''}
       ${(gradYear && section) ? `
-      <div class="feed-channel ${currentFeed === 'section' ? 'active' : ''}" onclick="window.switchFeed('section', this)">
+      <button type="button" class="feed-channel ${currentFeed === 'section' ? 'active' : ''}" onclick="window.switchFeed('section', this)" ${currentFeed === 'section' ? 'aria-current="page"' : ''}>
         <i data-lucide="users" style="width:1.1rem;height:1.1rem"></i>
-        <span>${gradYear}-${section} Sınıfı</span>
-      </div>` : ''}
+        <span>${safeGradYear}-${safeSection} Sınıfı</span>
+      </button>` : ''}
     `;
     setTimeout(() => ASDFL.refreshIcons(), 10);
   }
@@ -232,8 +241,12 @@
   /* ---------- Feed Switch ---------- */
   window.switchFeed = async function (type, el) {
     currentFeed = type;
-    document.querySelectorAll('.feed-channel').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.feed-channel').forEach(c => {
+      c.classList.remove('active');
+      c.removeAttribute('aria-current');
+    });
     el.classList.add('active');
+    el.setAttribute('aria-current', 'page');
     await loadFeed(type);
     updateComposeAudience(type);
   };
@@ -341,8 +354,8 @@
             textToCheck = parsed.text || '';
           } catch(e) {}
         }
-        const authorName = (p.profiles?.name || '').toLowerCase();
-        return textToCheck.toLowerCase().includes(searchQuery) || authorName.includes(searchQuery);
+        const authorName = (p.profiles?.name || '').toLocaleLowerCase('tr');
+        return textToCheck.toLocaleLowerCase('tr').includes(searchQuery) || authorName.includes(searchQuery);
       });
     }
 
@@ -360,6 +373,13 @@
         }
         return type === activeFilter;
       });
+    }
+
+    const searchStatus = document.getElementById('feedSearchStatus');
+    if (searchStatus) {
+      searchStatus.textContent = searchQuery || activeFilter !== 'all'
+        ? `${filtered.length} gönderi bulundu.`
+        : `${filtered.length} gönderi gösteriliyor.`;
     }
 
     if (filtered.length === 0) {
@@ -388,7 +408,7 @@
     if (!el) return; // gönderi bu akış sayfasında yoksa sessizce geç
     deepLinkHandled = true;
     setTimeout(() => {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
       el.classList.add('highlighted');
       setTimeout(() => el.classList.remove('highlighted'), 2500);
     }, 150);
@@ -397,13 +417,17 @@
   /* ---------- Filtre Seçimi & Hashtag Tetikleme ---------- */
   window.setFilter = function (filter, el) {
     activeFilter = filter;
-    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.filter-chip').forEach(c => {
+      c.classList.remove('active');
+      c.setAttribute('aria-pressed', 'false');
+    });
     el.classList.add('active');
+    el.setAttribute('aria-pressed', 'true');
     filterAndRenderPosts();
   };
 
   window.filterByHashtag = function (tag) {
-    searchQuery = '#' + tag.toLowerCase();
+    searchQuery = '#' + tag.toLocaleLowerCase('tr');
     const searchInput = document.getElementById('feedSearchInput');
     if (searchInput) searchInput.value = searchQuery;
     filterAndRenderPosts();
@@ -470,7 +494,7 @@
     if (ASDFL.supabase) {
       commentCount = post.post_comments ? post.post_comments.length : 0;
     } else {
-      let allComments = JSON.parse(localStorage.getItem('asdfl_post_comments') || '[]');
+      let allComments = JSON.parse(ASDFL._storage.getItem('asdfl_post_comments') || '[]');
       commentCount = allComments.filter(c => c.post_id === post.id).length;
     }
 
@@ -497,7 +521,7 @@
               const photoUrl = ASDFL.safeURL(att.value, { allowBlob: true });
               attachmentHtml = photoUrl ? `
                 <div class="post-media-attachment">
-                  <img src="${ASDFL.escapeAttr(photoUrl)}" alt="Paylaşım görseli" onclick="window.openImageLightbox(${ASDFL.jsString(photoUrl)})">
+                  <img src="${ASDFL.escapeAttr(photoUrl)}" alt="Paylaşım görseli" role="button" tabindex="0" aria-label="Görseli büyüt" onclick="window.openImageLightbox(${ASDFL.jsString(photoUrl)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.openImageLightbox(${ASDFL.jsString(photoUrl)})}">
                 </div>
               ` : '';
             } else if (att.type === 'video') {
@@ -610,27 +634,27 @@
       <div class="post-text${shouldCollapseText ? ' is-collapsed' : ''}" id="post-text-${safePostIdAttr}">
         ${formatPostText(postText, postMentions)}
       </div>
-      ${shouldCollapseText ? `<button class="post-read-more" id="post-more-${safePostIdAttr}" onclick="window.expandPostText(${safePostId})">Devamını oku</button>` : ''}
+      ${shouldCollapseText ? `<button type="button" class="post-read-more" id="post-more-${safePostIdAttr}" onclick="window.expandPostText(${safePostId})">Devamını oku</button>` : ''}
     `;
 
     const moderationBtn = (isMyPost || isAdmin)
-      ? `<button class="post-action-btn post-action-danger" style="margin-left:auto" onclick="window.deletePost(${safePostId})" title="Gönderiyi sil">
+      ? `<button type="button" class="post-action-btn post-action-danger" style="margin-left:auto" onclick="window.deletePost(${safePostId})" title="Gönderiyi sil">
            <i data-lucide="trash-2" style="width:1.1rem;height:1.1rem"></i>
          </button>`
-      : `<button class="post-action-btn" style="margin-left:auto" onclick="window.openReportModal(${safePostId})" title="Gönderiyi şikâyet et">
+      : `<button type="button" class="post-action-btn" style="margin-left:auto" onclick="window.openReportModal(${safePostId})" title="Gönderiyi şikâyet et">
            <i data-lucide="flag" style="width:1.1rem;height:1.1rem"></i>
          </button>`;
 
     return `
       <div class="post-card${post.pinned ? ' pinned' : ''}" id="post-${safePostIdAttr}">
         <div class="post-header">
-          <div style="cursor:pointer" onclick="window.location.href='profil.html?id=${encodeURIComponent(author?.id || '')}'">
+          <a class="post-author-link" href="profil.html?id=${encodeURIComponent(author?.id || '')}" aria-label="${ASDFL.escapeAttr(name)} profilini aç">
             ${ASDFL.getAvatarHTML({ initials, avatar_url: author?.avatar_url, avatar_position: author?.avatar_position, name }, 'post-avatar')}
-          </div>
-          <div class="post-meta" style="cursor:pointer" onclick="window.location.href='profil.html?id=${encodeURIComponent(author?.id || '')}'">
+          </a>
+          <a class="post-meta post-author-link" href="profil.html?id=${encodeURIComponent(author?.id || '')}" aria-label="${ASDFL.escapeAttr(name)} profilini aç">
             <strong class="post-author" style="display:inline-block">${escapeHtml(name)} ${feelingHtml}</strong>
             <span class="post-submeta">${escapeHtml(meta)}</span>
-          </div>
+          </a>
           <div class="post-time-audience">
             <span class="post-time">${escapeHtml(time)}</span>
             ${post.pinned ? '<span class="pinned-badge"><i data-lucide="pin" style="width:.8rem;height:.8rem"></i> Sabitlendi</span>' : ''}
@@ -639,20 +663,20 @@
         </div>
         <div class="post-body">${postTextHtml} ${attachmentHtml} ${linkCardHtml}</div>
         <div class="post-actions">
-          <button class="post-action-btn ${liked ? 'liked' : ''}" onclick="window.toggleLike(${safePostId}, this)" id="like-${safePostIdAttr}">
-            <i data-lucide="heart" style="width:1.1rem;height:1.1rem"></i>
+          <button type="button" class="post-action-btn like-action ${liked ? 'liked' : ''}" onclick="window.toggleLike(${safePostId}, this)" id="like-${safePostIdAttr}" aria-label="${liked ? 'Beğeniyi kaldır' : 'Gönderiyi beğen'}" aria-pressed="${liked}">
+            <span class="like-icon" aria-hidden="true"><i data-lucide="heart"></i></span>
             <span class="like-count">${post.likes_count || 0}</span>
           </button>
-          <button class="post-action-btn" onclick="window.toggleComments(${safePostId}, this)" id="comment-btn-${safePostIdAttr}">
+          <button type="button" class="post-action-btn" onclick="window.toggleComments(${safePostId}, this)" id="comment-btn-${safePostIdAttr}" aria-expanded="false" aria-controls="comments-section-${safePostIdAttr}">
             <i data-lucide="message-square" style="width:1.1rem;height:1.1rem"></i>
             <span class="comment-count">${commentCount}</span> Yorum
           </button>
-          <button class="post-action-btn" onclick="window.sharePost(${safePostId})">
+          <button type="button" class="post-action-btn" onclick="window.sharePost(${safePostId})">
             <i data-lucide="share-2" style="width:1.1rem;height:1.1rem"></i>
             <span>Paylaş</span>
           </button>
           ${isAdmin ? `
-          <button class="post-action-btn" onclick="window.togglePin(${safePostId}, ${!post.pinned})" title="${post.pinned ? 'Sabitlemeyi kaldır' : 'Gönderiyi sabitle'}">
+          <button type="button" class="post-action-btn" onclick="window.togglePin(${safePostId}, ${!post.pinned})" title="${post.pinned ? 'Sabitlemeyi kaldır' : 'Gönderiyi sabitle'}">
             <i data-lucide="pin" style="width:1.1rem;height:1.1rem"></i>
             <span>${post.pinned ? 'Kaldır' : 'Sabitle'}</span>
           </button>` : ''}
@@ -664,8 +688,8 @@
           <div class="comments-list" id="comments-list-${safePostIdAttr}"></div>
           <div class="comment-compose">
             ${ASDFL.getAvatarHTML(ASDFL.currentUser, 'comment-avatar', 'width:30px;height:30px;font-size:0.7rem')}
-            <input type="text" class="comment-input" placeholder="Yorum yaz ve Enter'a bas..." id="comment-input-${safePostIdAttr}" onkeydown="if(event.key==='Enter')window.submitCommentAction(${safePostId})">
-            <button class="btn btn-primary btn-sm" style="padding:0.35rem 0.85rem;font-size:0.8rem;border-radius:var(--radius-full)" onclick="window.submitCommentAction(${safePostId})">Gönder</button>
+            <input type="text" class="comment-input" placeholder="Yorum yaz ve Enter'a bas..." aria-label="Yorum yaz" id="comment-input-${safePostIdAttr}" onkeydown="if(event.key==='Enter')window.submitCommentAction(${safePostId})">
+            <button type="button" class="btn btn-primary btn-sm" style="padding:0.35rem 0.85rem;font-size:0.8rem;border-radius:var(--radius-full)" onclick="window.submitCommentAction(${safePostId})">Gönder</button>
           </div>
         </div>
       </div>
@@ -828,12 +852,17 @@
       count += 1;
     }
     countEl.textContent = count;
+    const isLikedNow = !alreadyLiked;
+    btn.setAttribute('aria-pressed', String(isLikedNow));
+    btn.setAttribute('aria-label', isLikedNow ? 'Beğeniyi kaldır' : 'Gönderiyi beğen');
 
     // Animasyonu tetikle
-    const icon = btn.querySelector('i');
-    if (icon) {
-      icon.style.animation = 'none';
-      setTimeout(() => { icon.style.animation = 'heartPop 0.3s ease-out'; }, 10);
+    const icon = btn.querySelector('.like-icon');
+    if (icon && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      icon.classList.remove('is-bursting');
+      void icon.offsetWidth;
+      icon.classList.add('is-bursting');
+      icon.addEventListener('animationend', () => icon.classList.remove('is-bursting'), { once: true });
     }
 
     // Veritabanına ya da LocalStorage'a kaydet
@@ -858,28 +887,30 @@
           btn.classList.remove('liked');
           countEl.textContent = Math.max(0, count - 1);
         }
+        btn.setAttribute('aria-pressed', String(alreadyLiked));
+        btn.setAttribute('aria-label', alreadyLiked ? 'Beğeniyi kaldır' : 'Gönderiyi beğen');
         ASDFL.toast('Beğeni kaydedilemedi, lütfen tekrar deneyin.', 'error');
       }
     } else {
       // Çevrimdışı mod yerel kaydetme
       try {
-        let localLikes = JSON.parse(localStorage.getItem('asdfl_local_likes') || '[]');
+        let localLikes = JSON.parse(ASDFL._storage.getItem('asdfl_local_likes') || '[]');
         if (alreadyLiked) {
           localLikes = localLikes.filter(id => id !== postId);
         } else {
           localLikes.push(postId);
         }
-        localStorage.setItem('asdfl_local_likes', JSON.stringify(localLikes));
+        ASDFL._storage.setItem('asdfl_local_likes', JSON.stringify(localLikes));
 
         // Yerel gönderilerdeki beğeni sayısını da güncelle
-        let localPosts = JSON.parse(localStorage.getItem('asdfl_posts') || '[]');
+        let localPosts = JSON.parse(ASDFL._storage.getItem('asdfl_posts') || '[]');
         localPosts = localPosts.map(p => {
           if (p.id === postId) {
             p.likes_count = count;
           }
           return p;
         });
-        localStorage.setItem('asdfl_posts', JSON.stringify(localPosts));
+        ASDFL._storage.setItem('asdfl_posts', JSON.stringify(localPosts));
       } catch (e) {
         console.error('Error updating local like:', e);
       }
@@ -1113,9 +1144,11 @@
 
     const isHidden = section.classList.toggle('hidden');
     btn.classList.toggle('commented', !isHidden);
+    btn.setAttribute('aria-expanded', String(!isHidden));
 
     if (!isHidden) {
       await loadComments(postId);
+      document.getElementById(`comment-input-${postId}`)?.focus({ preventScroll: true });
     }
   };
 
@@ -1183,7 +1216,7 @@
         initials: ASDFL.getInitials(c.profiles?.name || 'U')
       }));
     } else {
-      let allComments = JSON.parse(localStorage.getItem('asdfl_post_comments') || '[]');
+      let allComments = JSON.parse(ASDFL._storage.getItem('asdfl_post_comments') || '[]');
       return allComments.filter(c => c.post_id === postId);
     }
   }
@@ -1251,7 +1284,7 @@
         initials: ASDFL.getInitials(data.profiles?.name || 'U')
       };
     } else {
-      let allComments = JSON.parse(localStorage.getItem('asdfl_post_comments') || '[]');
+      let allComments = JSON.parse(ASDFL._storage.getItem('asdfl_post_comments') || '[]');
       const newComment = {
         id: Math.random().toString(36).substring(2),
         post_id: postId,
@@ -1269,7 +1302,7 @@
         initials: ASDFL.getInitials(ASDFL.currentUser.name)
       };
       allComments.push(newComment);
-      localStorage.setItem('asdfl_post_comments', JSON.stringify(allComments));
+      ASDFL._storage.setItem('asdfl_post_comments', JSON.stringify(allComments));
       return newComment;
     }
   }
@@ -1329,11 +1362,11 @@
         });
 
         const updatedContent = JSON.stringify(parsed);
-        let localPosts = JSON.parse(localStorage.getItem('asdfl_posts') || '[]');
+        let localPosts = JSON.parse(ASDFL._storage.getItem('asdfl_posts') || '[]');
         const idx = localPosts.findIndex(p => p.id === postId);
         if (idx !== -1) {
           localPosts[idx].content = updatedContent;
-          localStorage.setItem('asdfl_posts', JSON.stringify(localPosts));
+          ASDFL._storage.setItem('asdfl_posts', JSON.stringify(localPosts));
         }
 
         post.content = updatedContent;
@@ -1776,14 +1809,47 @@
     setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
+  let lightboxReturnFocus = null;
+
+  function initLightboxAccessibility() {
+    document.addEventListener('keydown', (event) => {
+      const lightbox = document.getElementById('imageLightbox');
+      if (!lightbox?.classList.contains('open')) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        window.closeImageLightbox();
+      } else if (event.key === 'Tab') {
+        event.preventDefault();
+        document.getElementById('lightboxCloseBtn')?.focus();
+      }
+    });
+  }
+
   // Opens Image Lightbox
   window.openImageLightbox = function(src) {
     const lightbox = document.getElementById('imageLightbox');
     const img = document.getElementById('lightboxImg');
-    if (lightbox && img) {
-      img.src = src;
+    const safeSrc = ASDFL.safeURL(src, { allowBlob: true });
+    if (lightbox && img && safeSrc) {
+      lightboxReturnFocus = document.activeElement;
+      img.src = safeSrc;
       lightbox.classList.add('open');
+      lightbox.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('community-lightbox-open');
+      document.getElementById('lightboxCloseBtn')?.focus({ preventScroll: true });
     }
+  };
+
+  window.closeImageLightbox = function() {
+    const lightbox = document.getElementById('imageLightbox');
+    const img = document.getElementById('lightboxImg');
+    if (!lightbox) return;
+    lightbox.classList.remove('open');
+    lightbox.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('community-lightbox-open');
+    if (img) img.removeAttribute('src');
+    if (lightboxReturnFocus instanceof HTMLElement) lightboxReturnFocus.focus({ preventScroll: true });
+    lightboxReturnFocus = null;
   };
 
   function initComposeAttachments() {
@@ -1828,11 +1894,11 @@
         .slice(0, 5);
       if (!candidates.length) { box.classList.add('hidden'); return; }
       box.innerHTML = candidates.map(a => `
-        <div class="mention-suggest-item" onclick="window.pickMention(${ASDFL.jsString(a.id)}, ${ASDFL.jsString(a.name)})">
+        <button type="button" class="mention-suggest-item" onclick="window.pickMention(${ASDFL.jsString(a.id)}, ${ASDFL.jsString(a.name)})">
           ${ASDFL.getAvatarHTML(a, 'mention-suggest-avatar', 'width:26px;height:26px;font-size:0.65rem;border-radius:6px')}
           <span>${escapeHtml(a.name)}</span>
           <small>${escapeHtml(a.grad_year ? a.grad_year + ' Mezunu' : (a.job || ''))}</small>
-        </div>`).join('');
+        </button>`).join('');
       box.classList.remove('hidden');
     });
 
@@ -1869,7 +1935,7 @@
     banner.className = 'new-posts-banner hidden';
     banner.onclick = async () => {
       await loadFeed(currentFeed);
-      feed.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      feed.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
     };
     feed.parentElement.insertBefore(banner, feed);
     return banner;

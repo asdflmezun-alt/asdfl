@@ -95,6 +95,8 @@ test('early cached-user rendering uses bootstrap sanitizers', async () => {
   const bootstrap = await readFile('js/bootstrap.js', 'utf8');
   assert.match(bootstrap, /window\.safeHTML/);
   assert.match(bootstrap, /window\.safeURL/);
+  assert.match(bootstrap, /const earlyStorage/);
+  assert.doesNotMatch(bootstrap, /(?<!window\.)localStorage\.(?:getItem|setItem)/);
   const htmlFiles = (await readdir('.')).filter(file => file.endsWith('.html'));
   for (const file of htmlFiles) {
     const html = await readFile(file, 'utf8');

@@ -62,3 +62,34 @@ test('shared UI layer supports accessible mobile navigation and modals', () => {
   assert.match(app, /focusFirstInModal/);
   assert.match(app, /_lastFocusedBeforeModal/);
 });
+
+test('mobile auth initialization preserves slow sessions without blocking auth events', () => {
+  assert.match(app, /storage: ASDFL_STORAGE/);
+  assert.match(app, /global: \{ fetch: supabaseFetchWithTimeout \}/);
+  assert.match(app, /_subscribeToAuthChanges\(\);[\s\S]*auth\.getSession\(\)/);
+  assert.match(app, /onAuthStateChange\(\(event, session\) =>/);
+  assert.doesNotMatch(app, /onAuthStateChange\(async/);
+  assert.match(app, /'INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'/);
+  assert.match(app, /if \(this\.authReady\) this\.initNotificationBell\(\)/);
+  assert.match(app, /}, 13000\)/);
+  assert.match(app, /if \(this\.currentUser\) \{\s*this\.authReady = true;\s*this\.updateUIForAuth\(\);\s*\}/);
+});
+
+test('login and community loading fail safely on stalled mobile requests', () => {
+  assert.match(app, /_loginInProgress/);
+  assert.match(app, /Giriş yapılıyor\.\.\./);
+  assert.match(app, /signInWithPassword[\s\S]*15000/);
+  assert.match(community, /queryWithTimeout\(query, 10000\)/);
+  assert.match(community, /data-retry-feed/);
+  assert.match(community, /Topluluk akışı şu anda yüklenemedi/);
+  assert.match(community, /asdfl:auth-changed/);
+  assert.match(community, /refreshCommunityForAuth/);
+});
+
+test('critical auth assets bypass stale iOS PWA caches', () => {
+  assert.match(sw, /CACHE_VERSION = 'v13'/);
+  assert.match(sw, /NETWORK_FIRST_ASSET_SUFFIXES/);
+  assert.match(sw, /fetch\(request, \{ cache: 'no-cache' \}\)/);
+  assert.match(sw, /js\/app\.js\?v=1\.7/);
+  assert.match(sw, /assets\/vendor\/supabase\.js\?v=2\.108\.2-1/);
+});

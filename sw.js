@@ -1,6 +1,6 @@
 // ASDFL Mezunlar Derneği — service worker
 // Bump CACHE_VERSION whenever a deploy should force-invalidate old caches.
-const CACHE_VERSION = 'v12';
+const CACHE_VERSION = 'v13';
 const CACHE_NAME = `asdfl-${CACHE_VERSION}`;
 const DEV_BYPASS_CACHE = ['localhost', '127.0.0.1', '::1'].includes(self.location.hostname);
 
@@ -11,12 +11,13 @@ const PRECACHE_URLS = [
   'css/fonts.css',
   'css/home.css',
   'css/topluluk.css',
-  'js/bootstrap.js',
-  'js/app.js',
+  'js/bootstrap.js?v=1.1',
+  'js/app.js?v=1.7',
   'js/home.js',
+  'js/topluluk.js?v=1.7',
   'js/universities.js',
   'assets/vendor/lucide.js',
-  'assets/vendor/supabase.js',
+  'assets/vendor/supabase.js?v=2.108.2-1',
   'assets/images/logo.png',
   'assets/images/favicon.png',
   'manifest.json'
@@ -25,6 +26,12 @@ const PRECACHE_URLS = [
 const STATIC_EXTENSIONS = new Set([
   'css', 'js', 'woff', 'woff2', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'ico'
 ]);
+
+const NETWORK_FIRST_ASSET_SUFFIXES = [
+  '/js/bootstrap.js',
+  '/js/app.js',
+  '/assets/vendor/supabase.js'
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -77,6 +84,24 @@ self.addEventListener('fetch', (event) => {
       } catch (err) {
         const cached = await caches.match(request);
         return cached || caches.match('index.html');
+      }
+    })());
+    return;
+  }
+
+  // Auth başlangıcını belirleyen dosyalar iOS PWA'da eski cache'den gelmemeli.
+  // Ağ yoksa aynı URL'nin cache kopyasına düşülür.
+  if (NETWORK_FIRST_ASSET_SUFFIXES.some((suffix) => url.pathname.endsWith(suffix))) {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(request, { cache: 'no-cache' });
+        if (response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(request, response.clone());
+        }
+        return response;
+      } catch (error) {
+        return (await caches.match(request)) || Response.error();
       }
     })());
     return;

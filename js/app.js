@@ -2,6 +2,101 @@
 // ASDFL MEZUNLAR DERNEĞİ — DATA & APP STATE
 // ========================================
 
+function createResilientStorage() {
+  const memory = new Map();
+  const storageNames = ['localStorage', 'sessionStorage'];
+  const available = new Set();
+
+  const accessStorage = (name) => {
+    try {
+      return window[name] || null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  storageNames.forEach((name) => {
+    const storage = accessStorage(name);
+    if (!storage) return;
+    try {
+      const probeKey = `__asdfl_storage_test_${name}__`;
+      storage.setItem(probeKey, '1');
+      storage.removeItem(probeKey);
+      available.add(name);
+    } catch (error) {
+      // Safari may expose the storage object while denying individual operations.
+    }
+  });
+
+  return {
+    getItem(key) {
+      for (const name of storageNames) {
+        if (!available.has(name)) continue;
+        const storage = accessStorage(name);
+        if (!storage) continue;
+        try {
+          const value = storage.getItem(key);
+          if (value !== null) {
+            memory.set(key, value);
+            return value;
+          }
+        } catch (error) {
+          available.delete(name);
+        }
+      }
+      return memory.has(key) ? memory.get(key) : null;
+    },
+    setItem(key, value) {
+      const normalized = String(value);
+      memory.set(key, normalized);
+      for (const name of [...available]) {
+        const storage = accessStorage(name);
+        if (!storage) continue;
+        try {
+          storage.setItem(key, normalized);
+        } catch (error) {
+          available.delete(name);
+        }
+      }
+    },
+    removeItem(key) {
+      memory.delete(key);
+      for (const name of [...available]) {
+        const storage = accessStorage(name);
+        if (!storage) continue;
+        try {
+          storage.removeItem(key);
+        } catch (error) {
+          available.delete(name);
+        }
+      }
+    },
+    isPersistent() {
+      return available.size > 0;
+    }
+  };
+}
+
+const ASDFL_STORAGE = createResilientStorage();
+
+function supabaseFetchWithTimeout(input, options = {}) {
+  if (typeof AbortController === 'undefined') return fetch(input, options);
+
+  const controller = new AbortController();
+  const upstreamSignal = options.signal;
+  const forwardAbort = () => controller.abort();
+  if (upstreamSignal) {
+    if (upstreamSignal.aborted) controller.abort();
+    else upstreamSignal.addEventListener('abort', forwardAbort, { once: true });
+  }
+
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  return fetch(input, { ...options, signal: controller.signal }).finally(() => {
+    clearTimeout(timeoutId);
+    if (upstreamSignal) upstreamSignal.removeEventListener('abort', forwardAbort);
+  });
+}
+
 // Demo data stored in localStorage on first load
 const ASDFL = {
   version: '1.0.0',
@@ -1846,30 +1941,24 @@ const ASDFL = {
 
   // ---- Auth State ----
   currentUser: null,
-  // Safari Private mode'da localStorage erişimi kısıtlı olabilir.
-  // Güvenli localStorage wrapper: hata durumunda sessionStorage veya memory'ye düşer.
-  _storage: (() => {
-    const memStore = {};
-    try { localStorage.setItem('__sb_test__', '1'); localStorage.removeItem('__sb_test__'); return localStorage; } catch(e) {}
-    try { sessionStorage.setItem('__sb_test__', '1'); sessionStorage.removeItem('__sb_test__'); return sessionStorage; } catch(e) {}
-    return { getItem: k => memStore[k] ?? null, setItem: (k,v) => { memStore[k]=v; }, removeItem: k => { delete memStore[k]; } };
-  })(),
+  // Safari depolama izinleri sayfa açıkken bile değişebilir. Her işlem güvenli
+  // sarmalayıcıdan geçer ve Supabase ile uygulama aynı fallback belleğini kullanır.
+  _storage: ASDFL_STORAGE,
   supabase: (() => {
     if (!window.supabase) return null;
-    const memStore = {};
-    let customStorage = null;
-    try { localStorage.setItem('__sb_test__', '1'); localStorage.removeItem('__sb_test__'); customStorage = localStorage; } catch(e) {}
-    if (!customStorage) {
-      try { sessionStorage.setItem('__sb_test__', '1'); sessionStorage.removeItem('__sb_test__'); customStorage = sessionStorage; } catch(e) {}
-    }
-    if (!customStorage) {
-      customStorage = { getItem: k => memStore[k] ?? null, setItem: (k,v) => { memStore[k]=v; }, removeItem: k => { delete memStore[k]; } };
-    }
     try {
       return window.supabase.createClient(
         'https://refpyezcxkkofpkwaqny.supabase.co',
         'sb_publishable_NlYWAPtmP6F6LRlAiXyIxw_hm1OoP9m',
-        { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: customStorage } }
+        {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            storage: ASDFL_STORAGE
+          },
+          global: { fetch: supabaseFetchWithTimeout }
+        }
       );
     } catch (e) {
       console.error('Supabase initialization failed:', e);
@@ -1877,7 +1966,11 @@ const ASDFL = {
     }
   })(),
   authReady: false,
+  _authSubscription: null,
+  _authEpoch: 0,
+  _profileHydration: null,
   waitForAuth() {
+    if (this.authReady) return Promise.resolve();
     return new Promise(resolve => {
       let resolved = false;
       const check = setInterval(() => {
@@ -1888,16 +1981,113 @@ const ASDFL = {
         }
       }, 50);
 
-      // Safety timeout: resolve after 1.5 seconds no matter what to prevent blank page freezes
+      // Mobil ağlarda auth başlangıcı masaüstünden daha uzun sürebilir. Bu süre
+      // dolsa bile checkAuth önbellekteki kullanıcıyı yanlışlıkla silmez.
       setTimeout(() => {
         if (!resolved) {
           clearInterval(check);
           resolved = true;
-          console.warn('Auth check timed out, resolving anyway.');
+          console.warn('Oturum kontrolü gecikti; mevcut güvenli durumla devam ediliyor.');
           resolve();
         }
-      }, 1500);
+      }, 13000);
     });
+  },
+
+  _userFromSession(session) {
+    const authUser = session?.user;
+    if (!authUser) return null;
+    const cached = this.currentUser?.id === authUser.id ? this.currentUser : {};
+    const metadata = authUser.user_metadata || {};
+    return {
+      ...metadata,
+      id: authUser.id,
+      name: metadata.name || cached.name || authUser.email?.split('@')[0] || 'Kullanıcı',
+      email: authUser.email || cached.email || '',
+      role: cached.role || metadata.role || 'Kullanıcı',
+      avatar_url: cached.avatar_url || metadata.avatar_url || '',
+      avatar_position: cached.avatar_position || metadata.avatar_position || '50% 50%'
+    };
+  },
+
+  _queueAuthProfileRefresh(session) {
+    const userId = session?.user?.id;
+    if (!userId || !this.supabase) return Promise.resolve(null);
+    if (this._profileHydration?.userId === userId) return this._profileHydration.promise;
+
+    const epoch = this._authEpoch;
+    const promise = this.queryWithTimeout(
+      this.supabase
+        .from('profiles')
+        .select('role, avatar_url, avatar_position')
+        .eq('id', userId)
+        .single(),
+      8000
+    ).then(({ data: profile, error }) => {
+      if (error) throw error;
+      if (!profile || epoch !== this._authEpoch || this.currentUser?.id !== userId) return null;
+      this.currentUser = {
+        ...this.currentUser,
+        role: profile.role || this.currentUser.role || 'Kullanıcı',
+        avatar_url: profile.avatar_url || this.currentUser.avatar_url || '',
+        avatar_position: profile.avatar_position || this.currentUser.avatar_position || '50% 50%'
+      };
+      this._storage.setItem('asdfl_user', JSON.stringify(this.currentUser));
+      this.updateUIForAuth();
+      return this.currentUser;
+    }).catch((error) => {
+      console.warn('Profil bilgisi oturumdan sonra yenilenemedi:', error?.message || error);
+      return null;
+    }).finally(() => {
+      if (this._profileHydration?.promise === promise) this._profileHydration = null;
+    });
+
+    this._profileHydration = { userId, promise };
+    return promise;
+  },
+
+  _applyAuthSession(session, { hydrateProfile = true } = {}) {
+    if (!session?.user) {
+      this._authEpoch += 1;
+      this.currentUser = null;
+      this._storage.removeItem('asdfl_user');
+      this.authReady = true;
+      this.updateUIForAuth();
+      return;
+    }
+
+    const nextUser = this._userFromSession(session);
+    if (!nextUser) return;
+    if (this.currentUser?.id && this.currentUser.id !== nextUser.id) this._authEpoch += 1;
+    this.currentUser = nextUser;
+    this._storage.setItem('asdfl_user', JSON.stringify(nextUser));
+    this.authReady = true;
+    this.updateUIForAuth();
+    if (hydrateProfile) this._queueAuthProfileRefresh(session);
+  },
+
+  _handleAuthEvent(event, session) {
+    if (event === 'SIGNED_OUT') {
+      this._applyAuthSession(null, { hydrateProfile: false });
+      return;
+    }
+    if (event === 'INITIAL_SESSION' && !session) {
+      this._applyAuthSession(null, { hydrateProfile: false });
+      return;
+    }
+    if (session && ['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) {
+      this._applyAuthSession(session, { hydrateProfile: event !== 'TOKEN_REFRESHED' });
+    }
+  },
+
+  _subscribeToAuthChanges() {
+    if (!this.supabase || this._authSubscription) return;
+    const { data } = this.supabase.auth.onAuthStateChange((event, session) => {
+      // Supabase auth olayları callback'in bitmesini bekler. Burada ağ isteği
+      // await edilmez; profil zenginleştirmesi callback dışında yürür.
+      this._handleAuthEvent(event, session);
+    });
+    this._authSubscription = data?.subscription || true;
   },
 
   // Auth Functions
@@ -1949,105 +2139,23 @@ const ASDFL = {
       this.updateUIForAuth();
       return;
     }
-    
-    let session = null;
+
+    // INITIAL_SESSION olayını kaçırmamak için dinleyici getSession'dan önce kurulur.
+    this._subscribeToAuthChanges();
+
     try {
-      const { data } = await this.queryWithTimeout(this.supabase.auth.getSession(), 2000);
-      session = data?.session;
+      const { data, error } = await this.queryWithTimeout(this.supabase.auth.getSession(), 8000);
+      if (error) throw error;
+      this._applyAuthSession(data?.session || null);
     } catch (err) {
-      console.error('Error fetching session:', err);
-    }
-
-    if (session) {
-      let dbRole = session.user.user_metadata?.role || 'Kullanıcı';
-      let dbAvatarUrl = session.user.user_metadata?.avatar_url || '';
-      let dbAvatarPosition = session.user.user_metadata?.avatar_position || '50% 50%';
-      try {
-        const { data: profile } = await this.queryWithTimeout(
-          this.supabase
-            .from('profiles')
-            .select('role, avatar_url, avatar_position')
-            .eq('id', session.user.id)
-            .single(),
-          2000
-        );
-        if (profile?.role) {
-          dbRole = profile.role;
-        }
-        if (profile?.avatar_url) {
-          dbAvatarUrl = profile.avatar_url;
-        }
-        if (profile?.avatar_position) {
-          dbAvatarPosition = profile.avatar_position;
-        }
-      } catch (e) {
-        console.error('Error fetching live role:', e);
+      // Timeout kesin olarak "oturum yok" anlamına gelmez. Özellikle iOS'ta
+      // geçerli önbelleği koru; INITIAL_SESSION geldiğinde durum netleşir.
+      console.warn('Oturum ilk denemede doğrulanamadı:', err?.message || err);
+      if (this.currentUser) {
+        this.authReady = true;
+        this.updateUIForAuth();
       }
-
-      this.currentUser = {
-        ...session.user.user_metadata,  // spread first so dbRole below wins
-        id: session.user.id,
-        name: session.user.user_metadata?.name || session.user.email.split('@')[0],
-        email: session.user.email,
-        role: dbRole,  // always use fresh DB role, not stale metadata
-        avatar_url: dbAvatarUrl,
-        avatar_position: dbAvatarPosition
-      };
-      // Keep cached session up-to-date
-      this._storage.setItem('asdfl_user', JSON.stringify(this.currentUser));
-    } else {
-      this.currentUser = null;
-      this._storage.removeItem('asdfl_user');
     }
-
-    // IMPORTANT: authReady is set AFTER the DB role is fetched, not before.
-    // This ensures waitForAuth() only resolves once currentUser.role is correct.
-    this.authReady = true;
-
-    this.supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        if (session) {
-          let dbRole = session.user.user_metadata?.role || 'Kullanıcı';
-          let dbAvatarUrl = session.user.user_metadata?.avatar_url || '';
-          let dbAvatarPosition = session.user.user_metadata?.avatar_position || '50% 50%';
-          try {
-            const { data: profile } = await this.supabase
-              .from('profiles')
-              .select('role, avatar_url, avatar_position')
-              .eq('id', session.user.id)
-              .single();
-            if (profile?.role) {
-              dbRole = profile.role;
-            }
-            if (profile?.avatar_url) {
-              dbAvatarUrl = profile.avatar_url;
-            }
-            if (profile?.avatar_position) {
-              dbAvatarPosition = profile.avatar_position;
-            }
-          } catch (e) {
-            console.error('Error fetching live role on change:', e);
-          }
-
-          this.currentUser = {
-            ...session.user.user_metadata,  // spread first so dbRole below wins
-            id: session.user.id,
-            name: session.user.user_metadata?.name || session.user.email.split('@')[0],
-            email: session.user.email,
-            role: dbRole,  // always use fresh DB role, not stale metadata
-            avatar_url: dbAvatarUrl,
-            avatar_position: dbAvatarPosition
-          };
-          this._storage.setItem('asdfl_user', JSON.stringify(this.currentUser));
-        }
-      } else if (event === 'SIGNED_OUT') {
-        this.currentUser = null;
-        this._storage.removeItem('asdfl_user');
-      }
-      this.updateUIForAuth();
-    });
-
-    this.updateUIForAuth();
   },
 
   updateUIForAuth() {
@@ -2192,7 +2300,7 @@ const ASDFL = {
     }
 
     if (this.currentUser) {
-      this.initNotificationBell();
+      if (this.authReady) this.initNotificationBell();
       if (this.authReady && !this._consentCheckRun) {
         this._consentCheckRun = true;
         this.checkRequiredConsents();
@@ -2528,73 +2636,76 @@ const ASDFL = {
     setTimeout(() => window.location.reload(), 1000);
   },
 
+  _loginInProgress: false,
   async quickLogin(email = 'admin@admin.com', pass = 'admin') {
-    if (!email || !pass) { this.toast('Lütfen tüm alanları doldurun.', 'warning'); return; }
+    if (!email || !pass) { this.toast('Lütfen tüm alanları doldurun.', 'warning'); return false; }
+    if (this._loginInProgress) return false;
+    this._loginInProgress = true;
     email = email.trim().toLowerCase();
-    
-    if (this.supabase) {
-      const { data, error } = await this.supabase.auth.signInWithPassword({ email, password: pass });
-      if (error) {
-        this.toast('Giriş başarısız: ' + error.message, 'error');
-        return;
-      }
-      
-      // Cache session data instantly before reload to avoid race conditions!
-      if (data.session) {
-        const session = data.session;
-        let dbRole = session.user.user_metadata?.role || 'Kullanıcı';
-        let dbAvatarUrl = session.user.user_metadata?.avatar_url || '';
-        let dbAvatarPosition = session.user.user_metadata?.avatar_position || '50% 50%';
-        try {
-          const { data: profile } = await this.supabase
-            .from('profiles')
-            .select('role, avatar_url, avatar_position')
-            .eq('id', session.user.id)
-            .single();
-          if (profile?.role) dbRole = profile.role;
-          if (profile?.avatar_url) dbAvatarUrl = profile.avatar_url;
-          if (profile?.avatar_position) dbAvatarPosition = profile.avatar_position;
-        } catch (e) {
-          console.error('Error fetching role during login:', e);
+    try {
+      if (this.supabase) {
+        const { data, error } = await this.queryWithTimeout(
+          this.supabase.auth.signInWithPassword({ email, password: pass }),
+          15000
+        );
+        if (error) {
+          this.toast('Giriş başarısız: ' + error.message, 'error');
+          return false;
         }
-        
-        this.currentUser = {
-          ...session.user.user_metadata,
-          id: session.user.id,
-          name: session.user.user_metadata?.name || session.user.email.split('@')[0],
-          email: session.user.email,
-          role: dbRole,
-          avatar_url: dbAvatarUrl,
-          avatar_position: dbAvatarPosition
-        };
-        this._storage.setItem('asdfl_user', JSON.stringify(this.currentUser));
-      }
-    } else {
-      let user = { id: Math.random().toString(36).substring(2), role: 'Kullanıcı', name: email.split('@')[0], email: email };
-      if (email === 'admin@admin.com' && pass === 'admin') {
-        user = { id: '1', role: 'Admin', name: 'Sistem Yöneticisi', email: 'admin@admin.com', mentor: true };
+
+        if (!data?.session) {
+          this.toast('Oturum başlatılamadı. Lütfen tekrar deneyin.', 'error');
+          return false;
+        }
+
+        // Auth callback senkrondur; profil isteği onun dışında ve süre sınırlı çalışır.
+        this._applyAuthSession(data.session);
+        await this._queueAuthProfileRefresh(data.session);
       } else {
-        try {
-          const alumni = JSON.parse(this._storage.getItem('asdfl_alumni') || '[]');
-          const matched = alumni.find(a => a.email.toLowerCase() === email.toLowerCase());
-          if (matched) {
-            user = { ...matched };
-          }
-        } catch(e) {}
+        let user = { id: Math.random().toString(36).substring(2), role: 'Kullanıcı', name: email.split('@')[0], email: email };
+        if (email === 'admin@admin.com' && pass === 'admin') {
+          user = { id: '1', role: 'Admin', name: 'Sistem Yöneticisi', email: 'admin@admin.com', mentor: true };
+        } else {
+          try {
+            const alumni = JSON.parse(this._storage.getItem('asdfl_alumni') || '[]');
+            const matched = alumni.find(a => a.email.toLowerCase() === email.toLowerCase());
+            if (matched) user = { ...matched };
+          } catch(e) {}
+        }
+        this._storage.setItem('asdfl_user', JSON.stringify(user));
+        this.currentUser = user;
       }
-      this._storage.setItem('asdfl_user', JSON.stringify(user));
-      this.currentUser = user;
+
+      this.updateUIForAuth();
+      this.toast('Giriş başarılı!', 'success');
+
+      if (!this._storage.isPersistent()) {
+        this.toast('Safari depolama erişimini engelliyor. Oturum yalnızca bu sayfa açıkken korunabilir.', 'warning');
+        window.dispatchEvent(new CustomEvent('asdfl:auth-changed', { detail: { user: this.currentUser } }));
+        return true;
+      }
+
+      setTimeout(() => {
+        if (this.currentUser?.role === 'Öğrenci') {
+          window.location.href = 'ogrenci.html';
+        } else {
+          window.location.reload();
+        }
+      }, 500);
+      return true;
+    } catch (error) {
+      const timedOut = error?.message === 'Query timeout' || error?.name === 'AbortError';
+      this.toast(
+        timedOut
+          ? 'Bağlantı zaman aşımına uğradı. İnternet bağlantınızı kontrol edip tekrar deneyin.'
+          : 'Giriş sırasında bir bağlantı hatası oluştu. Lütfen tekrar deneyin.',
+        'error'
+      );
+      console.error('Giriş hatası:', error);
+      return false;
+    } finally {
+      this._loginInProgress = false;
     }
-    
-    this.updateUIForAuth();
-    this.toast('Giriş başarılı!', 'success');
-    setTimeout(() => {
-      if (this.currentUser?.role === 'Öğrenci') {
-        window.location.href = 'ogrenci.html';
-      } else {
-        window.location.reload();
-      }
-    }, 500);
   },
 
   async handleLogin(emailId, passId) {
@@ -2605,8 +2716,24 @@ const ASDFL = {
     const pass = passEl.value;
     if (!email || !pass) { this.toast('Lütfen tüm alanları doldurun.', 'warning'); return; }
     
-    await this.quickLogin(email, pass);
-    this.closeModal('loginModal');
+    const loginButton = emailEl.closest('.modal-content')?.querySelector('button[onclick*="handleLogin"]');
+    const originalLabel = loginButton?.textContent || 'Giriş Yap';
+    if (loginButton) {
+      loginButton.disabled = true;
+      loginButton.classList.add('is-loading');
+      loginButton.textContent = 'Giriş yapılıyor...';
+    }
+
+    const success = await this.quickLogin(email, pass);
+    if (success) {
+      this.closeModal('loginModal');
+      return;
+    }
+    if (loginButton) {
+      loginButton.disabled = false;
+      loginButton.classList.remove('is-loading');
+      loginButton.textContent = originalLabel;
+    }
   },
 
   initCities() {

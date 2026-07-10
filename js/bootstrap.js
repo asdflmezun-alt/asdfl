@@ -1,4 +1,30 @@
 (function bootstrapSecurityHelpers() {
+  const earlyStorage = {
+    getItem(key) {
+      try {
+        const localValue = window.localStorage.getItem(key);
+        if (localValue !== null) return localValue;
+      } catch (error) {}
+      try {
+        return window.sessionStorage.getItem(key);
+      } catch (error) {
+        return null;
+      }
+    },
+    setItem(key, value) {
+      let stored = false;
+      try {
+        window.localStorage.setItem(key, value);
+        stored = true;
+      } catch (error) {}
+      try {
+        window.sessionStorage.setItem(key, value);
+        stored = true;
+      } catch (error) {}
+      return stored;
+    }
+  };
+
   window.safeHTML = function safeHTML(value) {
     return String(value ?? '')
       .replace(/&/g, '&amp;')
@@ -55,7 +81,7 @@
     if (!isMobile) return;
     
     // Do not show if they previously dismissed it
-    if (localStorage.getItem('asdfl_pwa_dismissed') === 'true') {
+    if (earlyStorage.getItem('asdfl_pwa_dismissed') === 'true') {
       return;
     }
     
@@ -74,7 +100,7 @@
 
     if (isIOS && !isStandalone) {
       // Do not show if they previously dismissed it
-      if (localStorage.getItem('asdfl_pwa_dismissed') === 'true') {
+      if (earlyStorage.getItem('asdfl_pwa_dismissed') === 'true') {
         return;
       }
       // Show iOS smart banner after 2.5 seconds
@@ -142,7 +168,7 @@
     });
     closeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      localStorage.setItem('asdfl_pwa_dismissed', 'true');
+      earlyStorage.setItem('asdfl_pwa_dismissed', 'true');
       banner.style.opacity = '0';
       banner.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
       banner.style.transform = 'translateY(20px)';
@@ -207,7 +233,7 @@
     });
     closeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      localStorage.setItem('asdfl_pwa_dismissed', 'true');
+      earlyStorage.setItem('asdfl_pwa_dismissed', 'true');
       banner.style.opacity = '0';
       banner.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
       banner.style.transform = 'translateY(20px)';

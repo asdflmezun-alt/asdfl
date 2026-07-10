@@ -23,6 +23,9 @@
   let activeFilter = 'all'; // 'all' | 'photo' | 'video' | 'poll' | 'event'
   let pollOptions = [];
   let eventRsvpState = new Map();
+  let authEnhancementsInitialized = false;
+  let authRefreshPromise = null;
+  let authRefreshQueued = false;
 
   const preferredScrollBehavior = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
 
@@ -30,6 +33,9 @@
   document.addEventListener('DOMContentLoaded', async () => {
     const composeBox = document.getElementById('composeBox');
     const loginPrompt = document.getElementById('loginPrompt');
+    window.addEventListener('asdfl:auth-changed', () => {
+      refreshCommunityForAuth();
+    });
     
     // Synchronous local session check to avoid initial load warning box flicker/flash
     const userStr = ASDFL._storage.getItem('asdfl_user');
@@ -42,31 +48,9 @@
     }
 
     await ASDFL.waitForAuth();
-    
-    // Toggle compose box and login prompt based on resolved auth state
-    const isLoggedIn = !!ASDFL.currentUser;
-    if (composeBox) {
-      composeBox.classList.toggle('hidden', !isLoggedIn);
-    }
-    if (loginPrompt) {
-      loginPrompt.classList.toggle('hidden', isLoggedIn);
-    }
-    if (isLoggedIn && composeBox) {
-      const composeAvatar = document.getElementById('composeAvatar');
-      if (composeAvatar) {
-        ASDFL.setAvatarElement(composeAvatar, ASDFL.currentUser);
-      }
-    }
-
-    await loadMyProfile();
-    buildSidebar();
-    await loadFeed('global');
+    await refreshCommunityForAuth();
     initComposeAttachments();
     initLightboxAccessibility();
-    if (isLoggedIn) {
-      initMentionAutocomplete();
-      subscribeFeedRealtime();
-    }
     
     // Arama Çubuğu Event Listener
     const searchInput = document.getElementById('feedSearchInput');
@@ -86,29 +70,77 @@
       if (tagEl && tagEl.dataset.tag) window.filterByHashtag(tagEl.dataset.tag);
     });
 
-    // Mini Profil Kartı İstatistikleri
-    if (isLoggedIn) {
-      await loadUserMiniCardStats();
-    }
   });
+
+  async function refreshCommunityForAuth() {
+    if (authRefreshPromise) {
+      authRefreshQueued = true;
+      return authRefreshPromise;
+    }
+    authRefreshPromise = (async () => {
+      const composeBox = document.getElementById('composeBox');
+      const loginPrompt = document.getElementById('loginPrompt');
+      const isLoggedIn = !!ASDFL.currentUser;
+      if (composeBox) composeBox.classList.toggle('hidden', !isLoggedIn);
+      if (loginPrompt) loginPrompt.classList.toggle('hidden', isLoggedIn);
+      if (isLoggedIn && composeBox) {
+        const composeAvatar = document.getElementById('composeAvatar');
+        if (composeAvatar) ASDFL.setAvatarElement(composeAvatar, ASDFL.currentUser);
+      }
+
+      myProfile = null;
+      likedPosts.clear();
+      await loadMyProfile();
+      buildSidebar();
+      await loadFeed(currentFeed);
+
+      if (isLoggedIn) {
+        if (!authEnhancementsInitialized) {
+          authEnhancementsInitialized = true;
+          initMentionAutocomplete();
+        }
+        subscribeFeedRealtime();
+        await loadUserMiniCardStats();
+      }
+    })().finally(() => {
+      const shouldRefreshAgain = authRefreshQueued;
+      authRefreshQueued = false;
+      authRefreshPromise = null;
+      if (shouldRefreshAgain) setTimeout(() => refreshCommunityForAuth(), 0);
+    });
+    return authRefreshPromise;
+  }
 
   async function loadMyProfile() {
     if (!ASDFL.currentUser) return;
     
     if (ASDFL.supabase) {
-      const { data } = await ASDFL.supabase
-        .from('profiles')
-        .select('id,name,role,grad_year,class_section,job,avatar_url,avatar_position,academic_title,specialization,mentor')
-        .eq('id', ASDFL.currentUser.id)
-        .single();
-      myProfile = data;
-
-      // Load my liked posts
-      const { data: likes } = await ASDFL.supabase
-        .from('post_likes')
-        .select('post_id')
-        .eq('user_id', ASDFL.currentUser.id);
-      if (likes) likes.forEach(l => likedPosts.add(l.post_id));
+      try {
+        const [profileResult, likesResult] = await Promise.all([
+          ASDFL.queryWithTimeout(
+            ASDFL.supabase
+              .from('profiles')
+              .select('id,name,role,grad_year,class_section,job,avatar_url,avatar_position,academic_title,specialization,mentor')
+              .eq('id', ASDFL.currentUser.id)
+              .single(),
+            8000
+          ),
+          ASDFL.queryWithTimeout(
+            ASDFL.supabase
+              .from('post_likes')
+              .select('post_id')
+              .eq('user_id', ASDFL.currentUser.id),
+            8000
+          )
+        ]);
+        if (profileResult.error) throw profileResult.error;
+        myProfile = profileResult.data;
+        if (likesResult.error) throw likesResult.error;
+        (likesResult.data || []).forEach(like => likedPosts.add(like.post_id));
+      } catch (error) {
+        console.warn('Topluluk profil bilgileri zamanında yüklenemedi:', error?.message || error);
+        myProfile = ASDFL.currentUser;
+      }
     } else {
       // Yerel ortamda beğenilen gönderileri yükle
       try {
@@ -318,8 +350,29 @@
       query = query.eq('target_year', year).eq('target_section', sec);
     }
 
-    const { data: posts, error } = await query;
-    if (error || !posts || posts.length === 0) {
+    let posts;
+    let error;
+    try {
+      ({ data: posts, error } = await ASDFL.queryWithTimeout(query, 10000));
+    } catch (queryError) {
+      error = queryError;
+    }
+
+    if (error) {
+      console.warn('Topluluk akışı yüklenemedi:', error?.message || error);
+      container.innerHTML = `
+        <div class="feed-empty">
+          <i data-lucide="wifi-off" style="width:3rem;height:3rem;opacity:.45;color:var(--gold-500)"></i>
+          <p>Topluluk akışı şu anda yüklenemedi. Bağlantınızı kontrol edip yeniden deneyin.</p>
+          <button type="button" class="btn btn-secondary btn-sm" data-retry-feed>Yeniden Dene</button>
+        </div>
+      `;
+      container.querySelector('[data-retry-feed]')?.addEventListener('click', () => loadFeed(type));
+      setTimeout(() => ASDFL.refreshIcons(container), 10);
+      return;
+    }
+
+    if (!posts || posts.length === 0) {
       loadedPosts = [];
       container.innerHTML = `<div class="feed-empty"><i data-lucide="message-circle" style="width:3rem;height:3rem;opacity:.3"></i><p>Henüz paylaşım yok. İlk paylaşımı sen yap!</p></div>`;
       setTimeout(() => ASDFL.refreshIcons(), 10);

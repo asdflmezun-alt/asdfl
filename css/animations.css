@@ -236,7 +236,8 @@
 
 /* Body sayfa girişinde otomatik animasyon */
 body {
-  animation: pageEnter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* `both` final transformu body üzerinde tutup fixed öğeleri sayfaya bağlıyordu. */
+  animation: pageEnter 0.38s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 /* Geçiş çıkış state'i */

@@ -530,6 +530,114 @@
   transform: translateY(-1px);
 }
 
+.post-report-btn {
+  color: #fbbf6a;
+  border-color: rgba(244, 168, 54, 0.18);
+  background: rgba(244, 168, 54, 0.045);
+}
+
+.post-report-btn:hover {
+  color: #ffd08a;
+  border-color: rgba(244, 168, 54, 0.34);
+  background: rgba(244, 168, 54, 0.11);
+}
+
+.post-report-btn.is-reported,
+.post-report-btn:disabled {
+  color: #75cfc5;
+  border-color: rgba(45, 212, 191, 0.2);
+  background: rgba(45, 212, 191, 0.07);
+  cursor: default;
+  opacity: 0.86;
+  transform: none;
+}
+
+.report-modal {
+  max-width: 520px;
+}
+
+.report-modal-header {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  padding-right: 2.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.report-modal-header h3 {
+  margin: 0 0 0.35rem;
+}
+
+.report-modal-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.report-modal-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 15px;
+  color: var(--gold-400);
+  border: 1px solid rgba(244, 168, 54, 0.28);
+  background: rgba(244, 168, 54, 0.1);
+}
+
+.report-modal-icon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.report-optional {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.report-modal .form-textarea {
+  min-height: 92px;
+}
+
+.report-privacy-note {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.2rem 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.report-privacy-note svg {
+  width: 15px;
+  height: 15px;
+  color: #75cfc5;
+}
+
+.report-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 48px;
+}
+
+.report-submit-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.report-submit-spinner {
+  animation: reportSpinner 0.8s linear infinite;
+}
+
+@keyframes reportSpinner {
+  to { transform: rotate(360deg); }
+}
+
 .post-action-btn.like-action {
   position: relative;
   gap: 0.38rem;
@@ -932,6 +1040,18 @@
 
   .post-action-btn[style*="margin-left:auto"] {
     margin-left: 0 !important;
+  }
+
+  .report-modal-header {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 0.75rem;
+    padding-right: 2.25rem;
+  }
+
+  .report-modal-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
   }
 
   .comment-compose {

@@ -105,7 +105,7 @@
 
 @media (max-width: 640px) {
   .events-cards-grid { grid-template-columns: 1fr; }
-  .event-filter-bar { position: sticky; top: 64px; z-index: 20; background: var(--navy-950, #05111e); padding: .5rem 0; overflow-x: auto; flex-wrap: nowrap; }
+  .event-filter-bar { position: sticky; top: 76px; z-index: 20; background: var(--navy-950, #05111e); padding: .5rem 0; overflow-x: auto; flex-wrap: nowrap; }
   .cd-unit { min-width: 42px; }
   .ec-cover { height: 120px; }
   .event-card h4 { font-size: .98rem; }

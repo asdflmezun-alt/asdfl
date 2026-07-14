@@ -13,6 +13,7 @@
   let currentFeed = 'global'; // 'global' | 'year' | 'section'
   let myProfile = null;
   let likedPosts = new Set();
+  let reportedPosts = new Set();
   let activeAttachment = null; // { type: 'photo'|'video'|'event'|'poll', value: ... }
   let activeFeeling = null;     // { emoji: '🥳', text: 'Heyecanlı' }
   
@@ -90,6 +91,7 @@
 
       myProfile = null;
       likedPosts.clear();
+      reportedPosts.clear();
       await loadMyProfile();
       buildSidebar();
       await loadFeed(currentFeed);
@@ -116,7 +118,7 @@
     
     if (ASDFL.supabase) {
       try {
-        const [profileResult, likesResult] = await Promise.all([
+        const [profileResult, likesResult, reportsResult] = await Promise.all([
           ASDFL.queryWithTimeout(
             ASDFL.supabase
               .from('profiles')
@@ -131,12 +133,21 @@
               .select('post_id')
               .eq('user_id', ASDFL.currentUser.id),
             8000
+          ),
+          ASDFL.queryWithTimeout(
+            ASDFL.supabase
+              .from('post_reports')
+              .select('post_id')
+              .eq('reporter_id', ASDFL.currentUser.id),
+            8000
           )
         ]);
         if (profileResult.error) throw profileResult.error;
         myProfile = profileResult.data;
         if (likesResult.error) throw likesResult.error;
         (likesResult.data || []).forEach(like => likedPosts.add(like.post_id));
+        if (reportsResult.error) throw reportsResult.error;
+        (reportsResult.data || []).forEach(report => reportedPosts.add(report.post_id));
       } catch (error) {
         console.warn('Topluluk profil bilgileri zamanında yüklenemedi:', error?.message || error);
         myProfile = ASDFL.currentUser;
@@ -690,13 +701,19 @@
       ${shouldCollapseText ? `<button type="button" class="post-read-more" id="post-more-${safePostIdAttr}" onclick="window.expandPostText(${safePostId})">Devamını oku</button>` : ''}
     `;
 
-    const moderationBtn = (isMyPost || isAdmin)
-      ? `<button type="button" class="post-action-btn post-action-danger" style="margin-left:auto" onclick="window.deletePost(${safePostId})" title="Gönderiyi sil">
-           <i data-lucide="trash-2" style="width:1.1rem;height:1.1rem"></i>
-         </button>`
-      : `<button type="button" class="post-action-btn" style="margin-left:auto" onclick="window.openReportModal(${safePostId})" title="Gönderiyi şikâyet et">
+    const alreadyReported = reportedPosts.has(post.id);
+    const reportButton = !isMyPost
+      ? `<button type="button" class="post-action-btn post-report-btn${alreadyReported ? ' is-reported' : ''}" style="margin-left:auto" onclick="window.openReportModal(${safePostId})" title="${alreadyReported ? 'Bu paylaşımı bildirdiniz' : 'Paylaşımı yönetime bildir'}" aria-label="${alreadyReported ? 'Bu paylaşım bildirildi' : 'Paylaşımı yönetime bildir'}" ${alreadyReported ? 'disabled' : ''}>
            <i data-lucide="flag" style="width:1.1rem;height:1.1rem"></i>
-         </button>`;
+           <span>${alreadyReported ? 'Bildirildi' : 'Bildir'}</span>
+         </button>`
+      : '';
+    const deleteButton = (isMyPost || isAdmin)
+      ? `<button type="button" class="post-action-btn post-action-danger" ${isMyPost ? 'style="margin-left:auto"' : ''} onclick="window.deletePost(${safePostId})" title="Gönderiyi sil" aria-label="Gönderiyi sil">
+           <i data-lucide="trash-2" style="width:1.1rem;height:1.1rem"></i>
+           <span>Sil</span>
+         </button>`
+      : '';
 
     return `
       <div class="post-card${post.pinned ? ' pinned' : ''}" id="post-${safePostIdAttr}">
@@ -733,7 +750,8 @@
             <i data-lucide="pin" style="width:1.1rem;height:1.1rem"></i>
             <span>${post.pinned ? 'Kaldır' : 'Sabitle'}</span>
           </button>` : ''}
-          ${moderationBtn}
+          ${reportButton}
+          ${deleteButton}
         </div>
         
         <!-- YORUMLAR PANELİ -->
@@ -991,19 +1009,30 @@
       return;
     }
     const idEl = document.getElementById('reportPostId');
-    const reasonEl = document.getElementById('reportReason');
+    const reasonEl = document.getElementById('reportReasonType');
+    const detailEl = document.getElementById('reportReasonDetail');
     if (idEl) idEl.value = postId;
     if (reasonEl) reasonEl.value = '';
+    if (detailEl) detailEl.value = '';
     ASDFL.openModal('reportModal');
   };
 
   window.submitPostReport = async function () {
     if (!ASDFL.supabase || !ASDFL.currentUser) return;
     const postId = document.getElementById('reportPostId')?.value;
-    const reason = document.getElementById('reportReason')?.value?.trim();
-    if (!reason) {
-      ASDFL.toast('Lütfen şikâyet nedeninizi kısaca yazın.', 'warning');
+    const reasonType = document.getElementById('reportReasonType')?.value?.trim();
+    const reasonDetail = document.getElementById('reportReasonDetail')?.value?.trim();
+    const submitButton = document.getElementById('reportSubmitButton');
+    if (!reasonType) {
+      ASDFL.toast('Lütfen bir bildirim nedeni seçin.', 'warning');
       return;
+    }
+    const reason = reasonDetail ? `${reasonType}: ${reasonDetail}` : reasonType;
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.setAttribute('aria-busy', 'true');
+      submitButton.innerHTML = '<i data-lucide="loader-circle" class="report-submit-spinner" aria-hidden="true"></i> Gönderiliyor';
+      ASDFL.refreshIcons(submitButton);
     }
     const { error } = await ASDFL.supabase.from('post_reports').insert({
       post_id: postId,
@@ -1011,12 +1040,26 @@
       reason
     });
     if (error) {
-      if (error.code === '23505') ASDFL.toast('Bu gönderiyi zaten şikâyet ettiniz.', 'info');
-      else ASDFL.toast('Şikâyet gönderilemedi: ' + error.message, 'error');
+      if (error.code === '23505') {
+        reportedPosts.add(postId);
+        ASDFL.toast('Bu paylaşımı daha önce bildirdiniz.', 'info');
+      } else {
+        ASDFL.toast('Bildirim gönderilemedi. Lütfen tekrar deneyin.', 'error');
+      }
     } else {
-      ASDFL.toast('Şikâyetiniz yönetime iletildi. Teşekkürler. 🛡️', 'success');
+      reportedPosts.add(postId);
+      ASDFL.toast('Bildiriminiz moderasyon ekibine iletildi.', 'success');
     }
-    ASDFL.closeModal('reportModal');
+    if (!error || error.code === '23505') {
+      ASDFL.closeModal('reportModal');
+      filterAndRenderPosts();
+    }
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.removeAttribute('aria-busy');
+      submitButton.innerHTML = '<i data-lucide="send" aria-hidden="true"></i> Moderasyona Gönder';
+      ASDFL.refreshIcons(submitButton);
+    }
   };
 
   /* ---------- Gönderi Sabitleme (Admin) ---------- */

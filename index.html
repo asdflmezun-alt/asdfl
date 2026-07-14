@@ -9,13 +9,13 @@
 <title>ASDFL Mezunlar Derneği | Afyon Süleyman Demirel Fen Lisesi</title>
 <meta name="description" content="Afyon Süleyman Demirel Fen Lisesi mezunları ve öğrencilerini buluşturan platform. Burs, mentörlük, etkinlik ve anılar.">
     <link rel="stylesheet" href="css/fonts.css">
-  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/main.css?v=1.4">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#05111E">
   <link rel="apple-touch-icon" href="assets/images/logo.png">
 <link rel="stylesheet" href="css/animations.css">
 <link rel="stylesheet" href="assets/vendor/leaflet.css">
-<link rel="stylesheet" href="css/home.css?v=1.2">
+<link rel="stylesheet" href="css/home.css?v=1.5">
 <script src="assets/vendor/lucide.js"></script>
 <script src="js/bootstrap.js?v=1.1"></script>
 <style>
@@ -531,7 +531,7 @@
         <input type="checkbox" id="regShareEmail" style="accent-color: var(--gold-500);"> E-posta adresimi diğer mezunlarla paylaş
       </label>
     </div>
-    <div class="form-group" style="margin-top:1rem; display:flex; flex-direction:column; gap:.65rem; padding:1rem; border:1px solid var(--glass-border); border-radius:var(--radius-md); text-align:left;">
+    <div class="form-group registration-consents" style="margin-top:1rem; display:flex; flex-direction:column; gap:.65rem; padding:1rem; border:1px solid var(--glass-border); border-radius:var(--radius-md); text-align:left;">
       <label style="display:flex;align-items:flex-start;gap:.55rem;font-size:.82rem;color:var(--text-secondary);cursor:pointer;line-height:1.45">
         <input type="checkbox" id="regKvkkNotice" style="margin-top:.2rem;accent-color:var(--gold-500)">
         <span><a href="kvkk-aydinlatma.html" target="_blank" rel="noopener">KVKK Aydınlatma Metni</a>'ni okudum ve bilgilendirildim. <strong>(Zorunlu)</strong></span>
@@ -570,7 +570,7 @@ function toggleRegFields(role) {
     document.getElementById('diag-leaflet-js').innerHTML = '- Leaflet JS Yüklenme Durumu: ' + (isLoaded ? '<span style="color:#2ecc71">Yüklendi (Ok)</span>' : '<span style="color:#e74c3c">Yüklenemedi (L tanımsız)</span>');
   }
 </script>
-<script src="js/app.js?v=1.7"></script>
+<script src="js/app.js?v=1.9"></script>
 <script>
   // Tarayıcı local cache'i app.js'i yenilemezse diye waitForAuth'u inline olarak eziyoruz (Zaman aşımı koruması)
   if (window.ASDFL) {

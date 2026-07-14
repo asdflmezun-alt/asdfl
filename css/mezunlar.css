@@ -2,7 +2,7 @@
 
 .mezun-tabs-wrapper {
   position: sticky;
-  top: 65px;
+  top: 82px;
   z-index: 50;
   background: transparent;
   border-bottom: none;
@@ -78,7 +78,7 @@
 @media (min-width: 769px) {
   .filters-bar {
     position: sticky;
-    top: 145px;
+    top: 162px;
     z-index: 45;
   }
 }

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>ASDFL — Bağlantı Teşhis Sayfası</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #05111e; color: #e6edf5; padding: 1rem; line-height: 1.5;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  h1 { font-size: 1.15rem; margin: .5rem 0 1rem; }
+  .card {
+    background: #0a1628; border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px; padding: .75rem 1rem; margin-bottom: .6rem;
+  }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; }
+  .name { font-weight: 600; font-size: .9rem; }
+  .status { font-size: .85rem; white-space: nowrap; }
+  .detail { font-size: .78rem; color: #8f9cae; margin-top: .25rem; word-break: break-word; }
+  .ok    { color: #4ade80; }
+  .fail  { color: #f87171; }
+  .warn  { color: #fbbf24; }
+  .wait  { color: #8f9cae; }
+  button {
+    width: 100%; padding: .8rem; border: none; border-radius: 10px;
+    font-size: .95rem; font-weight: 700; cursor: pointer; margin-top: .5rem;
+  }
+  .btn-copy { background: #f4a836; color: #05111e; }
+  .btn-clear { background: #1e293b; color: #e6edf5; border: 1px solid rgba(255,255,255,.12); }
+  .note { font-size: .75rem; color: #8f9cae; margin-top: 1rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔬 ASDFL Bağlantı Teşhisi</h1>
+  <div class="card" id="overallCard"><span class="status warn" id="overallStatus">⏳ Testler sürüyor — bitmeden kopyalamayın</span></div>
+  <div id="tests"></div>
+  <button class="btn-copy" id="fixJwtBtn" style="display:none">Şişmiş Oturum Kimliğini Onar</button>
+  <button class="btn-copy" id="copyBtn">Sonuçları Kopyala</button>
+  <button class="btn-clear" id="clearBtn">Önbelleği Temizle ve Yeniden Dene</button>
+  <button class="btn-clear" id="logoutBtn">Bu Cihazda Oturumu Zorla Kapat</button>
+  <p class="note">Bu sayfa yalnızca teşhis amaçlıdır; hiçbir kişisel veri göndermez.<br>Sonuçları kopyalayıp WhatsApp'tan iletebilirsiniz.</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var SUPA_URL = 'https://refpyezcxkkofpkwaqny.supabase.co';
+  var SUPA_KEY = 'sb_publishable_NlYWAPtmP6F6LRlAiXyIxw_hm1OoP9m';
+  var results = {};
+  var testsEl = document.getElementById('tests');
+
+  function makeCard(id, name) {
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = '<div class="row"><span class="name">' + name + '</span>' +
+      '<span class="status wait" id="st-' + id + '">bekliyor…</span></div>' +
+      '<div class="detail" id="dt-' + id + '"></div>';
+    testsEl.appendChild(card);
+  }
+
+  var finalized = {};
+  function setResult(id, cls, statusText, detail, interim) {
+    var st = document.getElementById('st-' + id);
+    var dt = document.getElementById('dt-' + id);
+    st.className = 'status ' + cls;
+    st.textContent = statusText;
+    if (detail) dt.textContent = detail;
+    results[id] = { durum: statusText, detay: detail || '' };
+    if (!interim) {
+      finalized[id] = true;
+      var doneCount = Object.keys(finalized).length;
+      if (doneCount >= TESTS.length) {
+        var el = document.getElementById('overallStatus');
+        el.className = 'status ok';
+        el.textContent = '✓ Tüm testler tamamlandı — sonuçları kopyalayabilirsiniz';
+      }
+    }
+  }
+
+  function fetchWithTimeout(url, options, ms) {
+    options = options || {};
+    if (typeof AbortController === 'undefined') return fetch(url, options);
+    var ctrl = new AbortController();
+    var t = setTimeout(function () { ctrl.abort(); }, ms || 10000);
+    options.signal = ctrl.signal;
+    return fetch(url, options).finally(function () { clearTimeout(t); });
+  }
+
+  // ---- Test tanımları ----
+  var TESTS = [
+    ['browser',  'Tarayıcı bilgisi'],
+    ['storage',  'Depolama (localStorage)'],
+    ['session',  'Kayıtlı oturum'],
+    ['sw',       'Service worker & önbellek'],
+    ['vendor',   'Supabase kütüphanesi yükleniyor mu'],
+    ['health',   'Supabase Auth erişimi'],
+    ['rest',     'Veritabanı sorgusu (REST)'],
+    ['token',    'Giriş sunucusu (token endpoint)'],
+    ['repair',   'Oturum yenileme / onarım (SDK)'],
+    ['authq',    'Girişli sorgular (gerçek token, ham)'],
+    ['sdkq',     'Girişli sorgu (SDK üzerinden)']
+  ];
+  TESTS.forEach(function (t) { makeCard(t[0], t[1]); });
+
+  // 1. Tarayıcı
+  (function () {
+    var ua = navigator.userAgent;
+    var standalone = (window.navigator.standalone === true) ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    var inApp = /FBAN|FBAV|Instagram|Line\/|WhatsApp|GSA\/|wv\)/i.test(ua);
+    setResult('browser', inApp ? 'warn' : 'ok',
+      inApp ? 'uygulama içi tarayıcı' : (standalone ? 'PWA (ana ekran)' : 'normal tarayıcı'),
+      ua);
+  })();
+
+  // 2. Depolama
+  (function () {
+    var local = false, sess = false;
+    try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); local = true; } catch (e) {}
+    try { sessionStorage.setItem('__t', '1'); sessionStorage.removeItem('__t'); sess = true; } catch (e) {}
+    if (local) setResult('storage', 'ok', 'çalışıyor', 'localStorage: OK, sessionStorage: ' + (sess ? 'OK' : 'ENGELLİ'));
+    else if (sess) setResult('storage', 'warn', 'kısıtlı', 'localStorage ENGELLİ, sessionStorage OK — oturum sekme kapanınca silinir');
+    else setResult('storage', 'fail', 'engelli', 'Hiçbir depolama çalışmıyor (gizli mod / tarayıcı kısıtı). Oturum tutulamaz!');
+  })();
+
+  // 3. Kayıtlı oturum
+  (function () {
+    function read(k) {
+      try { var v = localStorage.getItem(k); if (v !== null) return v; } catch (e) {}
+      try { return sessionStorage.getItem(k); } catch (e) { return null; }
+    }
+    var token = read('sb-refpyezcxkkofpkwaqny-auth-token');
+    var user = read('asdfl_user');
+    var parts = [];
+    if (token) {
+      try {
+        var parsed = JSON.parse(token);
+        var exp = parsed.expires_at ? new Date(parsed.expires_at * 1000) : null;
+        parts.push('Supabase oturumu VAR' + (exp ? (exp.getTime() < Date.now() ? ' (SÜRESİ DOLMUŞ: ' : ' (geçerli: ') + exp.toLocaleString('tr-TR') + ')' : ''));
+      } catch (e) { parts.push('Supabase oturum kaydı var ama OKUNAMIYOR (bozuk JSON)'); }
+    } else parts.push('Supabase oturumu yok');
+    parts.push(user ? 'asdfl_user önbelleği VAR' : 'asdfl_user önbelleği yok');
+    var mismatch = !token && !!user;
+    setResult('session', mismatch ? 'warn' : 'ok', mismatch ? 'TUTARSIZ' : 'kontrol edildi',
+      parts.join(' | ') + (mismatch ? ' — Uygulama girişli görünür ama gerçek oturum yok!' : ''));
+  })();
+
+  // 4. Service worker & önbellek
+  (function () {
+    if (!('serviceWorker' in navigator)) { setResult('sw', 'ok', 'desteklenmiyor', ''); return; }
+    Promise.all([
+      navigator.serviceWorker.getRegistrations().catch(function () { return []; }),
+      (window.caches ? caches.keys().catch(function () { return []; }) : Promise.resolve([]))
+    ]).then(function (r) {
+      var regs = r[0], keys = r[1].filter(function (k) { return k.indexOf('asdfl-') === 0; });
+      var stale = keys.filter(function (k) { return k !== 'asdfl-v14'; });
+      var detail = 'SW kayıt: ' + regs.length + ' | Önbellekler: ' + (keys.join(', ') || 'yok');
+      if (stale.length) setResult('sw', 'warn', 'ESKİ ÖNBELLEK', detail + ' — beklenen: asdfl-v14. Aşağıdaki temizleme düğmesini kullanın.');
+      else setResult('sw', 'ok', 'güncel', detail);
+    });
+  })();
+
+  // 5. Vendor script
+  (function () {
+    var s = document.createElement('script');
+    s.src = 'assets/vendor/supabase.js?v=2.108.2-1';
+    var t = setTimeout(function () { setResult('vendor', 'fail', 'zaman aşımı', 'Kütüphane 10 sn içinde yüklenemedi'); }, 10000);
+    s.onload = function () {
+      clearTimeout(t);
+      if (window.supabase && window.supabase.createClient) {
+        setResult('vendor', 'ok', 'yüklendi', 'window.supabase hazır');
+        runSessionRepair();
+      } else {
+        setResult('vendor', 'fail', 'ÇALIŞMADI', 'Dosya indi ama window.supabase tanımsız — tarayıcı bu JS sözdizimini desteklemiyor olabilir (eski iOS/Android)');
+        setResult('repair', 'wait', 'atlandı', 'Kütüphane çalışmadığı için denenemedi');
+      }
+    };
+    s.onerror = function () {
+      clearTimeout(t);
+      setResult('vendor', 'fail', 'yüklenemedi', 'Script indirilemedi');
+      setResult('repair', 'wait', 'atlandı', 'Kütüphane yüklenemediği için denenemedi');
+    };
+    document.head.appendChild(s);
+  })();
+
+  // 9. Oturum yenileme / onarım: depoda oturum varsa SDK ile getSession çağrılır.
+  // Süresi dolmuş oturumu SDK kendisi yenileyip depoya yazar (= onarım).
+  function runSessionRepair() {
+    var KEY = 'sb-refpyezcxkkofpkwaqny-auth-token';
+    var raw = null;
+    try { raw = localStorage.getItem(KEY); } catch (e) {}
+    if (!raw) {
+      setResult('repair', 'ok', 'atlandı', 'Kayıtlı oturum yok — giriş yapıldıktan sonra tekrar test edin');
+      setResult('authq', 'ok', 'atlandı', 'Kayıtlı oturum yok');
+      setResult('sdkq', 'ok', 'atlandı', 'Kayıtlı oturum yok');
+      return;
+    }
+
+    var wasExpired = false;
+    try {
+      var parsed = JSON.parse(raw);
+      wasExpired = parsed.expires_at && parsed.expires_at * 1000 < Date.now();
+    } catch (e) {}
+
+    // Oturum yoksa/geçersizse girişli testler koşulamaz; kartları baştan işaretle.
+    setResult('authq', 'wait', 'bekliyor…', '', true);
+    setResult('sdkq', 'wait', 'bekliyor…', '', true);
+
+    var client;
+    try {
+      client = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+      });
+    } catch (e) { setResult('repair', 'fail', 'istemci kurulamadı', String(e && e.message || e)); return; }
+
+    var done = false;
+    var timer = setTimeout(function () {
+      if (done) return; done = true;
+      setResult('repair', 'fail', 'ZAMAN AŞIMI (15 sn)',
+        'Yenileme isteği yanıt alamadı. Ağ testleri geçtiği halde bu adım takılıyorsa sorun tam olarak burada demektir.');
+    }, 15000);
+
+    client.auth.getSession().then(function (r) {
+      if (done) return; done = true; clearTimeout(timer);
+      var session = r && r.data && r.data.session;
+      var error = r && r.error;
+      if (session) {
+        var exp = session.expires_at ? new Date(session.expires_at * 1000).toLocaleString('tr-TR') : '?';
+        var jwtLen = session.access_token ? session.access_token.length : 0;
+        var baseDetail = (wasExpired ? 'Süresi dolmuş oturum başarıyla yenilendi ve kaydedildi. ' : '') +
+          'Geçerlilik: ' + exp + ' | JWT uzunluğu: ' + jwtLen + ' bayt';
+        if (jwtLen > 8000) {
+          var bigKeys = findBulkyMetadataKeys(session.access_token);
+          setResult('repair', 'warn', 'JWT ÇOK BÜYÜK', baseDetail +
+            ' — Normalde ~1.000 bayt olmalı. Şişkin alanlar: ' +
+            (bigKeys.map(function (k) { return k.key + ' (~' + Math.round(k.size / 1024) + 'KB)'; }).join(', ') || 'çözümlenemedi') +
+            '. Bu boyuttaki kimlikle yapılan sorgular sunucuda takılır; aşağıdaki "Şişmiş Oturum Kimliğini Onar" düğmesini kullanın.');
+          setupJwtFix(client, bigKeys);
+        } else {
+          setResult('repair', 'ok', wasExpired ? 'ONARILDI' : 'geçerli', baseDetail);
+        }
+        runAuthedTests(client, session);
+      } else {
+        var still = null;
+        try { still = localStorage.getItem(KEY); } catch (e) {}
+        var msg = error ? ((error.name || 'Hata') + ': ' + (error.message || '') + (error.status ? ' (HTTP ' + error.status + ')' : '')) : 'Oturum döndürülmedi';
+        if (!still) {
+          setResult('repair', 'warn', 'OTURUM GEÇERSİZDİ',
+            msg + ' — Sunucu oturumu reddetti; kayıt temizlendi. Siteye dönüp yeniden giriş yapın.');
+          try { localStorage.removeItem('asdfl_user'); sessionStorage.removeItem('asdfl_user'); } catch (e) {}
+        } else {
+          setResult('repair', 'fail', 'YENİLENEMEDİ', msg + ' — Oturum kaydı hâlâ duruyor; bu çıktıyı iletin.');
+        }
+        setResult('authq', 'ok', 'atlandı', 'Geçerli oturum olmadığı için koşulmadı');
+        setResult('sdkq', 'ok', 'atlandı', 'Geçerli oturum olmadığı için koşulmadı');
+      }
+    }).catch(function (e) {
+      if (done) return; done = true; clearTimeout(timer);
+      setResult('repair', 'fail', 'HATA', String(e && e.message || e));
+      setResult('authq', 'ok', 'atlandı', 'Oturum onarımı hata verdiği için koşulmadı');
+      setResult('sdkq', 'ok', 'atlandı', 'Oturum onarımı hata verdiği için koşulmadı');
+    });
+  }
+
+  // JWT gövdesini çözüp user_metadata içindeki 2KB üzeri alanları bulur
+  // (yalnızca alan adı ve boyut; içerik gösterilmez).
+  function findBulkyMetadataKeys(jwt) {
+    try {
+      var b = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      while (b.length % 4) b += '=';
+      var payload = JSON.parse(atob(b));
+      var meta = payload.user_metadata || {};
+      var found = [];
+      Object.keys(meta).forEach(function (k) {
+        var size = JSON.stringify(meta[k] === undefined ? null : meta[k]).length;
+        if (size > 2048) found.push({ key: k, size: size });
+      });
+      return found.sort(function (a, b2) { return b2.size - a.size; });
+    } catch (e) { return []; }
+  }
+
+  function withTimeout(promise, ms) {
+    return Promise.race([
+      promise,
+      new Promise(function (_, rej) { setTimeout(function () { rej(new Error('zaman aşımı')); }, ms); })
+    ]);
+  }
+
+  // Onarım düğmesi: şişkin metadata alanlarını sıfırlayıp token'ı tazeler.
+  // Auth sunucusu da büyük başlığı yutarsa (updateUser takılırsa) tek çare
+  // sunucu tarafındaki SQL temizliğidir; mesajda belirtilir.
+  function setupJwtFix(client, bigKeys) {
+    var btn = document.getElementById('fixJwtBtn');
+    btn.style.display = '';
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      btn.textContent = 'Onarılıyor…';
+      var data = {};
+      bigKeys.forEach(function (k) { data[k.key] = null; });
+      withTimeout(client.auth.updateUser({ data: data }), 15000)
+        .then(function (r) {
+          if (r && r.error) throw new Error(r.error.message || 'updateUser hatası');
+          return withTimeout(client.auth.refreshSession(), 15000);
+        })
+        .then(function (r) {
+          var tok = r && r.data && r.data.session && r.data.session.access_token;
+          var newLen = tok ? tok.length : 0;
+          if (tok && newLen < 8000) {
+            btn.textContent = 'Onarıldı ✓ (yeni JWT: ' + newLen + ' bayt)';
+            setResult('repair', 'ok', 'ONARILDI', 'Şişkin oturum kimliği temizlendi; yeni JWT ' + newLen +
+              ' bayt. Siteye dönüp yeniden deneyin.');
+          } else {
+            btn.textContent = 'Kısmen onarıldı — tekrar deneyin';
+            btn.disabled = false;
+            setResult('repair', 'warn', 'HÂLÂ BÜYÜK', 'Temizlik sonrası JWT ' + newLen +
+              ' bayt. Yönetici veritabanı temizliği gerekebilir; bu çıktıyı iletin.');
+          }
+        })
+        .catch(function (e) {
+          btn.textContent = 'Onarım cihazdan yapılamadı';
+          setResult('repair', 'fail', 'CİHAZDAN ONARILAMADI',
+            'Temizlik isteği de aynı nedenle sunucuya ulaşamıyor (' + String(e && e.message || e) +
+            '). Çözüm: yönetici, Supabase SQL temizliğini çalıştırmalı. Bu çıktıyı yöneticinize iletin.');
+        });
+    });
+  }
+
+  // 10. Girişli sorgular: sitenin gerçekte kullandığı sorguları, kullanıcının
+  // GERÇEK access token'ıyla koşar. Anon testler geçip bunlar takılıyorsa
+  // sorun girişli sorgu yolundadır (RLS/sunucu ya da cihazdaki SDK hattı).
+  function runAuthedTests(client, session) {
+    var jwt = session.access_token;
+    var uid = session.user && session.user.id;
+    var POSTS_SELECT = 'id,content,likes_count,created_at,target_year,target_section,pinned,' +
+      'profiles!author_id(id,name,job,grad_year,class_section,avatar_url,avatar_position,academic_title,specialization),' +
+      'post_comments(id),post_poll_votes(option_id,voter_id)';
+
+    function timedFetch(path, withAuth) {
+      var headers = { apikey: SUPA_KEY };
+      if (withAuth) headers.Authorization = 'Bearer ' + jwt;
+      var t0 = performance.now();
+      return fetchWithTimeout(SUPA_URL + path, { headers: headers }, 12000).then(function (r) {
+        var ms = Math.round(performance.now() - t0);
+        if (r.ok) return { ok: true, ms: ms, text: 'HTTP ' + r.status + ' (' + ms + ' ms)' };
+        return r.text().then(function (body) {
+          return { ok: false, ms: ms, text: 'HTTP ' + r.status + ' (' + ms + ' ms): ' + body.slice(0, 140) };
+        });
+      }).catch(function (e) {
+        var ms = Math.round(performance.now() - t0);
+        var aborted = e && e.name === 'AbortError';
+        return { ok: false, ms: ms, text: (aborted ? 'ZAMAN AŞIMI' : 'ULAŞILAMADI') + ' (' + ms + ' ms)' };
+      });
+    }
+
+    // Aynı basit sorgu anon ve girişli koşulur (A/B): fark token'dan mı
+    // anlaşılır. En ağır sorgu (akış) en sona bırakılır. Her adımın sonucu
+    // beklemeden karta yazılır; erken kopyalama yine anlamlı çıktı verir.
+    var SIMPLE = '/rest/v1/public_profiles?select=id&limit=1';
+    var steps = [
+      ['basit-anon',    SIMPLE, false],
+      ['basit-girişli', SIMPLE, true],
+      ['profil',   '/rest/v1/profiles?select=role,avatar_url&id=eq.' + encodeURIComponent(uid || ''), true],
+      ['bildirim', '/rest/v1/notifications?select=id,type,title,is_read,created_at&order=created_at.desc&limit=30', true],
+      ['akış',     '/rest/v1/posts?select=' + encodeURIComponent(POSTS_SELECT) +
+        '&target_year=is.null&target_section=is.null&order=pinned.desc,created_at.desc&limit=40', true]
+    ];
+
+    var outputs = [];
+    var allOk = true;
+    (function next(i) {
+      if (i >= steps.length) {
+        setResult('authq', allOk ? 'ok' : 'fail', allOk ? 'çalışıyor' : 'SORUN VAR', outputs.join(' | '));
+        runSdkQuery(client, POSTS_SELECT);
+        return;
+      }
+      setResult('authq', 'wait', (i + 1) + '/' + steps.length + ' sürüyor…', outputs.join(' | '), true);
+      timedFetch(steps[i][1], steps[i][2]).then(function (r) {
+        if (!r.ok) allOk = false;
+        outputs.push(steps[i][0] + ': ' + r.text);
+        setResult('authq', 'wait', (i + 1) + '/' + steps.length + ' bitti', outputs.join(' | '), true);
+        next(i + 1);
+      });
+    })(0);
+  }
+
+  // 11. Aynı akış sorgusu SDK üzerinden: ham istek çalışıp bu takılıyorsa
+  // sorun cihazdaki SDK/istek hattındadır, sunucuda değil.
+  function runSdkQuery(client, POSTS_SELECT) {
+    var t0 = performance.now();
+    var done = false;
+    var timer = setTimeout(function () {
+      if (done) return; done = true;
+      setResult('sdkq', 'fail', 'ZAMAN AŞIMI (12 sn)',
+        'Ham istekler çalışırken SDK sorgusu takıldı — sorun cihazdaki SDK istek hattında.');
+    }, 12000);
+    client.from('posts')
+      .select(POSTS_SELECT)
+      .is('target_year', null).is('target_section', null)
+      .order('pinned', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(40)
+      .then(function (r) {
+        if (done) return; done = true; clearTimeout(timer);
+        var ms = Math.round(performance.now() - t0);
+        if (r.error) setResult('sdkq', 'fail', 'HATA (' + ms + ' ms)', (r.error.code ? r.error.code + ': ' : '') + (r.error.message || ''));
+        else setResult('sdkq', 'ok', 'çalışıyor (' + ms + ' ms)', (r.data ? r.data.length : 0) + ' gönderi döndü');
+      }, function (e) {
+        if (done) return; done = true; clearTimeout(timer);
+        setResult('sdkq', 'fail', 'HATA', String(e && e.message || e));
+      });
+  }
+
+  // 6-7-8. Ağ testleri (sıralı)
+  function timed(id, okText, promiseFactory) {
+    var t0 = performance.now();
+    return promiseFactory().then(function (info) {
+      var ms = Math.round(performance.now() - t0);
+      var cls = ms > 5000 ? 'warn' : 'ok';
+      setResult(id, info.ok ? cls : 'fail',
+        (info.ok ? okText : 'HATA') + ' (' + ms + ' ms)', info.detail || '');
+    }).catch(function (e) {
+      var ms = Math.round(performance.now() - t0);
+      var aborted = e && (e.name === 'AbortError');
+      setResult(id, 'fail', (aborted ? 'ZAMAN AŞIMI' : 'ULAŞILAMADI') + ' (' + ms + ' ms)', String(e && e.message || e));
+    });
+  }
+
+  timed('health', 'erişildi', function () {
+    return fetchWithTimeout(SUPA_URL + '/auth/v1/health', { headers: { apikey: SUPA_KEY } }, 10000)
+      .then(function (r) { return { ok: r.ok, detail: 'HTTP ' + r.status }; });
+  }).then(function () {
+    return timed('rest', 'çalışıyor', function () {
+      return fetchWithTimeout(SUPA_URL + '/rest/v1/public_profiles?select=id&limit=1',
+        { headers: { apikey: SUPA_KEY } }, 10000)
+        .then(function (r) {
+          return r.text().then(function (body) {
+            return { ok: r.ok, detail: 'HTTP ' + r.status + (r.ok ? ', veri döndü' : ', yanıt: ' + body.slice(0, 120)) };
+          });
+        });
+    });
+  }).then(function () {
+    return timed('token', 'yanıt veriyor', function () {
+      return fetchWithTimeout(SUPA_URL + '/auth/v1/token?grant_type=password', {
+        method: 'POST',
+        headers: { apikey: SUPA_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'tani-testi@example.com', password: 'tani-testi' })
+      }, 15000).then(function (r) {
+        // 400 (geçersiz kimlik) = endpoint sağlıklı çalışıyor demektir
+        var healthy = r.status === 400 || r.ok;
+        return { ok: healthy, detail: 'HTTP ' + r.status + (healthy ? ' — giriş sunucusuna ulaşılıyor (test bilgileri kasıtlı olarak geçersiz)' : '') };
+      });
+    });
+  });
+
+  // Kopyala
+  document.getElementById('copyBtn').addEventListener('click', function () {
+    var lines = ['ASDFL Teşhis — ' + new Date().toLocaleString('tr-TR'),
+      document.getElementById('overallStatus').textContent];
+    TESTS.forEach(function (t) {
+      var r = results[t[0]] || { durum: 'bekliyor', detay: '' };
+      lines.push('• ' + t[1] + ': ' + r.durum + (r.detay ? ' — ' + r.detay : ''));
+    });
+    var text = lines.join('\n');
+    var done = function () { alert('Sonuçlar kopyalandı. WhatsApp\'a yapıştırabilirsiniz.'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { prompt('Kopyalayın:', text); });
+    } else prompt('Kopyalayın:', text);
+  });
+
+  // Zorla çıkış: SDK'ya hiç dokunmadan oturum kayıtlarını siler.
+  // Sitedeki "Çıkış Yap" takıldığında güvenilir kaçış yolu.
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    ['sb-refpyezcxkkofpkwaqny-auth-token', 'asdfl_user'].forEach(function (k) {
+      try { localStorage.removeItem(k); } catch (e) {}
+      try { sessionStorage.removeItem(k); } catch (e) {}
+    });
+    alert('Oturum bu cihazda kapatıldı. Siteye dönüp yeniden giriş yapabilirsiniz.');
+    location.reload();
+  });
+
+  // Önbellek temizle
+  document.getElementById('clearBtn').addEventListener('click', function () {
+    var jobs = [];
+    if ('serviceWorker' in navigator) {
+      jobs.push(navigator.serviceWorker.getRegistrations()
+        .then(function (regs) { return Promise.all(regs.map(function (r) { return r.unregister(); })); })
+        .catch(function () {}));
+    }
+    if (window.caches) {
+      jobs.push(caches.keys()
+        .then(function (keys) { return Promise.all(keys.map(function (k) { return caches.delete(k); })); })
+        .catch(function () {}));
+    }
+    Promise.all(jobs).then(function () {
+      alert('Service worker ve önbellekler temizlendi. Sayfa yenileniyor; ardından siteye tekrar giriş yapmayı deneyin.');
+      location.reload();
+    });
+  });
+})();
+</script>
+</body>
+</html>

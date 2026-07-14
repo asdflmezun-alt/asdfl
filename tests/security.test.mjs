@@ -9,7 +9,9 @@ const community = await readFile('js/topluluk.js', 'utf8');
 const gallery = await readFile('js/galeri.js', 'utf8');
 const career = await readFile('js/kariyer.js', 'utf8');
 const home = await readFile('js/home.js', 'utf8');
+const profile = await readFile('profil.html', 'utf8');
 const scanFixes = await readFile('supabase/migrations/202607080003_security_scan_fixes.sql', 'utf8');
+const metadataLimit = await readFile('supabase/migrations/20260714144922_enforce_user_metadata_size_limit.sql', 'utf8');
 
 test('profile privilege escalation is blocked in the database', () => {
   assert.match(migration, /protect_profile_privileges/);
@@ -17,6 +19,16 @@ test('profile privilege escalation is blocked in the database', () => {
   assert.match(migration, /REVOKE ALL ON FUNCTION public\.set_user_role/);
   assert.match(admin, /\.rpc\('set_user_role'/);
   assert.doesNotMatch(admin, /from\('profiles'\)\.update\(\{ role:/);
+});
+
+test('auth user metadata is rejected above the 8 KB database limit', () => {
+  assert.match(metadataLimit, /CREATE OR REPLACE FUNCTION public\.enforce_user_metadata_size_limit\(\)/);
+  assert.match(metadataLimit, /octet_length\(COALESCE\(NEW\.raw_user_meta_data, '\{\}'::jsonb\)::text\) > 8192/);
+  assert.match(metadataLimit, /SECURITY INVOKER/);
+  assert.doesNotMatch(metadataLimit, /SECURITY DEFINER/);
+  assert.match(metadataLimit, /REVOKE ALL ON FUNCTION public\.enforce_user_metadata_size_limit\(\)[\s\S]*FROM PUBLIC, anon, authenticated/);
+  assert.match(metadataLimit, /CREATE TRIGGER enforce_user_metadata_size_on_insert[\s\S]*BEFORE INSERT ON auth\.users/);
+  assert.match(metadataLimit, /CREATE TRIGGER enforce_user_metadata_size_on_update[\s\S]*BEFORE UPDATE OF raw_user_meta_data ON auth\.users/);
 });
 
 test('public profile reads use the share-safe view', () => {
@@ -82,6 +94,8 @@ test('post system fields and workflow tables are protected by database policy', 
 test('legal consent popup waits for verified auth state', () => {
   assert.match(app, /if \(this\.authReady && !this\._consentCheckRun\)/);
   assert.match(app, /if \(this\.supabase && !this\.authReady\) return/);
+  assert.match(app, /class="modal legal-consent-dialog"/);
+  assert.match(app, /class="legal-consent-actions"/);
 });
 
 test('home page shows only future events in calendar preview', () => {
@@ -107,6 +121,7 @@ test('early cached-user rendering uses bootstrap sanitizers', async () => {
 
 test('community posts have baseline RLS and poll votes are server-validated', async () => {
   const baseline = await readFile('supabase/migrations/202607080001_posts_baseline_and_poll_votes.sql', 'utf8');
+  const selfReportPolicy = await readFile('supabase/migrations/20260714153747_prevent_self_post_reports.sql', 'utf8');
   assert.match(baseline, /CREATE TABLE IF NOT EXISTS public\.posts/);
   assert.match(baseline, /"Authors and admins update posts"/);
   assert.match(baseline, /CREATE OR REPLACE FUNCTION public\.cast_poll_vote/);
@@ -114,6 +129,9 @@ test('community posts have baseline RLS and poll votes are server-validated', as
   // Oylar istemciden posts.content güncellenerek yazılamaz; yalnızca RPC kullanılır.
   assert.match(community, /\.rpc\('cast_poll_vote'/);
   assert.doesNotMatch(community, /from\('posts'\)\s*\.update\(/);
+  assert.match(selfReportPolicy, /DROP POLICY IF EXISTS "Users create own reports"/);
+  assert.match(selfReportPolicy, /\(SELECT auth\.uid\(\)\) = reporter_id/);
+  assert.match(selfReportPolicy, /posts\.author_id <> \(SELECT auth\.uid\(\)\)/);
 });
 
 test('user text is not embedded in inline event handlers', () => {
@@ -194,6 +212,12 @@ test('profile page persists email notification preference safely', async () => {
 
 test('uploads are restricted on client and storage', () => {
   assert.match(app, /maxImageBytes: 5 \* 1024 \* 1024/);
+  assert.match(profile, /accept="image\/jpeg,image\/png,image\/webp"/);
+  assert.match(profile, /const maxSourceBytes = 10 \* 1024 \* 1024/);
+  assert.match(profile, /const maxSourceDimension = 12000/);
+  assert.match(profile, /const outputSize = 512/);
+  assert.match(profile, /canvas\.toDataURL\('image\/jpeg', 0\.78\)/);
+  assert.doesNotMatch(profile, /auth\.updateUser\(\{\s*data: \{ avatar_url: avatarData \}/);
   assert.match(migration, /file_size_limit = 5242880/);
   assert.match(migration, /storage\.foldername\(name\)/);
   assert.match(migration, /allowed_mime_types/);

@@ -10,6 +10,9 @@ const profile = await readFile('profil.html', 'utf8');
 const adminHtml = await readFile('yonetim.html', 'utf8');
 const admin = await readFile('js/yonetim.js', 'utf8');
 const sw = await readFile('sw.js', 'utf8');
+const mainCss = await readFile('css/main.css', 'utf8');
+const homeCss = await readFile('css/home.css', 'utf8');
+const animationsCss = await readFile('css/animations.css', 'utf8');
 
 test('guest homepage keeps member-only previews gated', () => {
   assert.match(home, /ASDFL\.currentUser \? ASDFL\.fetchAlumni\(\) : Promise\.resolve\(\[\]\)/);
@@ -49,10 +52,41 @@ test('admin moderation is visible and actionable', () => {
   assert.match(admin, /deleteReportedPost/);
 });
 
+test('community posts expose a functional and accessible report action', () => {
+  assert.match(community, /post-report-btn/);
+  assert.match(community, /'Bildirildi' : 'Bildir'/);
+  assert.match(community, /aria-label="\$\{alreadyReported \? 'Bu paylaşım bildirildi' : 'Paylaşımı yönetime bildir'\}"/);
+  assert.match(community, /from\('post_reports'\)\.insert/);
+  assert.match(community, /reportedPosts\.add\(postId\)/);
+  assert.match(community, /reportReasonType/);
+});
+
 test('local development bypasses stale service worker caches', () => {
   assert.match(sw, /DEV_BYPASS_CACHE/);
   assert.match(sw, /localhost/);
   assert.match(sw, /event\.respondWith\(fetch\(request\)\.catch/);
+});
+
+test('desktop navbar becomes a compact floating surface after scroll', () => {
+  assert.match(mainCss, /@media \(min-width: 769px\)[\s\S]*\.navbar\.scrolled \{/);
+  assert.match(mainCss, /\.navbar\.scrolled \{[\s\S]*top: \.75rem;[\s\S]*border-radius: 20px;/);
+  assert.match(mainCss, /backdrop-filter: blur\(26px\) saturate\(185%\)/);
+  assert.match(mainCss, /\.navbar\.scrolled \.nav-brand \.sub/);
+  assert.match(mainCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.navbar::after/);
+  assert.match(mainCss, /@media \(min-width: 769px\) and \(max-width: 1280px\)[\s\S]*\.nav-links\.open/);
+  assert.match(mainCss, /\.hamburger \{[^}]*min-width:44px;[^}]*min-height:44px/);
+  assert.match(animationsCss, /animation: pageEnter[^;]*backwards/);
+  assert.doesNotMatch(animationsCss, /animation: pageEnter[^;]*both/);
+});
+
+test('mobile homepage avoids white flash and counter reflow', () => {
+  assert.match(mainCss, /html\s*\{[\s\S]*background:\s*var\(--navy-900\)/);
+  assert.match(mainCss, /\.mobile-bottom-nav\s*\{[\s\S]*grid-template-columns:\s*repeat\(auto-fit, minmax\(48px, 1fr\)\)/);
+  assert.match(homeCss, /@media \(max-width: 500px\)[\s\S]*\.hero-stats\s*\{[\s\S]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(homeCss, /\.hero-stat-divider\s*\{\s*display:\s*none/);
+  assert.match(homeCss, /\.hero-scroll-hint\s*\{[\s\S]*left:\s*50vw;[\s\S]*width:\s*max-content/);
+  assert.match(homeCss, /animation:\s*heroScrollHintIn/);
+  assert.match(homeCss, /@keyframes heroScrollHintIn[\s\S]*translate\(-50%, 0\)/);
 });
 
 test('shared UI layer supports accessible mobile navigation and modals', () => {
@@ -87,9 +121,10 @@ test('login and community loading fail safely on stalled mobile requests', () =>
 });
 
 test('critical auth assets bypass stale iOS PWA caches', () => {
-  assert.match(sw, /CACHE_VERSION = 'v13'/);
+  assert.match(sw, /CACHE_VERSION = 'v24'/);
+  assert.match(sw, /fetch\(request, \{ cache: 'no-store' \}\)/);
   assert.match(sw, /NETWORK_FIRST_ASSET_SUFFIXES/);
   assert.match(sw, /fetch\(request, \{ cache: 'no-cache' \}\)/);
-  assert.match(sw, /js\/app\.js\?v=1\.7/);
+  assert.match(sw, /js\/app\.js\?v=1\.9/);
   assert.match(sw, /assets\/vendor\/supabase\.js\?v=2\.108\.2-1/);
 });

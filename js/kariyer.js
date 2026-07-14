@@ -5,11 +5,180 @@
 // Caches for listing filters
 window.allJobs = [];
 window.allRequests = [];
+const CAREER_SAVED_JOBS_KEY = 'asdfl_saved_career_jobs';
 
 function careerSafeHttpUrl(value) {
   const safe = ASDFL.safeURL(value);
   return safe && /^https?:\/\//i.test(safe) ? safe : '';
 }
+
+function careerString(value) {
+  return String(value ?? '');
+}
+
+function getSavedJobIds() {
+  try {
+    const saved = JSON.parse(ASDFL._storage.getItem(CAREER_SAVED_JOBS_KEY) || '[]');
+    return new Set(Array.isArray(saved) ? saved.map(careerString) : []);
+  } catch (error) {
+    return new Set();
+  }
+}
+
+function updateSavedJobsCount() {
+  const savedIds = getSavedJobIds();
+  const availableCount = window.allJobs.length
+    ? window.allJobs.filter(job => savedIds.has(careerString(job.id))).length
+    : savedIds.size;
+  const badge = document.getElementById('savedJobsBadge');
+  const quickCount = document.getElementById('savedJobsQuickCount');
+  if (badge) {
+    badge.textContent = availableCount.toLocaleString('tr-TR');
+    badge.setAttribute('aria-label', `${availableCount} kaydedilen ilan`);
+  }
+  if (quickCount) quickCount.textContent = availableCount.toLocaleString('tr-TR');
+}
+
+function updateCareerCount(elementId, items) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  const activeItems = items.filter(item => !item.status || item.status === 'Active');
+  element.textContent = activeItems.length.toLocaleString('tr-TR');
+}
+
+function renderNetworkProfile() {
+  const user = ASDFL.currentUser;
+  const name = document.getElementById('networkProfileName');
+  const role = document.getElementById('networkProfileRole');
+  const meta = document.getElementById('networkProfileMeta');
+  const avatar = document.getElementById('networkProfileAvatar');
+  const composerAvatar = document.getElementById('careerComposerAvatar');
+  const action = document.getElementById('networkProfileAction');
+  if (!name || !role || !meta || !avatar || !composerAvatar || !action) return;
+
+  if (!user) {
+    name.textContent = 'ASDFL Kariyer Ağı';
+    role.textContent = 'Mezunlarla ve öğrencilerle bağ kurun.';
+    meta.textContent = 'Fırsatları görmek ve paylaşım yapmak için aramıza katılın.';
+    avatar.textContent = 'A';
+    composerAvatar.textContent = 'A';
+    action.innerHTML = '<i data-lucide="log-in" aria-hidden="true"></i><span>Ağa Katıl</span>';
+    action.onclick = () => ASDFL.openModal('loginModal');
+    ASDFL.refreshIcons(action);
+    return;
+  }
+
+  const gradYear = user.grad_year || user.gradYear;
+  const profession = user.job || user.branch || user.specialization || '';
+  const roleDetails = [profession, user.company].filter(Boolean).join(' · ');
+  const metaDetails = [gradYear ? `${gradYear} mezunu` : '', user.city].filter(Boolean).join(' · ');
+
+  name.textContent = careerString(user.name || 'ASDFL Üyesi');
+  role.textContent = roleDetails || careerString(user.role || 'ASDFL Üyesi');
+  meta.textContent = metaDetails || 'ASDFL profesyonel topluluğunun bir parçası';
+  ASDFL.setAvatarElement(avatar, user);
+  ASDFL.setAvatarElement(composerAvatar, user);
+
+  if (user.role === 'Öğrenci') {
+    action.innerHTML = '<i data-lucide="square-pen" aria-hidden="true"></i><span>Staj Arayışımı Paylaş</span>';
+    action.onclick = () => openNewRequestModal();
+  } else if (user.role === 'Mezun' || user.role === 'Admin' || user.role === 'Öğretmen') {
+    action.innerHTML = '<i data-lucide="briefcase-business" aria-hidden="true"></i><span>Fırsat Paylaş</span>';
+    action.onclick = () => openNewPostingModal();
+  } else {
+    action.innerHTML = '<i data-lucide="user-round" aria-hidden="true"></i><span>Profilimi Tamamla</span>';
+    action.onclick = () => { window.location.href = 'profil.html'; };
+  }
+  ASDFL.refreshIcons(action);
+}
+
+function updateComposerForTab(tabName) {
+  const title = document.getElementById('careerComposerTitle');
+  const text = document.getElementById('careerComposerText');
+  const action = document.getElementById('careerComposerAction');
+  if (!title || !text || !action) return;
+
+  if (tabName === 'saved') {
+    title.textContent = 'Kaydettiğiniz fırsatlar';
+    text.textContent = 'Bu cihazda sakladığınız aktif ilanlara tek yerden ulaşın.';
+    action.innerHTML = '<i data-lucide="newspaper" aria-hidden="true"></i><span>Yeni fırsatları keşfet</span>';
+    action.onclick = () => switchCareerTab('jobs');
+  } else if (tabName === 'requests') {
+    title.textContent = 'Staj hedefinizi ağınıza duyurun';
+    text.textContent = 'İlgi alanlarınızı anlatın, size yol gösterecek mezunlarla buluşun.';
+    action.innerHTML = '<i data-lucide="square-pen" aria-hidden="true"></i><span>Staj arayışımı paylaş</span>';
+    action.onclick = () => openNewRequestModal();
+  } else {
+    title.textContent = 'Bir fırsat paylaşın';
+    text.textContent = 'Deneyiminiz bir öğrencinin kariyer yolculuğunu değiştirebilir.';
+    action.innerHTML = '<i data-lucide="square-pen" aria-hidden="true"></i><span>İş veya staj fırsatı paylaş</span>';
+    action.onclick = () => openNewPostingModal();
+  }
+  ASDFL.refreshIcons(action);
+}
+
+async function loadCareerNetworkOverview() {
+  const [jobs, requests] = await Promise.all([
+    ASDFL.fetchJobPostings(),
+    ASDFL.fetchInternshipRequests()
+  ]);
+  window.allJobs = Array.isArray(jobs) ? jobs : [];
+  window.allRequests = Array.isArray(requests) ? requests : [];
+  updateCareerCount('activeJobsCount', window.allJobs);
+  updateCareerCount('activeRequestsCount', window.allRequests);
+  updateSavedJobsCount();
+}
+
+window.toggleSavedJob = function(jobId) {
+  const savedIds = getSavedJobIds();
+  const normalizedId = careerString(jobId);
+  const isSaved = savedIds.has(normalizedId);
+  if (isSaved) savedIds.delete(normalizedId);
+  else savedIds.add(normalizedId);
+
+  try {
+    ASDFL._storage.setItem(CAREER_SAVED_JOBS_KEY, JSON.stringify([...savedIds]));
+    ASDFL.toast(isSaved ? 'İlan kaydedilenlerden kaldırıldı.' : 'İlan Kaydedilenler sekmesine eklendi.', 'success');
+    updateSavedJobsCount();
+    filterJobs();
+  } catch (error) {
+    ASDFL.toast('Kaydetme tercihi bu cihazda saklanamadı.', 'warning');
+  }
+};
+
+window.shareCareerItem = async function(tabName, title, subtitle) {
+  const url = new URL(window.location.href);
+  url.hash = tabName === 'requests' ? 'requests' : 'jobs';
+  const shareData = {
+    title: careerString(title),
+    text: [title, subtitle].filter(Boolean).map(careerString).join(' — '),
+    url: url.href
+  };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+      ASDFL.toast('Paylaşım penceresi açıldı.', 'success');
+      return;
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+    }
+  }
+
+  const copyText = `${shareData.text}\n${shareData.url}`;
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(copyText);
+      ASDFL.toast('Paylaşım bağlantısı panoya kopyalandı.', 'success');
+      return;
+    } catch (error) {
+      // Güvenli bağlam veya pano izni yoksa basit metin seçme adımına geçilir.
+    }
+  }
+
+  window.prompt('Bağlantıyı kopyalayıp paylaşabilirsiniz:', copyText);
+  ASDFL.toast('Paylaşım metni kopyalamanız için hazırlandı.', 'info');
+};
 
 // ==========================================
 // 1. NAVIGATION & GENERAL TAB CONTROLLERS
@@ -18,19 +187,34 @@ function careerSafeHttpUrl(value) {
 /**
  * Switch between the top-level Career Network sections (Jobs, Requests, Dashboard)
  */
-window.switchCareerTab = function(tabName) {
+window.switchCareerTab = function(tabName, options = {}) {
+  if (!['jobs', 'requests', 'saved', 'dashboard'].includes(tabName)) tabName = 'jobs';
+
   // Update tabs active state
   const tabs = document.querySelectorAll('.kariyer-tab');
   tabs.forEach(t => {
     t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+    t.tabIndex = -1;
   });
   
   let activeTabBtn = null;
   if (tabName === 'jobs') activeTabBtn = document.getElementById('tabBtnJobs');
   else if (tabName === 'requests') activeTabBtn = document.getElementById('tabBtnRequests');
+  else if (tabName === 'saved') activeTabBtn = document.getElementById('tabBtnSaved');
   else if (tabName === 'dashboard') activeTabBtn = document.getElementById('tabBtnDashboard');
   
-  if (activeTabBtn) activeTabBtn.classList.add('active');
+  if (activeTabBtn) {
+    activeTabBtn.classList.add('active');
+    activeTabBtn.setAttribute('aria-selected', 'true');
+    activeTabBtn.tabIndex = 0;
+    const tabList = activeTabBtn.parentElement;
+    if (tabList && tabList.scrollWidth > tabList.clientWidth) {
+      const targetLeft = activeTabBtn.offsetLeft - ((tabList.clientWidth - activeTabBtn.offsetWidth) / 2);
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      tabList.scrollTo({ left: Math.max(0, targetLeft), behavior: options.scroll === false || reduceMotion ? 'auto' : 'smooth' });
+    }
+  }
   
   // Toggle sections
   const sections = [
@@ -46,25 +230,34 @@ window.switchCareerTab = function(tabName) {
   let activeSec = null;
   if (tabName === 'jobs') activeSec = document.getElementById('careerSectionJobs');
   else if (tabName === 'requests') activeSec = document.getElementById('careerSectionRequests');
+  else if (tabName === 'saved') activeSec = document.getElementById('careerSectionJobs');
   else if (tabName === 'dashboard') activeSec = document.getElementById('careerSectionDashboard');
   
   if (activeSec) {
     activeSec.classList.remove('hidden');
+    if (activeSec.id === 'careerSectionJobs') {
+      activeSec.setAttribute('aria-labelledby', tabName === 'saved' ? 'tabBtnSaved' : 'tabBtnJobs');
+    }
     
     // Smooth scroll page to tabs bar to make navigation comfortable on mobile devices
     const tabsWrapper = document.querySelector('.kariyer-tabs-wrapper');
-    if (tabsWrapper) {
+    if (tabsWrapper && options.scroll !== false) {
       const offsetTop = tabsWrapper.offsetTop - 75;
-      window.scrollTo({ top: offsetTop, behavior: 'smooth' });
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: offsetTop, behavior: reduceMotion ? 'auto' : 'smooth' });
     }
   }
+
+  const networkShell = document.getElementById('careerNetworkShell');
+  if (networkShell) networkShell.classList.toggle('hidden', tabName === 'dashboard');
+  if (tabName !== 'dashboard') updateComposerForTab(tabName);
   
   // Update hash dynamically for state persistence on browser reload
   window.location.hash = tabName;
   
   // Trigger appropriate loaders
-  if (tabName === 'jobs') renderJobs();
-  else if (tabName === 'requests') renderRequests();
+  if (tabName === 'jobs' || tabName === 'saved') filterJobs();
+  else if (tabName === 'requests') filterRequests();
   else if (tabName === 'dashboard') renderDashboard();
 };
 
@@ -150,11 +343,11 @@ window.renderJobs = async function() {
   const grid = document.getElementById('jobsGrid');
   if (!grid) return;
   
-  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem"><div class="spinner"></div></div>';
+  grid.innerHTML = '<div class="career-loading"><div class="spinner"></div><span>Fırsatlar yükleniyor</span></div>';
   
   const jobs = await ASDFL.fetchJobPostings();
   window.allJobs = jobs; // Cache locally
-  
+  updateCareerCount('activeJobsCount', window.allJobs);
   filterJobs();
 };
 
@@ -167,26 +360,37 @@ window.filterJobs = function() {
   
   const query = document.getElementById('jobSearch')?.value.toLowerCase().trim() || '';
   const type = document.getElementById('jobTypeFilter')?.value || 'all';
+  const savedOnly = window.location.hash.substring(1) === 'saved';
+  const savedIds = getSavedJobIds();
   
   if (!window.allJobs) return;
   
   const filtered = window.allJobs.filter(job => {
     const matchesSearch = !query || 
-      job.title.toLowerCase().includes(query) || 
-      job.company.toLowerCase().includes(query) || 
-      job.description.toLowerCase().includes(query) ||
-      job.location.toLowerCase().includes(query);
+      careerString(job.title).toLowerCase().includes(query) ||
+      careerString(job.company).toLowerCase().includes(query) ||
+      careerString(job.description).toLowerCase().includes(query) ||
+      careerString(job.location).toLowerCase().includes(query);
       
     const matchesType = type === 'all' || job.type === type;
     
-    return matchesSearch && matchesType;
+    const matchesSaved = !savedOnly || savedIds.has(careerString(job.id));
+    return matchesSearch && matchesType && matchesSaved;
   });
   
   if (filtered.length === 0) {
-    grid.innerHTML = `
-      <div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--radius-lg);color:var(--text-muted)">
-        <i data-lucide="search-slash" style="width:2.5rem;height:2.5rem;color:var(--text-muted);margin-bottom:.5rem;display:inline-block"></i>
-        <p>Arama kriterlerinize uygun iş veya staj ilanı bulunamadı.</p>
+    grid.innerHTML = savedOnly ? `
+      <div class="career-empty-state">
+        <i data-lucide="bookmark" aria-hidden="true"></i>
+        <h3>Henüz kaydedilmiş ilan yok</h3>
+        <p>Fırsat Akışı'ndaki Kaydet düğmesine bastığınız ilanlar burada, bu cihazda saklanır.</p>
+        <button class="career-action career-empty-action" type="button" onclick="switchCareerTab('jobs')"><i data-lucide="newspaper" aria-hidden="true"></i><span>Fırsatları keşfet</span></button>
+      </div>
+    ` : `
+      <div class="career-empty-state">
+        <i data-lucide="search-x" aria-hidden="true"></i>
+        <h3>Bu ölçütlerde fırsat bulunamadı</h3>
+        <p>Aramanızı genişletin veya farklı bir ilan türü seçin.</p>
       </div>
     `;
     ASDFL.refreshIcons();
@@ -194,47 +398,54 @@ window.filterJobs = function() {
   }
   
   const user = ASDFL.currentUser;
-  
   grid.innerHTML = filtered.map(job => {
     const isStaj = job.type === 'Staj';
-    const cardClass = isStaj ? 'card job-card type-staj' : 'card job-card';
+    const cardClass = isStaj ? 'card career-post job-card type-staj' : 'card career-post job-card';
     const initials = job.initials || 'M';
     const dateStr = ASDFL.formatDate(job.created_at);
+    const isSaved = savedIds.has(careerString(job.id));
     
     let actionBtn = '';
     if (!user) {
-      actionBtn = `<button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Başvur (Giriş Yapın)</button>`;
+      actionBtn = `<button class="career-action career-action-primary" type="button" onclick="ASDFL.openModal('loginModal')"><i data-lucide="send" aria-hidden="true"></i><span>Başvurmak için giriş yap</span></button>`;
     } else if (user.role === 'Öğrenci' || user.role === 'Admin') {
-      actionBtn = `<button class="btn btn-primary btn-sm" onclick="openApplyJobModal(${ASDFL.jsString(job.id)}, ${ASDFL.jsString(job.title)}, ${ASDFL.jsString(job.company)})">Başvur</button>`;
+      actionBtn = `<button class="career-action career-action-primary" type="button" onclick="openApplyJobModal(${ASDFL.jsString(job.id)}, ${ASDFL.jsString(job.title)}, ${ASDFL.jsString(job.company)})"><i data-lucide="send" aria-hidden="true"></i><span>Başvur</span></button>`;
     } else {
-      actionBtn = `<button class="btn btn-secondary btn-sm" style="opacity:0.65;cursor:not-allowed" disabled title="Sadece öğrenciler iş/staj ilanlarına başvurabilir">Sadece Öğrenci</button>`;
+      actionBtn = `<button class="career-action career-action-disabled" type="button" disabled title="Sadece öğrenciler iş ve staj ilanlarına başvurabilir"><i data-lucide="send" aria-hidden="true"></i><span>Başvuru öğrencilere açık</span></button>`;
     }
     
     return `
-      <div class="${cardClass}">
-        <div class="job-card-header">
+      <article class="${cardClass}" id="job-${ASDFL.escapeAttr(job.id)}">
+        <header class="career-post-author">
+          ${ASDFL.getAvatarHTML({ initials, avatar_url: job.employerAvatarUrl, avatar_position: job.employerAvatarPosition, name: job.employerName }, 'avatar')}
+          <div class="career-post-author-copy">
+            <strong>${ASDFL.escapeHTML(job.employerName || 'ASDFL Mezunu')}</strong>
+            <span>${job.employerYear ? `${ASDFL.escapeHTML(job.employerYear)} mezunu · ` : ''}${ASDFL.escapeHTML(job.company || 'ASDFL Kariyer Ağı')}</span>
+            <span>${ASDFL.escapeHTML(dateStr)} · <i data-lucide="globe-2" aria-label="Herkese açık"></i></span>
+          </div>
+          <span class="badge ${isStaj ? 'badge-success' : 'badge-gold'}">${ASDFL.escapeHTML(job.type)}</span>
+        </header>
+        <div class="career-post-content">
           <div class="job-title-group">
             <h3>${ASDFL.escapeHTML(job.title)}</h3>
             <span class="job-company">${ASDFL.escapeHTML(job.company)}</span>
           </div>
-          <span class="badge ${isStaj ? 'badge-success' : 'badge-gold'}">${ASDFL.escapeHTML(job.type)}</span>
-        </div>
-        
-        <div class="job-meta-row">
-          <div class="job-meta-item"><i data-lucide="map-pin" style="width:14px;height:14px"></i> ${ASDFL.escapeHTML(job.location)}</div>
-          <div class="job-meta-item"><i data-lucide="calendar" style="width:14px;height:14px"></i> ${ASDFL.escapeHTML(dateStr)}</div>
-        </div>
-        
-        <p class="job-desc">${ASDFL.escapeHTML(job.description)}</p>
-        
-        <div class="job-footer">
-          <div class="job-poster">
-            ${ASDFL.getAvatarHTML({ initials, avatar_url: job.employerAvatarUrl, avatar_position: job.employerAvatarPosition, name: job.employerName }, 'avatar avatar-sm')}
-            <span>Yayınlayan: <strong>${ASDFL.escapeHTML(job.employerName)}</strong> ${job.employerYear ? `(${ASDFL.escapeHTML(job.employerYear)} Mezunu)` : ''}</span>
+          <div class="job-meta-row">
+            <span class="job-meta-item"><i data-lucide="map-pin" aria-hidden="true"></i>${ASDFL.escapeHTML(job.location)}</span>
+            <span class="job-meta-item"><i data-lucide="clock-3" aria-hidden="true"></i>${ASDFL.escapeHTML(job.type)} fırsatı</span>
           </div>
-          ${actionBtn}
+          <p class="job-desc">${ASDFL.escapeHTML(job.description)}</p>
         </div>
-      </div>
+        <footer class="career-post-actions">
+          ${actionBtn}
+          <button class="career-action" type="button" aria-pressed="${isSaved}" onclick="toggleSavedJob(${ASDFL.jsString(job.id)})">
+            <i data-lucide="${isSaved ? 'bookmark-check' : 'bookmark'}" aria-hidden="true"></i><span>${isSaved ? 'Kaydedildi' : 'Kaydet'}</span>
+          </button>
+          <button class="career-action" type="button" onclick="shareCareerItem('jobs', ${ASDFL.jsString(job.title)}, ${ASDFL.jsString(job.company)})">
+            <i data-lucide="share-2" aria-hidden="true"></i><span>Paylaş</span>
+          </button>
+        </footer>
+      </article>
     `;
   }).join('');
   
@@ -252,11 +463,11 @@ window.renderRequests = async function() {
   const grid = document.getElementById('requestsGrid');
   if (!grid) return;
   
-  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem"><div class="spinner"></div></div>';
+  grid.innerHTML = '<div class="career-loading"><div class="spinner"></div><span>Paylaşımlar yükleniyor</span></div>';
   
   const requests = await ASDFL.fetchInternshipRequests();
   window.allRequests = requests; // Cache locally
-  
+  updateCareerCount('activeRequestsCount', window.allRequests);
   filterRequests();
 };
 
@@ -274,9 +485,10 @@ window.filterRequests = function() {
   
   const filtered = window.allRequests.filter(req => {
     const matchesSearch = !query || 
-      req.title.toLowerCase().includes(query) || 
-      req.studentName.toLowerCase().includes(query) || 
-      req.details.toLowerCase().includes(query);
+      careerString(req.title).toLowerCase().includes(query) ||
+      careerString(req.studentName).toLowerCase().includes(query) ||
+      careerString(req.details).toLowerCase().includes(query) ||
+      careerString(req.field).toLowerCase().includes(query);
       
     const matchesField = field === 'all' || req.field === field;
     
@@ -285,9 +497,10 @@ window.filterRequests = function() {
   
   if (filtered.length === 0) {
     grid.innerHTML = `
-      <div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--radius-lg);color:var(--text-muted)">
-        <i data-lucide="search-slash" style="width:2.5rem;height:2.5rem;color:var(--text-muted);margin-bottom:.5rem;display:inline-block"></i>
-        <p>Arama kriterlerinize uygun staj arayış talebi bulunamadı.</p>
+      <div class="career-empty-state">
+        <i data-lucide="search-x" aria-hidden="true"></i>
+        <h3>Bu ölçütlerde paylaşım bulunamadı</h3>
+        <p>Aramanızı genişletin veya farklı bir alan seçin.</p>
       </div>
     `;
     ASDFL.refreshIcons();
@@ -305,32 +518,33 @@ window.filterRequests = function() {
       const email = req.studentEmail || 'info@asdfl.org';
       const subject = encodeURIComponent(`ASDFL Kariyer Ağı — Staj Arayışınız Hakkında`);
       const body = encodeURIComponent(`Merhaba ${req.studentName},\n\nASDFL Kariyer Ağı üzerindeki "${req.title}" başlıklı staj arayış talebinizi inceledim. Sizinle staj/mentörlük imkanları hakkında görüşmek isterim.\n\nSaygılarımla,\n${user.name}`);
-      contactBtn = `<a href="${ASDFL.escapeAttr(`mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`)}" class="btn btn-primary btn-sm"><i data-lucide="mail"></i> İletişime Geç</a>`;
+      contactBtn = `<a href="${ASDFL.escapeAttr(`mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`)}" class="career-action career-action-primary"><i data-lucide="mail" aria-hidden="true"></i><span>İletişime geç</span></a>`;
     } else {
-      contactBtn = `<button class="btn btn-secondary btn-sm" style="opacity:0.65;cursor:not-allowed" disabled title="Öğrenci iletişim bilgilerini sadece dernek üyesi mezunlar görüntüleyebilir">Sadece Mezunlar</button>`;
+      contactBtn = `<button class="career-action career-action-disabled" type="button" disabled title="Öğrenci iletişim bilgilerini sadece dernek üyesi mezunlar görüntüleyebilir"><i data-lucide="mail" aria-hidden="true"></i><span>İletişim mezunlara açık</span></button>`;
     }
     
     return `
-      <div class="card req-card">
-        <div class="req-header">
+      <article class="card career-post req-card" id="request-${ASDFL.escapeAttr(req.id)}">
+        <header class="career-post-author req-header">
           ${ASDFL.getAvatarHTML({ initials, avatar_url: req.studentAvatarUrl, avatar_position: req.studentAvatarPosition, name: req.studentName }, 'avatar')}
-          <div class="req-student-info">
+          <div class="career-post-author-copy req-student-info">
             <strong>${ASDFL.escapeHTML(req.studentName)}</strong>
-            <span>${ASDFL.escapeHTML(req.studentGrade || 'Öğrenci')} ${req.studentClassSection ? `(${ASDFL.escapeHTML(req.studentClassSection)} Şubesi)` : ''} — ${dateStr}</span>
+            <span>${ASDFL.escapeHTML(req.studentGrade || 'Öğrenci')}${req.studentClassSection ? ` · ${ASDFL.escapeHTML(req.studentClassSection)} şubesi` : ''}</span>
+            <span>${ASDFL.escapeHTML(dateStr)} · <i data-lucide="globe-2" aria-label="Herkese açık"></i></span>
           </div>
-        </div>
-        
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem">
-          <h3 class="req-title" style="font-size:1.05rem">${ASDFL.escapeHTML(req.title)}</h3>
           <span class="badge badge-gold" style="font-size:0.75rem">${ASDFL.escapeHTML(req.field)}</span>
+        </header>
+        <div class="career-post-content">
+          <h3 class="req-title">${ASDFL.escapeHTML(req.title)}</h3>
+          <p class="req-details">${ASDFL.escapeHTML(req.details)}</p>
         </div>
-        
-        <p class="req-details">${ASDFL.escapeHTML(req.details)}</p>
-        
-        <div style="display:flex;justify-content:flex-end;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--glass-border)">
+        <footer class="career-post-actions">
           ${contactBtn}
-        </div>
-      </div>
+          <button class="career-action" type="button" onclick="shareCareerItem('requests', ${ASDFL.jsString(req.title)}, ${ASDFL.jsString(req.studentName)})">
+            <i data-lucide="share-2" aria-hidden="true"></i><span>Paylaş</span>
+          </button>
+        </footer>
+      </article>
     `;
   }).join('');
   
@@ -853,18 +1067,28 @@ async function initCareerPage() {
   
   // Setup responsive visibility rules on boot
   updateRoleFieldsVisibility();
+  renderNetworkProfile();
+  await loadCareerNetworkOverview();
   
   // Decide which tab to display based on location hash
   let defaultTab = 'jobs';
   const hash = window.location.hash.substring(1);
-  if (hash === 'jobs' || hash === 'requests' || hash === 'dashboard') {
+  if (hash === 'jobs' || hash === 'requests' || hash === 'saved' || hash === 'dashboard') {
     defaultTab = hash;
   }
   
-  switchCareerTab(defaultTab);
+  switchCareerTab(defaultTab, { scroll: false });
 }
 
 // Global page load hook
 document.addEventListener('DOMContentLoaded', () => {
   initCareerPage();
+});
+
+window.addEventListener('asdfl:auth-changed', () => {
+  renderNetworkProfile();
+  updateRoleFieldsVisibility();
+  const activeTab = window.location.hash.substring(1);
+  if (activeTab === 'jobs' || activeTab === 'saved') filterJobs();
+  else if (activeTab === 'requests') filterRequests();
 });

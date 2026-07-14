@@ -127,7 +127,8 @@
 .hero-scroll-hint {
   position: absolute;
   bottom: 2rem;
-  left: 50%;
+  left: 50vw;
+  width: max-content;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -137,7 +138,12 @@
   font-size: .75rem;
   letter-spacing: .1em;
   text-transform: uppercase;
-  animation: fadeInUp .8s 1s both;
+  animation: heroScrollHintIn .8s 1s both;
+}
+
+@keyframes heroScrollHintIn {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .scroll-mouse {
@@ -465,5 +471,22 @@
 }
 
 @media (max-width: 500px) {
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 1rem .75rem;
+  }
+  .hero-stat {
+    min-width: 0;
+    padding: .85rem .75rem;
+    text-align: left;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    background: rgba(255,255,255,.025);
+  }
+  .hero-stat .stat-number { font-size: 2rem; }
+  .hero-stat .stat-label { display: block; font-size: .68rem; }
+  .hero-stat-divider { display: none; }
   .burs-cta-stats { flex-direction: column; gap: 1.25rem; }
 }

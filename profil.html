@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Profilim | ASDFL Mezunlar Derneği</title>
     <link rel="stylesheet" href="css/fonts.css">
-  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/main.css?v=1.4">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#05111E">
   <link rel="apple-touch-icon" href="assets/images/logo.png">
@@ -333,11 +333,12 @@
           <div class="avatar-edit-badge" onclick="document.getElementById('avatarInput').click()" style="position: absolute; bottom: -4px; right: -4px; background: var(--gold-500); color: var(--navy-950); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #05111e; box-shadow: 0 4px 10px rgba(0,0,0,0.3);" title="Profil Fotoğrafı Yükle">
             <i data-lucide="camera" style="width: 14px; height: 14px;"></i>
           </div>
-          <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+          <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleAvatarUpload(event)">
         </div>
         <div class="profile-identity">
           <h1 id="profileName">Profil Yükleniyor...</h1>
           <p id="profileRole"></p>
+          <small id="avatarUploadHint" style="display:block;margin-top:.35rem;color:var(--text-muted);font-size:.72rem;line-height:1.4">JPG, PNG veya WebP · Fotoğraf otomatik olarak karelenip 512×512 px boyutuna sıkıştırılır</small>
         </div>
 
         <!-- Profil Tamamlanma Skoru -->
@@ -701,7 +702,7 @@
 <div class="toast-container"></div>
 <script src="assets/vendor/supabase.js?v=2.108.2-1"></script>
 <script src="js/universities.js"></script>
-<script src="js/app.js?v=1.7"></script>
+<script src="js/app.js?v=1.9"></script>
 <script>
   window.goBackToAlumni = function() {
     if (document.referrer && document.referrer.includes('mezunlar.html')) {
@@ -1828,43 +1829,58 @@
     const file = event.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      ASDFL.toast('Dosya boyutu 2MB\'tan küçük olmalıdır.', 'warning');
+    const input = event.target;
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    const maxSourceBytes = 10 * 1024 * 1024;
+    const maxSourceDimension = 12000;
+
+    const rejectAvatar = (message) => {
+      input.value = '';
+      ASDFL.toast(message, 'warning');
+    };
+
+    if (!allowedTypes.has(file.type)) {
+      rejectAvatar('Profil fotoğrafı JPG, PNG veya WebP formatında olmalıdır.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-      let base64 = e.target.result;
-      
-      // Compress image slightly using Canvas
-      const img = new Image();
-      img.src = base64;
-      img.onload = async function() {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const max = 300; // max size for avatar
-        if (width > max || height > max) {
-          if (width > height) {
-            height = Math.round((height * max) / width);
-            width = max;
-          } else {
-            width = Math.round((width * max) / height);
-            height = max;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.75);
+    if (file.size > maxSourceBytes) {
+      rejectAvatar('Fotoğraf sıkıştırma için çok büyük. Lütfen 10 MB veya daha küçük bir dosya seçin.');
+      return;
+    }
 
-        // Save
-        await saveAvatar(compressedBase64);
-      };
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = async function() {
+      URL.revokeObjectURL(objectUrl);
+      const width = img.naturalWidth;
+      const height = img.naturalHeight;
+
+      if (width > maxSourceDimension || height > maxSourceDimension) {
+        rejectAvatar(`Fotoğraf işlenemeyecek kadar büyük. Kenarlar ${maxSourceDimension} pikseli aşmamalıdır.`);
+        return;
+      }
+
+      const outputSize = 512;
+      const sourceSize = Math.min(width, height);
+      const sourceX = Math.round((width - sourceSize) / 2);
+      const sourceY = Math.round((height - sourceSize) / 2);
+      const canvas = document.createElement('canvas');
+      canvas.width = outputSize;
+      canvas.height = outputSize;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#132236';
+      ctx.fillRect(0, 0, outputSize, outputSize);
+      ctx.drawImage(img, sourceX, sourceY, sourceSize, sourceSize, 0, 0, outputSize, outputSize);
+      const optimizedAvatar = canvas.toDataURL('image/jpeg', 0.78);
+      input.value = '';
+      await saveAvatar(optimizedAvatar);
     };
-    reader.readAsDataURL(file);
+    img.onerror = function() {
+      URL.revokeObjectURL(objectUrl);
+      rejectAvatar('Fotoğraf okunamadı. Lütfen başka bir dosya seçin.');
+    };
+    img.src = objectUrl;
   };
 
   async function saveAvatar(avatarData) {
@@ -1880,9 +1896,8 @@
         return;
       }
       
-      await ASDFL.supabase.auth.updateUser({
-        data: { avatar_url: avatarData }
-      });
+      // Base64 fotoğrafı auth metadata'sına yazma: metadata boyut limitini aşabilir.
+      // Oturum açılışında avatar public.profiles.avatar_url alanından yüklenir.
     } else if (ASDFL.currentUser) {
       // Local fallback
       ASDFL.currentUser.avatarUrl = avatarData;

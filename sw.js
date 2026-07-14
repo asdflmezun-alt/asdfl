@@ -1,20 +1,22 @@
 // ASDFL Mezunlar Derneği — service worker
 // Bump CACHE_VERSION whenever a deploy should force-invalidate old caches.
-const CACHE_VERSION = 'v13';
+const CACHE_VERSION = 'v24';
 const CACHE_NAME = `asdfl-${CACHE_VERSION}`;
 const DEV_BYPASS_CACHE = ['localhost', '127.0.0.1', '::1'].includes(self.location.hostname);
 
 const PRECACHE_URLS = [
   'index.html',
-  'css/main.css',
+  'css/main.css?v=1.4',
   'css/animations.css',
   'css/fonts.css',
-  'css/home.css',
-  'css/topluluk.css',
+  'css/home.css?v=1.5',
+  'css/topluluk.css?v=2.3',
+  'css/kariyer.css?v=1.3',
   'js/bootstrap.js?v=1.1',
-  'js/app.js?v=1.7',
+  'js/app.js?v=1.9',
   'js/home.js',
-  'js/topluluk.js?v=1.7',
+  'js/topluluk.js?v=1.8',
+  'js/kariyer.js?v=1.3',
   'js/universities.js',
   'assets/vendor/lucide.js',
   'assets/vendor/supabase.js?v=2.108.2-1',
@@ -77,7 +79,7 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
       try {
-        const response = await fetch(request);
+        const response = await fetch(request, { cache: 'no-store' });
         const cache = await caches.open(CACHE_NAME);
         cache.put(request, response.clone());
         return response;

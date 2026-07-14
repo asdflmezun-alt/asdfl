@@ -2122,6 +2122,19 @@ const ASDFL = {
     }
   },
 
+  // Depodaki Supabase oturumu süresi dolmuş mu? (60 sn tolerans)
+  _isStoredSessionExpired() {
+    try {
+      const raw = this._storage.getItem('sb-refpyezcxkkofpkwaqny-auth-token');
+      if (!raw) return false;
+      const session = JSON.parse(raw);
+      return typeof session.expires_at === 'number' &&
+        session.expires_at * 1000 < Date.now() - 60000;
+    } catch (e) {
+      return false;
+    }
+  },
+
   async checkAuth() {
     // Synchronous local session check to avoid initial page-load login state flicker/flashes
     const userStr = this._storage.getItem('asdfl_user');
@@ -2148,9 +2161,22 @@ const ASDFL = {
       if (error) throw error;
       this._applyAuthSession(data?.session || null);
     } catch (err) {
+      console.warn('Oturum ilk denemede doğrulanamadı:', err?.message || err);
+      // Süresi dolmuş ve yenilenemeyen oturum: girişliymiş gibi görünüp hiçbir
+      // sorgunun çalışmadığı duruma düşmektense yerelde çıkış yapıp yeniden
+      // giriş iste. (SDK'nın commit guard'ı, geç gelen bir yenilemenin bu
+      // temizliği ezmesini zaten engelliyor.)
+      if (this._isStoredSessionExpired()) {
+        // signOut SDK'nın (takılı olabilecek) initialize sürecini beklediği için
+        // temizlik doğrudan depodan yapılır; signOut yalnızca art alanda denenir.
+        this._storage.removeItem('sb-refpyezcxkkofpkwaqny-auth-token');
+        Promise.resolve(this.supabase.auth.signOut({ scope: 'local' })).catch(() => {});
+        this._applyAuthSession(null, { hydrateProfile: false });
+        this.toast('Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.', 'warning');
+        return;
+      }
       // Timeout kesin olarak "oturum yok" anlamına gelmez. Özellikle iOS'ta
       // geçerli önbelleği koru; INITIAL_SESSION geldiğinde durum netleşir.
-      console.warn('Oturum ilk denemede doğrulanamadı:', err?.message || err);
       if (this.currentUser) {
         this.authReady = true;
         this.updateUIForAuth();
@@ -2314,14 +2340,22 @@ const ASDFL = {
   },
 
   async logout() {
+    // Yerel durum önce temizlenir; signOut askıda kalsa bile kullanıcı
+    // çıkış yapmış olur (iOS'ta SDK istekleri takılabiliyor).
     this._storage.removeItem('asdfl_user');
-    if (this.supabase) {
-      await this.supabase.auth.signOut();
-    }
     this.currentUser = null;
     this.teardownNotifications();
-    this.toast('Çıkış yapıldı.', 'info');
     this.updateUIForAuth();
+    if (this.supabase) {
+      try {
+        await this.queryWithTimeout(this.supabase.auth.signOut(), 2500);
+      } catch (e) {
+        // Sunucuya ulaşılamadıysa oturum kaydını elle sil; token zaten
+        // kullanılmayacak.
+        this._storage.removeItem('sb-refpyezcxkkofpkwaqny-auth-token');
+      }
+    }
+    this.toast('Çıkış yapıldı.', 'info');
     setTimeout(() => window.location.reload(), 500);
   },
 
@@ -3009,13 +3043,13 @@ const ASDFL = {
     modal.style.zIndex = '999999';
 
     modal.innerHTML = `
-      <div class="modal" style="max-width: 520px; width: 100%; padding: 2.5rem; margin-top: 4rem; margin-bottom: 4rem; position: relative;">
+      <div class="modal legal-consent-dialog" role="dialog" aria-modal="true" aria-labelledby="legalConsentTitle" style="max-width: 520px; width: 100%; position: relative;">
         <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
           <div style="width: 42px; height: 42px; background: rgba(212,175,55,0.1); border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; color: var(--gold-500);">
             <i data-lucide="shield-check" style="width: 22px; height: 22px;"></i>
           </div>
           <div>
-            <h3 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-primary);">Üyelik İzinleri ve KVKK</h3>
+            <h3 id="legalConsentTitle" style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-primary);">Üyelik İzinleri ve KVKK</h3>
             <span style="font-size: 0.75rem; color: var(--text-muted);">Güncellenme: 18 Haziran 2026</span>
           </div>
         </div>
@@ -3060,9 +3094,11 @@ const ASDFL = {
           </label>
         </div>
 
-        <button id="btnSubmitConsents" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" disabled onclick="ASDFL.submitConsentsFromPopup()">
-          Onayla ve Devam Et <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
-        </button>
+        <div class="legal-consent-actions">
+          <button id="btnSubmitConsents" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" disabled onclick="ASDFL.submitConsentsFromPopup()">
+            Onayla ve Devam Et <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+          </button>
+        </div>
       </div>
     `;
 
@@ -3225,6 +3261,11 @@ document.addEventListener('DOMContentLoaded', () => ASDFL.init());
       requestAnimationFrame(() => {
         document.body.style.animation = '';
       });
+      // iOS Safari sayfayı günlerce bfcache'te tutabiliyor; bu sırada oturum
+      // süresi dolarsa sayfa bayat bir auth durumuyla uyanır. Kontrolü tazele.
+      if (window.ASDFL && typeof ASDFL.checkAuth === 'function') {
+        ASDFL.checkAuth();
+      }
     }
   });
 })();

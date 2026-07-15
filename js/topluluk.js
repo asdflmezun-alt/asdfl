@@ -1536,8 +1536,24 @@
       return;
     }
 
-    // İlk 4 aktif üyeyi al
-    const list = alumni.slice(0, 4);
+    const candidates = alumni.filter(a =>
+      a?.id &&
+      a?.name &&
+      (a.role === 'Mezun' || (a.role === 'Admin' && a.grad_year))
+    );
+
+    if (candidates.length === 0) {
+      container.innerHTML = `<div style="font-size:0.78rem; color:var(--text-muted); text-align:center">Mezun bulunamadı.</div>`;
+      return;
+    }
+
+    // Her sayfa açılışında havuzun yeni bir kopyasını Fisher-Yates ile karıştır.
+    const shuffled = [...candidates];
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const randomIndex = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[i]];
+    }
+    const list = shuffled.slice(0, 4);
 
     container.innerHTML = list.map(a => {
       const academicTitle = a.academic_title || '';

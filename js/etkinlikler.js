@@ -2,6 +2,7 @@
 (function () {
   const E = ASDFL.escapeHTML.bind(ASDFL);
   const A = ASDFL.escapeAttr.bind(ASDFL);
+  const J = ASDFL.jsString.bind(ASDFL);
 
   const TYPE_LABELS = {
     bulusma: ['handshake', 'Buluşma'], gala: ['sparkles', 'Gala'],
@@ -13,16 +14,17 @@
     bulusma: 'badge-teal', gala: 'badge-gold', kariyer: 'badge-blue', spor: 'badge-teal',
     meziyet: 'badge-gold', mezuniyet: 'badge-gold', panel: 'badge-blue', etkinlik: 'badge-blue', duyuru: 'badge-gold'
   };
-  const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-
   let allEvents = [];
   let currentFilter = 'all';
   let countdownTimer = null;
+  let calendarCursor = startOfMonth(new Date());
+  let selectedDateKey = toDateKey(new Date());
 
   document.addEventListener('DOMContentLoaded', async () => {
     await ASDFL.waitForAuth();
     ensureCalMenu();
     ensureDetailModal();
+    bindCalendarControls();
     await loadEvents();
 
     document.addEventListener('click', (e) => {
@@ -39,7 +41,9 @@
 
   async function loadEvents() {
     const upcomingEl = document.getElementById('upcomingGrid');
+    const pastEl = document.getElementById('pastGrid');
     if (upcomingEl) upcomingEl.innerHTML = skeletonCards(3);
+    if (pastEl) pastEl.innerHTML = skeletonCards(2);
 
     if (ASDFL.supabase) {
       try {
@@ -96,6 +100,44 @@
     return end ? end.getTime() < Date.now() : false;
   }
 
+  function parseEventDate(value) {
+    const input = String(value || '').trim();
+    const isoDate = input.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoDate) {
+      const parsed = new Date(Number(isoDate[1]), Number(isoDate[2]) - 1, Number(isoDate[3]), 12);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+    const parsed = new Date(input);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  function toDateKey(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function eventDateKey(ev) {
+    return toDateKey(parseEventDate(ev.date));
+  }
+
+  function dateFromKey(key) {
+    return parseEventDate(key);
+  }
+
+  function startOfMonth(date) {
+    return new Date(date.getFullYear(), date.getMonth(), 1, 12);
+  }
+
+  function getFilteredEvents() {
+    if (currentFilter === 'upcoming') return allEvents.filter(ev => !isPast(ev));
+    if (currentFilter === 'past') return allEvents.filter(isPast);
+    if (currentFilter === 'all') return [...allEvents];
+    return allEvents.filter(ev => ev.type === currentFilter);
+  }
+
   /* ---------- Geri sayım ---------- */
   function renderCountdown() {
     const host = document.getElementById('eventCountdown');
@@ -105,10 +147,18 @@
     const next = allEvents
       .filter(e => !isPast(e))
       .map(e => ({ e, start: ASDFL.eventStart(e) }))
-      .filter(x => x.start)
+      .filter(x => x.start && x.start.getTime() > Date.now())
       .sort((a, b) => a.start - b.start)[0];
 
-    if (!next) { host.classList.add('hidden'); return; }
+    if (!next) {
+      host.classList.remove('hidden');
+      host.innerHTML = `<div class="countdown-empty">
+        <span class="countdown-empty-icon"><i data-lucide="calendar-check" aria-hidden="true"></i></span>
+        <div><strong>Ajanda şu an açık</strong><span>Yeni etkinlikler eklendiğinde sıradaki buluşma burada görünecek.</span></div>
+      </div>`;
+      ASDFL.refreshIcons(host);
+      return;
+    }
     host.classList.remove('hidden');
 
     const tick = () => {
@@ -121,7 +171,7 @@
       host.innerHTML = `
         <div class="countdown-inner">
           <span class="countdown-label"><i data-lucide="clock" style="width:1em;height:1em"></i> Sıradaki etkinlik</span>
-          <a class="countdown-title" href="#event-${A(next.e.id)}" onclick="window.openEventDetail('${A(next.e.id)}');return false;">${E(next.e.title)}</a>
+          <a class="countdown-title" href="#event-${A(next.e.id)}" onclick="window.openEventDetail(${J(next.e.id)});return false;">${E(next.e.title)}</a>
           <div class="countdown-clock">
             ${cdUnit(d, 'gün')}${cdUnit(h, 'saat')}${cdUnit(m, 'dk')}${cdUnit(s, 'sn')}
           </div>
@@ -135,17 +185,198 @@
     return `<div class="cd-unit"><span class="cd-num">${String(v).padStart(2, '0')}</span><span class="cd-lbl">${label}</span></div>`;
   }
 
+  /* ---------- Aylık takvim ve seçili gün ajandası ---------- */
+  function bindCalendarControls() {
+    document.getElementById('calendarPrev')?.addEventListener('click', () => moveCalendarMonth(-1));
+    document.getElementById('calendarNext')?.addEventListener('click', () => moveCalendarMonth(1));
+    document.getElementById('calendarToday')?.addEventListener('click', () => {
+      const today = new Date();
+      calendarCursor = startOfMonth(today);
+      selectedDateKey = toDateKey(today);
+      renderCalendar();
+      renderDayAgenda();
+      focusSelectedCalendarDay();
+    });
+
+    document.getElementById('calendarGrid')?.addEventListener('keydown', (event) => {
+      const dayButton = event.target.closest('.calendar-day');
+      if (!dayButton) return;
+      const moves = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+      if (Object.prototype.hasOwnProperty.call(moves, event.key)) {
+        event.preventDefault();
+        moveCalendarSelection(moves[event.key]);
+      } else if (event.key === 'PageUp' || event.key === 'PageDown') {
+        event.preventDefault();
+        moveCalendarMonth(event.key === 'PageUp' ? -1 : 1);
+        focusSelectedCalendarDay();
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        moveCalendarSelection(-((dateFromKey(selectedDateKey)?.getDay() + 6) % 7));
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        moveCalendarSelection(6 - ((dateFromKey(selectedDateKey)?.getDay() + 6) % 7));
+      }
+    });
+  }
+
+  function moveCalendarMonth(delta) {
+    const selected = dateFromKey(selectedDateKey) || new Date();
+    const targetMonth = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() + delta, 1, 12);
+    const lastDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0, 12).getDate();
+    const target = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), Math.min(selected.getDate(), lastDay), 12);
+    calendarCursor = startOfMonth(targetMonth);
+    selectedDateKey = toDateKey(target);
+    renderCalendar();
+    renderDayAgenda();
+  }
+
+  function moveCalendarSelection(dayDelta) {
+    const selected = dateFromKey(selectedDateKey) || new Date();
+    selected.setDate(selected.getDate() + dayDelta);
+    selectedDateKey = toDateKey(selected);
+    calendarCursor = startOfMonth(selected);
+    renderCalendar();
+    renderDayAgenda();
+    focusSelectedCalendarDay();
+  }
+
+  function focusSelectedCalendarDay() {
+    requestAnimationFrame(() => document.querySelector('.calendar-day.is-selected')?.focus());
+  }
+
+  window.selectCalendarDay = function (dateKey) {
+    const selected = dateFromKey(dateKey);
+    if (!selected) return;
+    selectedDateKey = toDateKey(selected);
+    calendarCursor = startOfMonth(selected);
+    renderCalendar();
+    renderDayAgenda();
+  };
+
+  function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    const monthLabel = document.getElementById('calendarMonthLabel');
+    if (!grid || !monthLabel) return;
+
+    const visibleEvents = getFilteredEvents();
+    const eventsByDate = new Map();
+    visibleEvents.forEach(ev => {
+      const key = eventDateKey(ev);
+      if (!key) return;
+      if (!eventsByDate.has(key)) eventsByDate.set(key, []);
+      eventsByDate.get(key).push(ev);
+    });
+    eventsByDate.forEach(events => events.sort(compareEventStart));
+
+    const firstOfMonth = startOfMonth(calendarCursor);
+    const mondayOffset = (firstOfMonth.getDay() + 6) % 7;
+    const gridStart = new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth(), 1 - mondayOffset, 12);
+    const todayKey = toDateKey(new Date());
+    monthLabel.textContent = firstOfMonth.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+
+    const cells = [];
+    for (let index = 0; index < 42; index += 1) {
+      const date = new Date(gridStart);
+      date.setDate(gridStart.getDate() + index);
+      const dateKey = toDateKey(date);
+      const dayEvents = eventsByDate.get(dateKey) || [];
+      const isOutside = date.getMonth() !== firstOfMonth.getMonth();
+      const isToday = dateKey === todayKey;
+      const isSelected = dateKey === selectedDateKey;
+      const dateLabel = date.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      const titles = dayEvents.slice(0, 2).map(ev => ev.title).filter(Boolean).join(', ');
+      const ariaLabel = dayEvents.length
+        ? `${dateLabel}; ${dayEvents.length} etkinlik${titles ? `: ${titles}` : ''}`
+        : `${dateLabel}; etkinlik yok`;
+      const classes = ['calendar-day'];
+      if (isOutside) classes.push('is-outside');
+      if (isToday) classes.push('is-today');
+      if (isSelected) classes.push('is-selected');
+      if (dayEvents.length) classes.push('has-events');
+      const chips = dayEvents.slice(0, 2).map(ev =>
+        `<span class="calendar-event-chip type-${calendarTypeClass(ev.type)}">${E(ev.title || 'Etkinlik')}</span>`
+      ).join('');
+      const more = dayEvents.length > 2 ? `<span class="calendar-event-more">+${dayEvents.length - 2} etkinlik</span>` : '';
+      const dots = dayEvents.length
+        ? `<span class="calendar-event-dots" aria-hidden="true">${Array.from({ length: Math.min(dayEvents.length, 3) }, () => '<i></i>').join('')}</span>`
+        : '';
+
+      cells.push(`<button type="button" role="gridcell" class="${classes.join(' ')}" data-date="${A(dateKey)}" aria-label="${A(ariaLabel)}" aria-selected="${isSelected ? 'true' : 'false'}" onclick="window.selectCalendarDay(${J(dateKey)})">
+        <span class="calendar-day-number">${date.getDate()}</span>
+        <span class="calendar-day-events" aria-hidden="true">${chips}${more}</span>
+        ${dots}
+      </button>`);
+    }
+
+    grid.classList.remove('is-loading');
+    grid.removeAttribute('aria-busy');
+    grid.innerHTML = cells.join('');
+  }
+
+  function renderDayAgenda() {
+    const host = document.getElementById('dayAgenda');
+    const label = document.getElementById('selectedDayLabel');
+    const eyebrow = document.getElementById('selectedDayEyebrow');
+    const count = document.getElementById('selectedDayCount');
+    const date = dateFromKey(selectedDateKey);
+    if (!host || !label || !eyebrow || !count || !date) return;
+
+    const todayKey = toDateKey(new Date());
+    const dayEvents = getFilteredEvents()
+      .filter(ev => eventDateKey(ev) === selectedDateKey)
+      .sort(compareEventStart);
+    eyebrow.textContent = selectedDateKey === todayKey ? 'Bugün' : 'Seçili gün';
+    label.textContent = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
+    count.textContent = String(dayEvents.length);
+    count.setAttribute('aria-label', `${dayEvents.length} etkinlik`);
+    host.classList.remove('is-loading');
+    host.removeAttribute('aria-busy');
+
+    if (!dayEvents.length) {
+      host.innerHTML = `<div class="agenda-empty">
+        <div><span class="agenda-empty-icon"><i data-lucide="calendar-search" aria-hidden="true"></i></span>
+        <strong>Bu gün için etkinlik yok</strong>
+        <p>Başka bir gün seçebilir veya aşağıdaki programın tamamını inceleyebilirsin.</p></div>
+      </div>`;
+      ASDFL.refreshIcons(host);
+      return;
+    }
+
+    host.innerHTML = dayEvents.map(ev => {
+      const [icon, typeLabel] = TYPE_LABELS[ev.type] || ['calendar', ev.type || 'Etkinlik'];
+      return `<article class="agenda-item type-${calendarTypeClass(ev.type)}">
+        <div class="agenda-item-top">
+          <span class="agenda-time">${E(ev.time || 'Tüm gün')}</span>
+          <span class="agenda-type"><i data-lucide="${A(icon)}" aria-hidden="true"></i>${E(typeLabel)}</span>
+        </div>
+        <h4>${E(ev.title)}</h4>
+        <span class="agenda-location"><i data-lucide="map-pin" aria-hidden="true"></i><span>${E(ev.location || 'ASDFL')}</span></span>
+        <button type="button" class="agenda-detail-btn" onclick="window.openEventDetail(${J(ev.id)})">Etkinlik detayını aç</button>
+      </article>`;
+    }).join('');
+    ASDFL.refreshIcons(host);
+  }
+
+  function calendarTypeClass(type) {
+    return ['bulusma', 'gala', 'kariyer', 'spor', 'meziyet', 'mezuniyet', 'panel', 'etkinlik', 'duyuru'].includes(type)
+      ? type
+      : 'etkinlik';
+  }
+
+  function compareEventStart(a, b) {
+    const aDate = parseEventDate(a.date);
+    const bDate = parseEventDate(b.date);
+    const dateDiff = (aDate?.getTime() || 0) - (bDate?.getTime() || 0);
+    if (dateDiff) return dateDiff;
+    return String(a.time || '').localeCompare(String(b.time || ''), 'tr');
+  }
+
   /* ---------- Liste render ---------- */
   function renderEvents(filter) {
     currentFilter = filter;
-    let upcoming = allEvents.filter(e => !isPast(e));
-    let past = allEvents.filter(e => isPast(e)).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    if (filter !== 'all' && filter !== 'upcoming' && filter !== 'past') {
-      upcoming = upcoming.filter(e => e.type === filter);
-      past = past.filter(e => e.type === filter);
-    } else if (filter === 'upcoming') { past = []; }
-    else if (filter === 'past') { upcoming = []; }
+    const filteredEvents = getFilteredEvents();
+    const upcoming = filteredEvents.filter(e => !isPast(e)).sort(compareEventStart);
+    const past = filteredEvents.filter(e => isPast(e)).sort((a, b) => compareEventStart(b, a));
 
     const upcomingEl = document.getElementById('upcomingGrid');
     const pastEl = document.getElementById('pastGrid');
@@ -157,13 +388,15 @@
 
     if (upcomingEl) {
       upcomingEl.innerHTML = upcoming.length
-        ? renderGrouped(upcoming, true)
+        ? upcoming.map(ev => renderEventCard(ev, true)).join('')
         : emptyState('calendar-x', 'Yaklaşan etkinlik yok', 'Yeni etkinlikler eklendiğinde burada görünecek.');
+      upcomingEl.removeAttribute('aria-busy');
     }
     if (pastEl) {
       pastEl.innerHTML = past.length
         ? past.map(ev => renderEventCard(ev, false)).join('')
         : emptyState('folder', 'Geçmiş etkinlik yok', '');
+      pastEl.removeAttribute('aria-busy');
     }
 
     const upSec = document.getElementById('upcomingSection');
@@ -171,49 +404,36 @@
     if (upSec) upSec.style.display = filter === 'past' ? 'none' : '';
     if (pastSec) pastSec.style.display = filter === 'upcoming' ? 'none' : '';
 
+    renderCalendar();
+    renderDayAgenda();
     ASDFL.initReveal();
     setTimeout(() => ASDFL.refreshIcons(), 10);
   }
 
-  // Yaklaşan etkinlikleri aya göre grupla
-  function renderGrouped(events, isUpcoming) {
-    const groups = new Map();
-    events.forEach(ev => {
-      const d = new Date(ev.date);
-      const key = isNaN(d) ? 'Tarih yok' : `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(ev);
-    });
-    let html = '';
-    for (const [label, evs] of groups) {
-      html += `<div class="event-month-group"><h4 class="event-month-label">${E(label)}</h4>
-        <div class="events-cards-grid">${evs.map(ev => renderEventCard(ev, isUpcoming)).join('')}</div></div>`;
-    }
-    return html;
-  }
-
   function renderEventCard(ev, isUpcoming) {
-    const d = new Date(ev.date);
-    const day = isNaN(d) ? '?' : d.getDate();
-    const mon = isNaN(d) ? '' : d.toLocaleDateString('tr-TR', { month: 'short' });
+    const d = parseEventDate(ev.date);
+    const day = d ? d.getDate() : '?';
+    const mon = d ? d.toLocaleDateString('tr-TR', { month: 'short' }) : '';
     const [icon, tLabel] = TYPE_LABELS[ev.type] || ['calendar', ev.type];
     const badgeClass = TYPE_COLORS[ev.type] || 'badge-blue';
     const cover = ASDFL.safeURL(ev.cover_url);
     const idA = A(ev.id);
+    const idJ = J(ev.id);
+    const typeClass = calendarTypeClass(ev.type);
 
     const coverHtml = cover
       ? `<div class="ec-cover" style="background-image:url('${A(cover)}')"></div>`
-      : `<div class="ec-cover ec-cover-${E(ev.type)}"><i data-lucide="${A(icon)}"></i></div>`;
+      : `<div class="ec-cover ec-cover-${typeClass}"><i data-lucide="${A(icon)}"></i></div>`;
 
     return `
       <div class="card event-card ${isUpcoming ? 'upcoming' : 'past'} reveal" id="event-${idA}">
-        <div class="ec-cover-wrap" onclick="window.openEventDetail('${idA}')">
+        <button type="button" class="ec-cover-wrap" onclick="window.openEventDetail(${idJ})" aria-label="${A(ev.title || 'Etkinlik')} detayını aç">
           ${coverHtml}
           <div class="event-date-box2"><span class="day">${E(String(day))}</span><span class="mon">${E(mon)}</span></div>
           <span class="badge ${badgeClass} ec-type-badge"><i data-lucide="${A(icon)}" style="width:1em;height:1em"></i> ${E(tLabel)}</span>
-        </div>
+        </button>
         <div class="ec-body">
-          <h4 onclick="window.openEventDetail('${idA}')" style="cursor:pointer">${E(ev.title)}</h4>
+          <h4><button type="button" class="event-title-button" onclick="window.openEventDetail(${idJ})">${E(ev.title)}</button></h4>
           <div class="ec-meta">
             <span><i data-lucide="calendar" style="width:1em;height:1em"></i> ${E(ASDFL.formatDate(ev.date))}${ev.time ? ' · ' + E(ev.time) : ''}</span>
             <span><i data-lucide="map-pin" style="width:1em;height:1em"></i> ${E(ev.location || 'ASDFL')}</span>
@@ -231,20 +451,20 @@
   }
 
   function renderUpcomingActions(ev) {
-    const idA = A(ev.id);
+    const idJ = J(ev.id);
     const full = ev.capacity != null && ev.goingCount >= ev.capacity && !ev.iAmGoing;
     let rsvpBtn;
     if (!ASDFL.currentUser) {
       rsvpBtn = `<button class="btn btn-primary btn-sm" onclick="ASDFL.openModal('loginModal')">Katılmak için giriş yap</button>`;
     } else if (ev.iAmGoing) {
-      rsvpBtn = `<button class="btn btn-success btn-sm rsvp-btn going" onclick="window.toggleRsvp('${idA}')"><i data-lucide="check-circle" style="width:1.1rem;height:1.1rem"></i> Katılıyorsun</button>`;
+      rsvpBtn = `<button class="btn btn-success btn-sm rsvp-btn going" onclick="window.toggleRsvp(${idJ})"><i data-lucide="check-circle" style="width:1.1rem;height:1.1rem"></i> Katılıyorsun</button>`;
     } else if (full) {
       rsvpBtn = `<button class="btn btn-ghost btn-sm" disabled><i data-lucide="users" style="width:1.1rem;height:1.1rem"></i> Kontenjan doldu</button>`;
     } else {
-      rsvpBtn = `<button class="btn btn-primary btn-sm rsvp-btn" onclick="window.toggleRsvp('${idA}')"><i data-lucide="plus" style="width:1.1rem;height:1.1rem"></i> Katılıyorum</button>`;
+      rsvpBtn = `<button class="btn btn-primary btn-sm rsvp-btn" onclick="window.toggleRsvp(${idJ})"><i data-lucide="plus" style="width:1.1rem;height:1.1rem"></i> Katılıyorum</button>`;
     }
     return `${rsvpBtn}
-      <button class="btn btn-ghost btn-sm" data-cal-btn onclick="window.openCalMenu('${idA}',this)"><i data-lucide="calendar-plus" style="width:1.1rem;height:1.1rem"></i> Takvime Ekle</button>`;
+      <button class="btn btn-ghost btn-sm" data-cal-btn onclick="window.openCalMenu(${idJ},this)"><i data-lucide="calendar-plus" style="width:1.1rem;height:1.1rem"></i> Takvime Ekle</button>`;
   }
 
   function renderAttendees(ev) {
@@ -260,10 +480,10 @@
       const p = r.profiles || {};
       return ASDFL.getAvatarHTML({ name: p.name, avatar_url: p.avatar_url, avatar_position: p.avatar_position }, 'rsvp-face');
     }).join('');
-    return `<div class="ec-attendees" onclick="window.openEventDetail('${A(ev.id)}')" style="cursor:pointer">
+    return `<button type="button" class="ec-attendees ec-attendees-button" onclick="window.openEventDetail(${J(ev.id)})" aria-label="${ev.goingCount} katılımcıyı görüntüle">
       <div class="rsvp-avatar-stack">${avatars}${rest > 0 ? `<div class="rsvp-face rsvp-more">+${rest}</div>` : ''}</div>
       <span class="ec-att-count">${ev.goingCount} kişi katılıyor</span>
-    </div>`;
+    </button>`;
   }
 
   function renderCapacity(ev) {
@@ -393,7 +613,7 @@
       <p class="detail-desc">${E(ev.desc) || '<span style=\"color:var(--text-muted)\">Açıklama eklenmemiş.</span>'}</p>
       <div class="detail-actions">
         ${!past ? renderUpcomingActions(ev) : ''}
-        <button class="btn btn-ghost btn-sm" onclick="window.shareEvent('${A(ev.id)}')"><i data-lucide="share-2" style="width:1.1rem;height:1.1rem"></i> Paylaş</button>
+        <button class="btn btn-ghost btn-sm" onclick="window.shareEvent(${J(ev.id)})"><i data-lucide="share-2" style="width:1.1rem;height:1.1rem"></i> Paylaş</button>
       </div>
       <div class="detail-attendees-block">
         <h4 style="font-size:.9rem;margin:1.25rem 0 .5rem"><i data-lucide="users" style="width:1em;height:1em"></i> Katılımcılar (${ev.goingCount})</h4>
@@ -447,8 +667,14 @@
   }
 
   window.filterEvents = function (type, btn) {
-    document.querySelectorAll('.event-filter-bar .tag').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
+    document.querySelectorAll('.event-filter-bar .tag').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    if (btn) {
+      btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
+    }
     renderEvents(type);
   };
 })();

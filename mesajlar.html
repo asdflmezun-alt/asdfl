@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <script>document.documentElement.classList.add('no-transitions');</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mesajlar | ASDFL Mezunlar Derneği</title>
+  <meta name="description" content="ASDFL topluluğundaki güvenli bire bir mesajlarınız.">
+  <meta name="theme-color" content="#05111e">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/main.css?v=1.4">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/mesajlar.css?v=1.0">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/images/logo.png">
+  <script src="assets/vendor/lucide.js"></script>
+  <script src="js/bootstrap.js?v=1.1"></script>
+</head>
+<body class="messages-page">
+  <header class="messages-nav">
+    <a class="messages-brand" href="index.html" aria-label="ASDFL ana sayfası">
+      <span class="messages-brand-mark"><i data-lucide="microscope"></i></span>
+      <span>ASDFL<small>Mezunlar Derneği</small></span>
+    </a>
+    <nav aria-label="Sayfa bağlantıları">
+      <a class="messages-nav-link" href="topluluk.html"><i data-lucide="users"></i><span>Topluluk</span></a>
+      <a class="messages-nav-link" href="profil.html"><i data-lucide="user-round"></i><span>Profilim</span></a>
+    </nav>
+  </header>
+
+  <main class="messages-main">
+    <section id="messagesGate" class="messages-gate" aria-live="polite">
+      <div class="messages-gate-icon"><i data-lucide="loader-circle"></i></div>
+      <h1>Mesajların hazırlanıyor</h1>
+      <p>Güvenli oturumun kontrol ediliyor.</p>
+    </section>
+
+    <section id="messagesApp" class="messages-shell hidden" aria-label="Özel mesajlar">
+      <aside class="conversation-panel" aria-label="Konuşmalar">
+        <div class="conversation-panel-head">
+          <div>
+            <p class="messages-kicker">Güvenli iletişim</p>
+            <h1>Mesajlar</h1>
+          </div>
+          <span id="conversationCount" class="conversation-count" aria-label="Konuşma sayısı">0</span>
+        </div>
+
+        <label class="conversation-search">
+          <span class="sr-only">Konuşmalarda ara</span>
+          <i data-lucide="search" aria-hidden="true"></i>
+          <input id="conversationSearch" type="search" autocomplete="off" placeholder="Konuşmalarda ara">
+        </label>
+
+        <div id="conversationListStatus" class="panel-status" role="status">Konuşmalar yükleniyor…</div>
+        <div id="conversationList" class="conversation-list"></div>
+      </aside>
+
+      <section class="thread-panel" aria-label="Mesaj dizisi">
+        <div id="threadEmpty" class="thread-empty">
+          <div class="thread-empty-visual" aria-hidden="true">
+            <i data-lucide="messages-square"></i>
+          </div>
+          <p class="messages-kicker">Bağlantıda kal</p>
+          <h2>Bir konuşma seç</h2>
+          <p>Mesajların uçtan uca şifreli değildir. Hassas kişisel bilgilerini paylaşma.</p>
+        </div>
+
+        <div id="threadActive" class="thread-active hidden">
+          <header class="thread-header">
+            <button id="mobileThreadBack" class="icon-button mobile-thread-back" type="button" aria-label="Konuşma listesine dön">
+              <i data-lucide="arrow-left"></i>
+            </button>
+            <div id="threadAvatar" class="message-avatar thread-avatar" aria-hidden="true">?</div>
+            <div class="thread-person">
+              <strong id="threadName">Konuşma</strong>
+              <span id="threadRole">ASDFL üyesi</span>
+            </div>
+            <button id="blockUserButton" class="thread-action" type="button">
+              <i data-lucide="shield-ban"></i>
+              <span>Engelle</span>
+            </button>
+          </header>
+
+          <div id="threadNotice" class="thread-notice hidden" role="status"></div>
+          <div id="messageList" class="message-list" role="log" aria-live="polite" aria-relevant="additions text"></div>
+
+          <form id="messageForm" class="message-composer" novalidate>
+            <label for="messageInput" class="sr-only">Mesajınız</label>
+            <textarea id="messageInput" rows="1" maxlength="2000" placeholder="Bir mesaj yaz…" aria-describedby="messageComposerHint messageCharCount"></textarea>
+            <div class="composer-bottom">
+              <span id="messageComposerHint">Enter ile gönder · Shift+Enter ile yeni satır</span>
+              <span id="messageCharCount">0 / 2000</span>
+            </div>
+            <button id="sendMessageButton" class="send-button" type="submit" aria-label="Mesajı gönder">
+              <span>Gönder</span><i data-lucide="send"></i>
+            </button>
+          </form>
+        </div>
+      </section>
+    </section>
+    <div id="messagesToast" class="messages-toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <dialog id="blockDialog" class="messages-dialog">
+    <form method="dialog" class="dialog-card">
+      <span class="dialog-icon dialog-icon-warning"><i data-lucide="shield-ban"></i></span>
+      <p class="messages-kicker">Güvenlik tercihi</p>
+      <h2 id="blockDialogTitle">Kullanıcı engellensin mi?</h2>
+      <p id="blockDialogCopy">Engellediğinizde birbirinize yeni mesaj gönderemezsiniz.</p>
+      <div class="dialog-actions">
+        <button class="dialog-button secondary" value="cancel">Vazgeç</button>
+        <button id="confirmBlockButton" class="dialog-button danger" value="confirm">Engelle</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="reportDialog" class="messages-dialog">
+    <form id="reportForm" class="dialog-card" novalidate>
+      <button id="closeReportButton" class="icon-button dialog-close" type="button" aria-label="Şikâyet penceresini kapat">
+        <i data-lucide="x"></i>
+      </button>
+      <span class="dialog-icon"><i data-lucide="flag"></i></span>
+      <p class="messages-kicker">Topluluk güvenliği</p>
+      <h2>Mesajı şikâyet et</h2>
+      <p>Ekibimizin durumu değerlendirebilmesi için kısa bir neden yaz.</p>
+      <label for="reportReason">Şikâyet nedeni</label>
+      <textarea id="reportReason" rows="4" minlength="1" maxlength="500" required placeholder="Rahatsız edici içerik, istenmeyen iletişim…"></textarea>
+      <div class="dialog-meta"><span id="reportReasonCount">0 / 500</span></div>
+      <div class="dialog-actions">
+        <button id="cancelReportButton" class="dialog-button secondary" type="button">Vazgeç</button>
+        <button id="submitReportButton" class="dialog-button primary" type="submit">Gönder</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="assets/vendor/supabase.js?v=2.108.2-1"></script>
+  <script src="js/app.js?v=1.13"></script>
+  <script src="js/mesajlar.js?v=1.0"></script>
+</body>
+</html>

@@ -163,8 +163,8 @@
     box-shadow: 0 4px 15px rgba(244, 168, 54, 0.25);
   }
   .social-icon-btn {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     border: 1px solid var(--glass-border);
     background: rgba(255, 255, 255, 0.02);
@@ -250,6 +250,86 @@
   #social-bio::-webkit-scrollbar-thumb:hover {
     background: rgba(244, 168, 54, 0.45);
   }
+  .profile-onboarding-panel {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 1.15rem;
+    margin-bottom: 1.5rem;
+    padding: 1.45rem;
+    border: 1px solid rgba(244, 168, 54, 0.28);
+    border-radius: var(--radius-xl);
+    background:
+      radial-gradient(circle at 92% 12%, rgba(244, 168, 54, 0.16), transparent 32%),
+      linear-gradient(135deg, rgba(13, 31, 49, 0.98), rgba(7, 20, 33, 0.98));
+    box-shadow: 0 22px 55px rgba(0, 0, 0, 0.24), inset 0 1px rgba(255, 255, 255, 0.04);
+  }
+  .profile-onboarding-panel.hidden { display: none; }
+  .profile-onboarding-icon {
+    width: 3rem;
+    height: 3rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(244, 168, 54, 0.35);
+    border-radius: 1rem;
+    color: var(--gold-400);
+    background: rgba(244, 168, 54, 0.1);
+  }
+  .profile-onboarding-eyebrow {
+    margin: 0 0 0.35rem;
+    color: var(--gold-400);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .profile-onboarding-panel h2 {
+    margin: 0;
+    font-family: 'Outfit', sans-serif;
+    font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+    color: var(--text-primary);
+  }
+  .profile-onboarding-copy {
+    max-width: 48rem;
+    margin: 0.55rem 0 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+  .profile-onboarding-missing {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  .profile-onboarding-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
+    padding: 0.4rem 0.65rem;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 650;
+  }
+  .profile-onboarding-chip::before {
+    content: '';
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 50%;
+    background: var(--gold-500);
+    box-shadow: 0 0 0 3px rgba(244, 168, 54, 0.12);
+  }
+  @media (max-width: 640px) {
+    .profile-onboarding-panel {
+      grid-template-columns: 1fr;
+      padding: 1.15rem;
+    }
+    .profile-onboarding-icon { width: 2.7rem; height: 2.7rem; }
+  }
 </style>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 18h8M3 22h18M14 22a7 7 0 1 0-14 0M9 14h2M9 12a3 3 0 0 1-3-3V6a3 3 0 0 1 6 0v3a3 3 0 0 1-3 3ZM12 6l3.5-3.5M17 2l2.5 2.5'/></svg>">
 </head>
@@ -323,6 +403,18 @@
         <span>Geri Dön</span>
       </button>
     </div>
+
+    <section id="profileOnboardingPanel" class="profile-onboarding-panel hidden" aria-labelledby="profileOnboardingTitle">
+      <div class="profile-onboarding-icon" aria-hidden="true">
+        <i data-lucide="sparkles" style="width:1.35rem;height:1.35rem"></i>
+      </div>
+      <div>
+        <p class="profile-onboarding-eyebrow">ASDFL'ye hoş geldin</p>
+        <h2 id="profileOnboardingTitle">Profilini birlikte tamamlayalım</h2>
+        <p class="profile-onboarding-copy" id="profileOnboardingCopy">Topluluk deneyimini sana göre hazırlamak için aşağıdaki bilgileri tamamla. Kaydettiğinde başladığın yere otomatik olarak döneceksin.</p>
+        <div id="profileOnboardingMissing" class="profile-onboarding-missing" aria-live="polite"></div>
+      </div>
+    </section>
 
     <div class="profile-header scale-in-init">
       <div class="profile-header-main">
@@ -416,6 +508,7 @@
               <a href="#" id="social-instagram" target="_blank" class="social-icon-btn" title="Instagram"><i data-lucide="instagram" style="width:16px; height:16px;"></i></a>
               <a href="#" id="social-whatsapp" target="_blank" class="social-icon-btn" title="WhatsApp" style="display:none;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.73-1.464L0 24zm6.59-4.846c1.6.95 3.198 1.45 4.817 1.452 5.398 0 9.79-4.39 9.794-9.792.002-2.617-1.015-5.08-2.86-6.93C16.5 2.03 14.05 1.01 11.436 1.01c-5.405 0-9.8 4.393-9.804 9.795-.001 2.07.543 4.085 1.573 5.867l-.99 3.611 3.7.971c1.7-.929 3.29-1.42 4.84-1.422zm11.238-6.195c-.296-.148-1.747-.862-2.019-.962-.27-.099-.467-.148-.663.148-.198.297-.768.963-.941 1.16-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.663-1.597-.908-2.193-.24-.576-.48-.497-.663-.506-.17-.008-.368-.01-.565-.01-.196 0-.518.074-.789.371-.271.297-1.033 1.012-1.033 2.47 0 1.458 1.06 2.871 1.208 3.07.149.198 2.088 3.19 5.06 4.477.708.307 1.26.49 1.69.627.712.227 1.36.195 1.871.118.571-.085 1.747-.713 1.996-1.402.248-.688.248-1.277.173-1.402-.075-.125-.27-.199-.57-.347z"/></svg></a>
               <a href="#" id="social-mail" class="social-icon-btn" title="E-posta Gönder" style="display:none;"><i data-lucide="mail" style="width:16px; height:16px;"></i></a>
+              <a href="mesajlar.html" id="social-message" class="social-icon-btn" title="Güvenli mesaj gönder" aria-label="Güvenli mesaj gönder" style="display:none;"><i data-lucide="message-circle" style="width:16px; height:16px;"></i></a>
             </div>
           </div>
         </div>
@@ -702,7 +795,7 @@
 <div class="toast-container"></div>
 <script src="assets/vendor/supabase.js?v=2.108.2-1"></script>
 <script src="js/universities.js"></script>
-<script src="js/app.js?v=1.9"></script>
+<script src="js/app.js?v=1.13"></script>
 <script>
   window.goBackToAlumni = function() {
     if (document.referrer && document.referrer.includes('mezunlar.html')) {
@@ -744,6 +837,46 @@
       selectEl.appendChild(optNo);
     }
     selectEl.value = currentValue || '';
+  };
+
+  window.isProfileOnboardingMode = function() {
+    const params = new URLSearchParams(window.location.search);
+    const targetUserId = params.get('id');
+    return params.get('onboarding') === '1' && (!targetUserId || targetUserId === ASDFL.currentUser?.id);
+  };
+
+  window.renderProfileOnboarding = function(profile) {
+    const panel = document.getElementById('profileOnboardingPanel');
+    const missingEl = document.getElementById('profileOnboardingMissing');
+    const copyEl = document.getElementById('profileOnboardingCopy');
+    if (!panel || !missingEl) return;
+
+    if (!isProfileOnboardingMode()) {
+      panel.classList.add('hidden');
+      missingEl.replaceChildren();
+      return;
+    }
+
+    const onboarding = ASDFL.getOnboardingRequirements(profile || {});
+    panel.classList.remove('hidden');
+    missingEl.replaceChildren();
+
+    if (copyEl) {
+      copyEl.textContent = onboarding.role
+        ? `${onboarding.role} profilin için gereken bilgileri tamamla. Kaydettiğinde başladığın yere otomatik olarak döneceksin.`
+        : 'Hesap türün doğrulanamadı. Profil bilgilerini kontrol et; sorun sürerse yönetimle iletişime geç.';
+    }
+
+    const missing = onboarding.missing.length
+      ? onboarding.missing
+      : [{ key: 'complete', label: 'Tüm zorunlu bilgiler hazır' }];
+    missing.forEach(item => {
+      const chip = document.createElement('span');
+      chip.className = 'profile-onboarding-chip';
+      chip.textContent = item.label;
+      missingEl.appendChild(chip);
+    });
+    ASDFL.refreshIcons(panel);
   };
 
   window.updateProfileCompletion = function(profile) {
@@ -1039,6 +1172,11 @@
     (async () => {
       await ASDFL.waitForAuth();
       await loadProfile();
+
+      if (isProfileOnboardingMode()) {
+        switchProfileTab('settings');
+        return;
+      }
 
       const tabParam = urlParams.get('tab');
       if (tabParam && ['social', 'settings', 'requests', 'privacy'].includes(tabParam)) {
@@ -1559,6 +1697,8 @@
       if (ASDFL.currentUser) {
         ASDFL.currentUser = {
           ...ASDFL.currentUser,
+          role: profileData.role || '',
+          name: profileData.name || '',
           city: profileData.city || '',
           job: profileData.job || '',
           company: profileData.company || '',
@@ -1734,6 +1874,7 @@
     // WhatsApp & Mail dynamic connection buttons
     const whatsappEl = document.getElementById('social-whatsapp');
     const mailEl = document.getElementById('social-mail');
+    const messageEl = document.getElementById('social-message');
 
     const isVisibleEmail = isOwnProfile || hasEmailShared || isApproved;
     const isVisiblePhone = isOwnProfile || hasPhoneShared || isApproved;
@@ -1759,6 +1900,17 @@
         mailEl.style.display = 'inline-flex';
       } else {
         mailEl.style.display = 'none';
+      }
+    }
+
+    if (messageEl) {
+      if (!isOwnProfile && targetUserId) {
+        messageEl.href = `mesajlar.html?user=${encodeURIComponent(targetUserId)}`;
+        messageEl.dataset.messengerUser = targetUserId;
+        messageEl.style.display = 'inline-flex';
+      } else {
+        delete messageEl.dataset.messengerUser;
+        messageEl.style.display = 'none';
       }
     }
 
@@ -1819,6 +1971,8 @@
       }
       academicDiv.innerHTML = academicHTML;
     }
+
+    if (isOwnProfile) renderProfileOnboarding(profileData);
 
     await loadSimilarAlumni(profileData);
     ASDFL.initReveal();
@@ -2329,9 +2483,41 @@
 
     ASDFL._storage.setItem('asdfl_user', JSON.stringify(ASDFL.currentUser));
     await loadProfile();
-    ASDFL.toast('Profil başarıyla güncellendi!', 'success');
+
+    if (isProfileOnboardingMode()) {
+      let verifiedProfile = ASDFL.currentUser;
+      if (ASDFL.supabase) {
+        try {
+          verifiedProfile = await ASDFL.loadOnboardingProfile(ASDFL.currentUser.id);
+        } catch (error) {
+          console.error('Onboarding profil doğrulaması başarısız:', error);
+          ASDFL.toast('Bilgiler kaydedildi ancak profil doğrulanamadı. Lütfen yeniden deneyin.', 'warning');
+          btn.textContent = 'Değişiklikleri Kaydet';
+          btn.disabled = false;
+          switchProfileTab('settings');
+          return;
+        }
+      }
+
+      const onboarding = ASDFL.getOnboardingRequirements(verifiedProfile || {});
+      renderProfileOnboarding(verifiedProfile);
+      if (!onboarding.complete) {
+        ASDFL.toast('Devam etmek için belirtilen zorunlu alanları tamamlayın.', 'warning');
+        btn.textContent = 'Değişiklikleri Kaydet';
+        btn.disabled = false;
+        switchProfileTab('settings');
+        return;
+      }
+
+      const destination = ASDFL.consumeLoginReturnIntent(ASDFL.currentUser.id) || 'index.html';
+      ASDFL.toast('Profilin hazır. Başladığın yere dönüyorsun!', 'success');
+      window.location.assign(destination);
+      return;
+    }
+
     btn.textContent = 'Değişiklikleri Kaydet';
     btn.disabled = false;
+    ASDFL.toast('Profil başarıyla güncellendi!', 'success');
     
     // Switch to profile overview to let them see changes
     switchProfileTab('social');

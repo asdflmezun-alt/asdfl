@@ -12,6 +12,7 @@ const home = await readFile('js/home.js', 'utf8');
 const profile = await readFile('profil.html', 'utf8');
 const scanFixes = await readFile('supabase/migrations/202607080003_security_scan_fixes.sql', 'utf8');
 const metadataLimit = await readFile('supabase/migrations/20260714144922_enforce_user_metadata_size_limit.sql', 'utf8');
+const messaging = await readFile('supabase/migrations/20260715205847_secure_messaging.sql', 'utf8');
 
 test('profile privilege escalation is blocked in the database', () => {
   assert.match(migration, /protect_profile_privileges/);
@@ -19,6 +20,37 @@ test('profile privilege escalation is blocked in the database', () => {
   assert.match(migration, /REVOKE ALL ON FUNCTION public\.set_user_role/);
   assert.match(admin, /\.rpc\('set_user_role'/);
   assert.doesNotMatch(admin, /from\('profiles'\)\.update\(\{ role:/);
+});
+
+test('direct messages are participant-scoped and all mutations use guarded RPCs', () => {
+  for (const table of ['conversations', 'conversation_participants', 'messages', 'user_blocks', 'message_reports']) {
+    assert.match(messaging, new RegExp(`ALTER TABLE public\\.${table} ENABLE ROW LEVEL SECURITY`));
+    assert.match(messaging, new RegExp(`REVOKE ALL ON TABLE public\\.${table} FROM anon, authenticated`));
+  }
+  assert.match(messaging, /Participants read conversations/);
+  assert.match(messaging, /Participants read messages/);
+  assert.doesNotMatch(messaging, /Participants read messages[\s\S]{0,180}public\.is_admin/);
+  for (const fn of ['start_direct_conversation', 'send_conversation_message', 'mark_conversation_read', 'set_user_block', 'report_message']) {
+    assert.match(messaging, new RegExp(`CREATE OR REPLACE FUNCTION public\\.${fn}`));
+    assert.match(messaging, new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn}`));
+  }
+  assert.match(messaging, /SET search_path = ''/);
+  assert.match(messaging, /direct-message-pair/);
+  assert.match(messaging, /created_at > NOW\(\) - INTERVAL '1 minute'\) >= 20/);
+  assert.match(messaging, /created_at > NOW\(\) - INTERVAL '1 hour'\) >= 200/);
+});
+
+test('message blocks, reports and notifications preserve privacy evidence', () => {
+  assert.match(messaging, /blocker_id = caller_id AND blocked_id = other_user_id/);
+  assert.match(messaging, /blocker_id = other_user_id AND blocked_id = caller_id/);
+  assert.match(messaging, /message_id UUID REFERENCES public\.messages\(id\) ON DELETE SET NULL/);
+  assert.match(messaging, /reporter_id UUID REFERENCES public\.profiles\(id\) ON DELETE SET NULL/);
+  assert.match(messaging, /evidence_body TEXT NOT NULL/);
+  assert.match(messaging, /WHERE id = target_message_id\s+FOR UPDATE/);
+  assert.match(messaging, /ON CONFLICT \(message_id, reporter_id\) DO NOTHING/);
+  assert.match(messaging, /'direct_message'/);
+  assert.doesNotMatch(messaging, /notify_direct_message\(\)[\s\S]*NEW\.body/);
+  assert.match(messaging, /ALTER PUBLICATION supabase_realtime ADD TABLE public\.messages/);
 });
 
 test('auth user metadata is rejected above the 8 KB database limit', () => {

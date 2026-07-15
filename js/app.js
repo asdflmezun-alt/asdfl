@@ -1344,9 +1344,143 @@ const ASDFL = {
     setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); }, 3500);
   },
 
+  _loginReturnIntentKey: 'asdfl_login_return_intent_v1',
+  _loginReturnIntentTTL: 30 * 60 * 1000,
+  _loginReturnIntentMemory: null,
+  _loginReturnRoutes: new Set([
+    '',
+    'index.html',
+    'burs-mentorluk.html',
+    'etkinlikler.html',
+    'galeri.html',
+    'kariyer.html',
+    'mesajlar.html',
+    'mentorluk.html',
+    'mezunlar.html',
+    'ogrenci.html',
+    'profil.html',
+    'topluluk.html'
+  ]),
+
+  _readLoginReturnIntent() {
+    let raw = null;
+    try {
+      raw = window.sessionStorage.getItem(this._loginReturnIntentKey) || this._loginReturnIntentMemory;
+    } catch (error) {
+      raw = this._loginReturnIntentMemory;
+    }
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch (error) {
+      this.clearLoginReturnIntent();
+      return null;
+    }
+  },
+
+  _writeLoginReturnIntent(intent) {
+    const raw = JSON.stringify(intent);
+    this._loginReturnIntentMemory = raw;
+    try {
+      window.sessionStorage.setItem(this._loginReturnIntentKey, raw);
+    } catch (error) {
+      // Sekme depolaması kapalıysa bu sayfa yaşadığı sürece bellek kullanılır.
+    }
+  },
+
+  clearLoginReturnIntent() {
+    this._loginReturnIntentMemory = null;
+    try {
+      window.sessionStorage.removeItem(this._loginReturnIntentKey);
+    } catch (error) {
+      // Bellek kopyası zaten temizlendi.
+    }
+  },
+
+  sanitizeLoginReturnPath(candidate) {
+    if (typeof candidate !== 'string' || !candidate.trim()) return null;
+    const raw = candidate.trim();
+    if (/^(?:\/\/|\\\\|[a-z][a-z0-9+.-]*:)/i.test(raw) || raw.includes('\\')) return null;
+    let decodedRaw = raw;
+    try {
+      decodedRaw = decodeURIComponent(raw);
+    } catch (error) {
+      return null;
+    }
+    if (/[?&#](?:code|error|error_description|access_token|refresh_token|token_type|expires_in|provider_token|provider_refresh_token)=/i.test(decodedRaw)) return null;
+
+    let url;
+    try {
+      url = new URL(raw, window.location.origin);
+    } catch (error) {
+      return null;
+    }
+    if (url.origin !== window.location.origin || url.username || url.password) return null;
+
+    const sensitiveAuthParams = new Set([
+      'code', 'error', 'error_description', 'access_token', 'refresh_token',
+      'token_type', 'expires_in', 'provider_token', 'provider_refresh_token'
+    ]);
+    if ([...url.searchParams.keys()].some(key => sensitiveAuthParams.has(key.toLocaleLowerCase('en-US')))) return null;
+
+    let decodedPath = url.pathname;
+    try {
+      decodedPath = decodeURIComponent(decodedPath);
+    } catch (error) {
+      return null;
+    }
+    if (decodedPath.includes('\\') || decodedPath.startsWith('//')) return null;
+    const segments = decodedPath.toLocaleLowerCase('tr-TR').split('/').filter(Boolean);
+    const route = segments.at(-1) || '';
+    if (!this._loginReturnRoutes.has(route)) return null;
+    const blockedTarget = segments.some(segment => /^(?:admin|auth|login|giris|kayit|register|yonetim)(?:[._-]|$)/i.test(segment));
+    if (blockedTarget) return null;
+    if (segments.at(-1) === 'profil.html' && url.searchParams.get('onboarding') === '1') return null;
+
+    return `${url.pathname}${url.search}${url.hash}`;
+  },
+
+  captureLoginReturnIntent() {
+    const path = this.sanitizeLoginReturnPath(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+    if (!path) {
+      this.clearLoginReturnIntent();
+      return null;
+    }
+    const intent = { path, createdAt: Date.now(), userId: null };
+    this._writeLoginReturnIntent(intent);
+    return intent;
+  },
+
+  bindLoginReturnIntent(userId) {
+    const intent = this._readLoginReturnIntent();
+    const createdAt = Number(intent?.createdAt);
+    if (!intent || !userId || !Number.isFinite(createdAt) || createdAt > Date.now() + 60000 || Date.now() - createdAt > this._loginReturnIntentTTL) {
+      this.clearLoginReturnIntent();
+      return null;
+    }
+    const path = this.sanitizeLoginReturnPath(intent.path);
+    if (!path || (intent.userId && intent.userId !== userId)) {
+      this.clearLoginReturnIntent();
+      return null;
+    }
+    const boundIntent = { path, createdAt, userId };
+    this._writeLoginReturnIntent(boundIntent);
+    return boundIntent;
+  },
+
+  consumeLoginReturnIntent(userId) {
+    const intent = this._readLoginReturnIntent();
+    this.clearLoginReturnIntent();
+    if (!intent || !userId || intent.userId !== userId) return null;
+    const createdAt = Number(intent.createdAt);
+    if (!Number.isFinite(createdAt) || createdAt > Date.now() + 60000 || Date.now() - createdAt > this._loginReturnIntentTTL) return null;
+    return this.sanitizeLoginReturnPath(intent.path);
+  },
+
   openModal(id) {
     const m = document.getElementById(id);
     if (!m) return;
+    if (id === 'loginModal') this.captureLoginReturnIntent();
     this._lastFocusedBeforeModal = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     m.setAttribute('role', 'dialog');
     m.setAttribute('aria-modal', 'true');
@@ -1553,6 +1687,64 @@ const ASDFL = {
       total: checks.length,
       missing: checks.filter(([, , ok]) => !ok).map(([, label]) => label).slice(0, 3)
     };
+  },
+
+  getOnboardingRequirements(profile = {}) {
+    const role = String(profile.role || '').trim();
+    const hasText = value => Boolean(String(value ?? '').trim());
+    const checks = [
+      ['role', 'Hesap türü', ['Mezun', 'Öğrenci', 'Öğretmen', 'Admin'].includes(role)],
+      ['name', 'Ad soyad', hasText(profile.name)],
+      ['city', 'Şehir', hasText(profile.city)],
+      ['bio', 'Kısa tanıtım', hasText(profile.bio)]
+    ];
+
+    if (role === 'Öğrenci') {
+      checks.push(
+        ['grade', 'Sınıf düzeyi', hasText(profile.grade)],
+        ['class_section', 'Sınıf / şube', hasText(profile.class_section || profile.classSection)],
+        ['target_university', 'Hedef üniversite', hasText(profile.target_university || profile.targetUniversity)],
+        ['target_job', 'Hedef meslek', hasText(profile.target_job || profile.targetJob)]
+      );
+    } else if (role === 'Öğretmen') {
+      checks.push(
+        ['branch', 'Branş', hasText(profile.branch)],
+        ['teaching_year', 'Göreve başlangıç yılı', hasText(profile.teaching_year || profile.teachingYear)]
+      );
+    } else if (role === 'Mezun') {
+      checks.push(
+        ['grad_year', 'Mezuniyet yılı', hasText(profile.grad_year || profile.gradYear)],
+        ['job', 'Meslek', hasText(profile.job)],
+        ['university', 'Üniversite', hasText(profile.university)]
+      );
+    }
+
+    const missing = checks.filter(([, , complete]) => !complete).map(([key, label]) => ({ key, label }));
+    return { role, complete: missing.length === 0, missing };
+  },
+
+  async loadOnboardingProfile(userId) {
+    if (!userId || !this.supabase) return null;
+    const { data: profile, error } = await this.queryWithTimeout(
+      this.supabase
+        .from('profiles')
+        .select('id,role,name,city,bio,grade,class_section,target_university,target_job,branch,teaching_year,grad_year,job,university,avatar_url,avatar_position')
+        .eq('id', userId)
+        .single(),
+      8000
+    );
+    if (error) throw error;
+    if (!profile || profile.id !== userId) throw new Error('Profil doğrulanamadı.');
+
+    this.currentUser = {
+      ...this.currentUser,
+      ...profile,
+      id: userId,
+      email: this.currentUser?.email || ''
+    };
+    this._storage.setItem('asdfl_user', JSON.stringify(this.currentUser));
+    this.updateUIForAuth();
+    return profile;
   },
 
   eventIsUpcoming(ev, now = new Date()) {
@@ -1801,7 +1993,7 @@ const ASDFL = {
     }
 
     if (this.currentUser) {
-      items.push({ href: 'profil.html', label: 'Profil', icon: 'user' });
+      items.push({ href: 'mesajlar.html', label: 'Mesajlar', icon: 'messages-square' });
     } else {
       items.push({ action: 'login', label: 'Giriş', icon: 'log-in' });
     }
@@ -2004,7 +2196,7 @@ const ASDFL = {
       id: authUser.id,
       name: metadata.name || cached.name || authUser.email?.split('@')[0] || 'Kullanıcı',
       email: authUser.email || cached.email || '',
-      role: cached.role || metadata.role || 'Kullanıcı',
+      role: cached.role || 'Kullanıcı',
       avatar_url: cached.avatar_url || metadata.avatar_url || '',
       avatar_position: cached.avatar_position || metadata.avatar_position || '50% 50%'
     };
@@ -2185,6 +2377,10 @@ const ASDFL = {
   },
 
   updateUIForAuth() {
+    this.initMessengerWidgetAssets();
+    if (window.ASDFLMessenger?.syncAuth) {
+      window.ASDFLMessenger.syncAuth(this.currentUser, this.authReady);
+    }
     const navCta = document.querySelector('.nav-cta');
     if (!navCta) return;
 
@@ -2225,6 +2421,7 @@ const ASDFL = {
                 <span style="font-size:.75rem;color:var(--text-muted)">${this.escapeHTML(role)}</span>
               </div>
               <a href="profil.html" style="display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;color:var(--text-secondary);text-decoration:none;transition:all .2s"><i data-lucide="user" style="width:16px;height:16px"></i> Profilim</a>
+              <a href="mesajlar.html" style="display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;color:var(--text-secondary);text-decoration:none;transition:all .2s"><i data-lucide="messages-square" style="width:16px;height:16px"></i> Mesajlarım</a>
               <button onclick="ASDFL.logout()" class="logout"><i data-lucide="log-out" style="width:16px;height:16px"></i> Çıkış Yap</button>
             </div>
           </div>
@@ -2693,8 +2890,7 @@ const ASDFL = {
         }
 
         // Auth callback senkrondur; profil isteği onun dışında ve süre sınırlı çalışır.
-        this._applyAuthSession(data.session);
-        await this._queueAuthProfileRefresh(data.session);
+        this._applyAuthSession(data.session, { hydrateProfile: false });
       } else {
         let user = { id: Math.random().toString(36).substring(2), role: 'Kullanıcı', name: email.split('@')[0], email: email };
         if (email === 'admin@admin.com' && pass === 'admin') {
@@ -2710,22 +2906,37 @@ const ASDFL = {
         this.currentUser = user;
       }
 
+      let onboardingProfile = this.currentUser;
+      if (this.supabase) {
+        try {
+          onboardingProfile = await this.loadOnboardingProfile(this.currentUser?.id);
+        } catch (profileError) {
+          console.error('Giriş sonrası profil doğrulanamadı:', profileError);
+          this.clearLoginReturnIntent();
+          this.toast('Profil bilgileri doğrulanamadı. Güvenli ana sayfaya yönlendiriliyorsunuz.', 'warning');
+          window.dispatchEvent(new CustomEvent('asdfl:auth-changed', { detail: { user: this.currentUser } }));
+          setTimeout(() => window.location.assign('index.html'), 300);
+          return true;
+        }
+      }
+
+      const onboarding = this.getOnboardingRequirements(onboardingProfile || {});
+      this.bindLoginReturnIntent(this.currentUser?.id);
+      const destination = onboarding.complete
+        ? (this.consumeLoginReturnIntent(this.currentUser?.id) || 'index.html')
+        : 'profil.html?onboarding=1';
+
       this.updateUIForAuth();
       this.toast('Giriş başarılı!', 'success');
 
       if (!this._storage.isPersistent()) {
         this.toast('Safari depolama erişimini engelliyor. Oturum yalnızca bu sayfa açıkken korunabilir.', 'warning');
         window.dispatchEvent(new CustomEvent('asdfl:auth-changed', { detail: { user: this.currentUser } }));
-        return true;
       }
 
       setTimeout(() => {
-        if (this.currentUser?.role === 'Öğrenci') {
-          window.location.href = 'ogrenci.html';
-        } else {
-          window.location.reload();
-        }
-      }, 500);
+        window.location.assign(destination);
+      }, 350);
       return true;
     } catch (error) {
       const timedOut = error?.message === 'Query timeout' || error?.name === 'AbortError';
@@ -2966,6 +3177,39 @@ const ASDFL = {
     }
   },
 
+  initMessengerWidgetAssets() {
+    const path = window.location.pathname.split('/').pop() || 'index.html';
+    if (document.body?.classList.contains('messages-page') || path === 'mesajlar.html') {
+      if (window.ASDFLMessenger?.destroy) window.ASDFLMessenger.destroy();
+      return;
+    }
+
+    if (!document.getElementById('messengerWidgetStyles')) {
+      const stylesheet = document.createElement('link');
+      stylesheet.id = 'messengerWidgetStyles';
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = 'css/messenger-widget.css?v=1.1';
+      document.head.appendChild(stylesheet);
+    }
+
+    if (window.ASDFLMessenger?.syncAuth) {
+      window.ASDFLMessenger.syncAuth(this.currentUser, this.authReady);
+      return;
+    }
+    if (document.getElementById('messengerWidgetScript')) return;
+
+    const script = document.createElement('script');
+    script.id = 'messengerWidgetScript';
+    script.src = 'js/messenger-widget.js?v=1.1';
+    script.defer = true;
+    script.addEventListener('load', () => {
+      if (window.ASDFLMessenger?.syncAuth) {
+        window.ASDFLMessenger.syncAuth(this.currentUser, this.authReady);
+      }
+    }, { once: true });
+    document.head.appendChild(script);
+  },
+
   init() {
     // Dynamically inject the hidden utility style to bypass aggressive browser caching globally!
     const style = document.createElement('style');
@@ -2987,6 +3231,7 @@ const ASDFL = {
     this.initModalA11y();
     this.initResponsiveTables();
     this.ensureLegalFooter();
+    this.initMessengerWidgetAssets();
     this.checkAuth();
     this.initCities();
     this.initAutocomplete();

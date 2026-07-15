@@ -24,7 +24,7 @@ function adminEscape(value) {
 
 function safeSetItem(key, value) {
   try {
-    localStorage.setItem(key, value);
+    ASDFL._storage.setItem(key, value);
   } catch (e) {
     console.warn('safeSetItem failed for key "' + key + '":', e);
   }
@@ -33,14 +33,84 @@ function safeSetItem(key, value) {
 // switchAdminTab global scope'da olmalı — onclick attribute'u DOMContentLoaded beklemez
 function switchAdminTab(tabName, btn) {
   currentTab = tabName;
-  document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+  const targetBtn = btn || document.getElementById(`btn-tab-${tabName}`);
+  const shouldMoveFocus = Boolean(
+    targetBtn &&
+    document.activeElement?.closest('.admin-panel-tab') &&
+    !targetBtn.contains(document.activeElement)
+  );
+  document.querySelectorAll('.admin-tab-btn').forEach(b => {
+    const active = b === targetBtn;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-selected', String(active));
+    b.tabIndex = active ? 0 : -1;
+  });
+  if (targetBtn && window.matchMedia('(max-width: 991px)').matches) {
+    targetBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
 
-  document.querySelectorAll('.admin-panel-tab').forEach(t => t.style.display = 'none');
+  document.querySelectorAll('.admin-panel-tab').forEach(t => {
+    t.style.display = 'none';
+    t.hidden = true;
+  });
   const tabEl = document.getElementById(`tab-${tabName}`);
-  if (tabEl) tabEl.style.display = 'block';
+  if (tabEl) {
+    tabEl.style.display = 'block';
+    tabEl.hidden = false;
+  }
+
+  if (shouldMoveFocus) targetBtn.focus();
 
   if (typeof renderAllPanels === 'function') renderAllPanels();
+}
+
+function bindAdminTabKeyboard() {
+  const nav = document.querySelector('.admin-nav[role="tablist"]');
+  if (!nav || nav.dataset.keyboardReady === 'true') return;
+  nav.dataset.keyboardReady = 'true';
+  nav.addEventListener('keydown', event => {
+    const tabs = [...nav.querySelectorAll('[role="tab"]')];
+    const currentIndex = tabs.indexOf(event.target.closest('[role="tab"]'));
+    if (currentIndex < 0) return;
+    let nextIndex = null;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % tabs.length;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = tabs.length - 1;
+    if (nextIndex == null) return;
+    event.preventDefault();
+    const nextTab = tabs[nextIndex];
+    switchAdminTab(nextTab.id.replace('btn-tab-', ''), nextTab);
+    nextTab.focus();
+  });
+}
+
+let adminTableObserver = null;
+let adminTableEnhanceFrame = 0;
+
+function enhanceAdminTables(root = document) {
+  const tables = root.matches?.('.admin-table') ? [root] : Array.from(root.querySelectorAll ? root.querySelectorAll('.admin-table') : []);
+  tables.forEach(table => {
+    const labels = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
+    table.querySelectorAll('tbody tr').forEach(row => {
+      const cells = [...row.children].filter(cell => cell.tagName === 'TD');
+      const isEmpty = cells.length === 1 && cells[0].hasAttribute('colspan');
+      row.classList.toggle('admin-empty-row', isEmpty);
+      if (isEmpty) return;
+      cells.forEach((cell, index) => cell.setAttribute('data-label', labels[index] || `Alan ${index + 1}`));
+    });
+  });
+}
+
+function observeAdminTables() {
+  const wrapper = document.getElementById('adminActiveWrapper');
+  if (!wrapper || adminTableObserver) return;
+  enhanceAdminTables(wrapper);
+  adminTableObserver = new MutationObserver(() => {
+    cancelAnimationFrame(adminTableEnhanceFrame);
+    adminTableEnhanceFrame = requestAnimationFrame(() => enhanceAdminTables(wrapper));
+  });
+  adminTableObserver.observe(wrapper, { childList: true, subtree: true });
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -66,11 +136,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (authBlock) authBlock.style.display = 'none';
   if (activeWrapper) activeWrapper.style.display = 'grid';
 
+  bindAdminTabKeyboard();
+  observeAdminTables();
+
   // 2. Load Administrative Data
   await loadAdminData();
 
   // 3. Render Initial State
-  renderAllPanels();
+  switchAdminTab(currentTab, document.getElementById(`btn-tab-${currentTab}`));
 });
 
 // Load all site components
@@ -222,7 +295,7 @@ function loadOfflineFallbackData() {
   allPostReports = [];
   // Members mock
   try {
-    const stored = localStorage.getItem('asdfl_alumni');
+    const stored = ASDFL._storage.getItem('asdfl_alumni');
     allMembers = stored ? JSON.parse(stored) : [];
   } catch (e) {
     console.error('Error parsing members mock:', e);
@@ -239,7 +312,7 @@ function loadOfflineFallbackData() {
 
   // Events mock
   try {
-    const stored = localStorage.getItem('asdfl_events');
+    const stored = ASDFL._storage.getItem('asdfl_events');
     allEvents = stored ? JSON.parse(stored) : [];
   } catch (e) {
     console.error('Error parsing events mock:', e);
@@ -255,7 +328,7 @@ function loadOfflineFallbackData() {
 
   // Scholarships mock
   try {
-    const stored = localStorage.getItem('asdfl_scholarships');
+    const stored = ASDFL._storage.getItem('asdfl_scholarships');
     allScholarships = stored ? JSON.parse(stored) : [];
   } catch (e) {
     console.error('Error parsing scholarships mock:', e);
@@ -271,7 +344,7 @@ function loadOfflineFallbackData() {
 
   // Applications mock
   try {
-    const stored = localStorage.getItem('asdfl_applications');
+    const stored = ASDFL._storage.getItem('asdfl_applications');
     allApplications = stored ? JSON.parse(stored) : [];
   } catch (e) {
     console.error('Error parsing applications mock:', e);
@@ -295,7 +368,7 @@ function loadOfflineFallbackData() {
 
   // Logo Announcements mock
   try {
-    const stored = localStorage.getItem('asdfl_logo_announcements');
+    const stored = ASDFL._storage.getItem('asdfl_logo_announcements');
     allAnnouncements = stored ? JSON.parse(stored) : [];
   } catch (e) {
     console.error('Error parsing logo announcements mock:', e);
@@ -310,7 +383,7 @@ function loadOfflineFallbackData() {
     safeSetItem('asdfl_logo_announcements', JSON.stringify(allAnnouncements));
   }
   try {
-    const storedRequests = localStorage.getItem('asdfl_data_requests');
+    const storedRequests = ASDFL._storage.getItem('asdfl_data_requests');
     allDataRequests = storedRequests ? JSON.parse(storedRequests).map(request => ({ ...request, profile: allMembers.find(member => member.id === request.user_id) || null })) : [];
   } catch (e) {
     console.error('Error parsing data request mock:', e);
@@ -341,6 +414,7 @@ function renderAllPanels() {
   }
 
   setTimeout(() => {
+    enhanceAdminTables(document);
     ASDFL.refreshIcons();
     if (typeof ASDFL !== 'undefined' && ASDFL.initReveal) {
       ASDFL.initReveal();
@@ -356,11 +430,12 @@ window.renderDataRequests = function() {
   const filter = document.getElementById('dataRequestStatusFilter')?.value || 'ALL';
   const rows = allDataRequests.filter(row => filter === 'ALL' || row.status === filter);
   if (!rows.length) { container.innerHTML = '<div class="card" style="padding:2rem;text-align:center;color:var(--text-muted)">Bu filtrede veri talebi bulunmuyor.</div>'; return; }
+  const statusLabels = { Pending: 'Bekleyen', InProgress: 'İşlemde', Resolved: 'Sonuçlandı', Rejected: 'Reddedildi' };
   container.innerHTML = rows.map(row => `<div class="card" style="padding:1.25rem;margin-bottom:1rem">
-    <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap"><div><h3 style="margin:0 0 .25rem;font-size:1rem">${adminDataRequestLabels[row.request_type] || row.request_type}</h3><span style="font-size:.8rem;color:var(--text-muted)">${ASDFL.escapeHTML(row.profile?.name || 'Bilinmeyen kullanıcı')} · ${ASDFL.escapeHTML(row.profile?.email || '')} · ${new Date(row.created_at).toLocaleString('tr-TR')}</span></div><span class="badge badge-gold">${row.status}</span></div>
+    <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap"><div><h3 style="margin:0 0 .25rem;font-size:1rem">${adminEscape(adminDataRequestLabels[row.request_type] || 'Veri talebi')}</h3><span style="font-size:.8rem;color:var(--text-muted)">${ASDFL.escapeHTML(row.profile?.name || 'Bilinmeyen kullanıcı')} · ${ASDFL.escapeHTML(row.profile?.email || '')} · ${new Date(row.created_at).toLocaleString('tr-TR')}</span></div><span class="badge badge-gold">${adminEscape(statusLabels[row.status] || 'Bilinmeyen durum')}</span></div>
     <p style="color:var(--text-secondary);font-size:.88rem">${ASDFL.escapeHTML(row.description || 'Açıklama yok')}</p>
-    <div class="grid-2"><div class="form-group"><label class="form-label">Durum</label><select class="form-select" id="request-status-${row.id}"><option value="Pending" ${row.status === 'Pending' ? 'selected' : ''}>Bekleyen</option><option value="InProgress" ${row.status === 'InProgress' ? 'selected' : ''}>İşlemde</option><option value="Resolved" ${row.status === 'Resolved' ? 'selected' : ''}>Sonuçlandı</option><option value="Rejected" ${row.status === 'Rejected' ? 'selected' : ''}>Reddedildi</option></select></div><div class="form-group"><label class="form-label">Yönetim Notu</label><input class="form-input" id="request-note-${row.id}" maxlength="2000" value="${ASDFL.escapeAttr(row.admin_note || '')}" placeholder="Kullanıcıya gösterilecek açıklama"></div></div>
-    <div style="display:flex;justify-content:flex-end;gap:.5rem;flex-wrap:wrap"><button class="btn btn-primary btn-sm" onclick="updateDataRequest('${row.id}')">Talebi Güncelle</button>${row.request_type === 'account_deletion' && row.status !== 'Resolved' ? `<button class="btn btn-ghost btn-sm" style="color:var(--text-red)" onclick="completeAccountDeletion('${row.id}','${row.user_id}')">Hesabı Sil ve Sonuçlandır</button>` : ''}</div>
+    <div class="grid-2"><div class="form-group"><label class="form-label">Durum</label><select class="form-select" id="request-status-${ASDFL.escapeAttr(row.id)}"><option value="Pending" ${row.status === 'Pending' ? 'selected' : ''}>Bekleyen</option><option value="InProgress" ${row.status === 'InProgress' ? 'selected' : ''}>İşlemde</option><option value="Resolved" ${row.status === 'Resolved' ? 'selected' : ''}>Sonuçlandı</option><option value="Rejected" ${row.status === 'Rejected' ? 'selected' : ''}>Reddedildi</option></select></div><div class="form-group"><label class="form-label">Yönetim Notu</label><input class="form-input" id="request-note-${ASDFL.escapeAttr(row.id)}" maxlength="2000" value="${ASDFL.escapeAttr(row.admin_note || '')}" placeholder="Kullanıcıya gösterilecek açıklama"></div></div>
+    <div class="app-actions"><button class="btn btn-primary btn-sm" onclick="updateDataRequest(${ASDFL.jsString(row.id)})">Talebi Güncelle</button>${row.request_type === 'account_deletion' && row.status !== 'Resolved' ? `<button class="btn btn-ghost btn-sm" style="color:var(--text-red)" onclick="completeAccountDeletion(${ASDFL.jsString(row.id)},${ASDFL.jsString(row.user_id)})">Hesabı Sil ve Sonuçlandır</button>` : ''}</div>
   </div>`).join('');
 };
 
@@ -380,6 +455,10 @@ window.updateDataRequest = async function(requestId) {
 };
 
 window.completeAccountDeletion = async function(requestId, userId) {
+  if (userId === ASDFL.currentUser?.id) {
+    ASDFL.toast('Kendi yönetici hesabınızı veri talebi üzerinden silemezsiniz.', 'warning');
+    return;
+  }
   if (!confirm('Bu kullanıcının hesabı ve ilişkili verileri kalıcı olarak silinecek. Devam edilsin mi?')) return;
   const { error } = await ASDFL.supabase.rpc('delete_user', { target_user_id: userId });
   if (error) { ASDFL.toast('Hesap silinemedi: ' + error.message, 'error'); return; }
@@ -471,25 +550,47 @@ window.deleteReportedPost = async function(postId, reportId) {
 
 // Render counters and badges
 function updateStats() {
+  const now = new Date();
+  const thirtyDaysLater = new Date(now.getTime() + 30 * 86400000);
   const totalUsers = allMembers.length;
-  const totalEvents = allEvents.length;
+  const upcomingEvents = allEvents.filter(event => {
+    const start = ASDFL.eventStart(event);
+    const end = ASDFL.eventEnd(event);
+    return !!start && (end || start) >= now;
+  });
+  const upcomingThirtyDays = upcomingEvents.filter(event => ASDFL.eventStart(event) <= thirtyDaysLater).length;
   const pendingApps = allApplications.filter(a => a.status === 'Pending').length;
-  const totalScholarships = allScholarships.length;
+  const activeScholarships = allScholarships.filter(program => program.active !== false && (!program.deadline || adminParseDate(program.deadline) >= adminStartOfToday())).length;
+  const activeRecipients = allApplications.filter(application => application.type === 'Burs' && application.status === 'Approved').length;
+  const openDataRequests = allDataRequests.filter(request => ['Pending', 'InProgress'].includes(request.status)).length;
+  const pendingReports = allPostReports.filter(report => report.status === 'Pending').length;
 
   const elUsers = document.getElementById('statTotalUsers');
   const elEvents = document.getElementById('statTotalEvents');
   const elPending = document.getElementById('statPendingApps');
   const elBurs = document.getElementById('statTotalScholarships');
+  const elReports = document.getElementById('statPendingReports');
+  const elOpenRequests = document.getElementById('statOpenDataRequests');
+  const elUpcoming = document.getElementById('statUpcomingEvents');
+  const elRecipients = document.getElementById('statActiveRecipients');
   const appBadge = document.getElementById('pendingAppsBadge');
   const dataRequestBadge = document.getElementById('pendingDataRequestsBadge');
   const reportBadge = document.getElementById('pendingReportsBadge');
   const pendingDataRequests = allDataRequests.filter(request => request.status === 'Pending').length;
-  const pendingReports = allPostReports.filter(report => report.status === 'Pending').length;
 
   if (elUsers) elUsers.textContent = totalUsers;
-  if (elEvents) elEvents.textContent = totalEvents;
+  if (elEvents) elEvents.textContent = upcomingEvents.length;
   if (elPending) elPending.textContent = pendingApps;
-  if (elBurs) elBurs.textContent = totalScholarships;
+        if (elBurs) elBurs.textContent = activeScholarships;
+  if (elReports) elReports.textContent = pendingReports;
+  if (elOpenRequests) elOpenRequests.textContent = openDataRequests;
+  if (elUpcoming) elUpcoming.textContent = upcomingThirtyDays;
+  if (elRecipients) elRecipients.textContent = activeRecipients;
+
+  const lastUpdated = document.getElementById('adminLastUpdated');
+  const openWork = document.getElementById('adminOpenWorkSummary');
+  if (lastUpdated) lastUpdated.textContent = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  if (openWork) openWork.textContent = `${pendingApps + pendingReports + openDataRequests} işlem bekliyor`;
 
   if (appBadge) {
     if (pendingApps > 0) {
@@ -509,10 +610,68 @@ function updateStats() {
   }
 }
 
+function adminStartOfToday() {
+  const today = new Date();
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12);
+}
+
+function adminParseDate(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12);
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function renderAdminPriorityQueue() {
+  const host = document.getElementById('adminPriorityQueue');
+  if (!host) return;
+  const today = adminStartOfToday();
+  const deadlineLimit = new Date(today.getTime() + 14 * 86400000);
+  const priorities = [];
+
+  allApplications.filter(app => app.status === 'Pending').forEach(app => priorities.push({
+    tab: 'applications', urgent: true, sort: 0,
+    title: app.profiles?.name || app.details?.name || 'İsimsiz başvuru',
+    meta: `${adminApplicationTypeLabel(app.type)} · İnceleme bekliyor`
+  }));
+  allPostReports.filter(report => report.status === 'Pending').forEach(report => priorities.push({
+    tab: 'moderation', urgent: true, sort: 1,
+    title: report.reporter?.name ? `${report.reporter.name} tarafından raporlandı` : 'Yeni topluluk raporu',
+    meta: report.reason || 'Moderasyon incelemesi bekliyor'
+  }));
+  allDataRequests.filter(request => ['Pending', 'InProgress'].includes(request.status)).forEach(request => priorities.push({
+    tab: 'data-requests', urgent: request.status === 'Pending', sort: request.status === 'Pending' ? 2 : 3,
+    title: request.profile?.name || 'Bilinmeyen kullanıcı',
+    meta: `${adminDataRequestLabels[request.request_type] || 'Veri talebi'} · ${request.status === 'Pending' ? 'Bekliyor' : 'İşlemde'}`
+  }));
+  allScholarships.forEach(program => {
+    const deadline = adminParseDate(program.deadline);
+    if (program.active === false || !deadline || deadline < today || deadline > deadlineLimit) return;
+    const days = Math.ceil((deadline - today) / 86400000);
+    priorities.push({ tab: 'burs', urgent: days <= 3, sort: 4 + days, title: program.title || 'Burs programı', meta: `Son başvuruya ${days} gün kaldı` });
+  });
+
+  priorities.sort((a, b) => a.sort - b.sort);
+  if (!priorities.length) {
+    host.innerHTML = '<div class="admin-priority-empty">Bugün için açık öncelikli işlem bulunmuyor.</div>';
+    return;
+  }
+  host.innerHTML = priorities.slice(0, 8).map(item => `<div class="admin-priority-item${item.urgent ? ' is-urgent' : ''}">
+    <i class="admin-priority-marker" aria-hidden="true"></i>
+    <div class="admin-priority-copy"><strong>${adminEscape(item.title)}</strong><span>${adminEscape(item.meta)}</span></div>
+    <button type="button" class="admin-priority-action" onclick="switchAdminTab('${item.tab}',document.getElementById('btn-tab-${item.tab}'))">İncele</button>
+  </div>`).join('');
+}
+
+function adminApplicationTypeLabel(type) {
+  return ({ Burs: 'Burs başvurusu', MentorlukTalebi: 'Mentörlük talebi', MentorlukKaydi: 'Mentörlük kaydı' })[type] || 'Başvuru';
+}
+
 // Dashboard tab UI elements
 function renderDashboardOverview() {
-  const recentMembers = allMembers.slice(-4).reverse();
-  const recentApps = allApplications.slice(-4).reverse();
+  const recentMembers = [...allMembers].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 4);
+  const recentApps = [...allApplications].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 4);
+  renderAdminPriorityQueue();
 
   // Recent members
   const memberListEl = document.getElementById('recentMembersList');
@@ -547,8 +706,8 @@ function renderDashboardOverview() {
         return `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem;background:rgba(255,255,255,0.01);border:1px solid var(--glass-border);border-radius:var(--radius-md)">
             <div>
-              <strong style="font-size:.88rem;color:var(--text-primary);display:block">${a.profiles?.name || 'Bilinmeyen Üye'}</strong>
-              <span style="font-size:.75rem;color:var(--text-muted)">${typeLabels[a.type] || a.type}</span>
+              <strong style="font-size:.88rem;color:var(--text-primary);display:block">${adminEscape(a.profiles?.name || a.details?.name || 'Bilinmeyen Üye')}</strong>
+              <span style="font-size:.75rem;color:var(--text-muted)">${adminEscape(typeLabels[a.type] || 'Başvuru')}</span>
             </div>
             <span class="badge ${statusColors[a.status]}" style="font-size:.7rem">${a.status === 'Pending' ? 'Bekliyor' : a.status === 'Approved' ? 'Onaylandı' : 'Reddedildi'}</span>
           </div>
@@ -598,7 +757,7 @@ function renderMembersTable(list) {
         ${m.phone ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:2px"><i data-lucide="phone" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(m.phone)}</div>` : ''}
       </td>
       <td>
-        <select class="form-select" style="font-size:.8rem;padding:.2rem .4rem;height:auto" onchange="updateMemberRole('${m.id}', this.value)">
+        <select class="form-select" aria-label="${ASDFL.escapeAttr(m.name || 'Üye')} rolü" style="font-size:.8rem;padding:.2rem .4rem;height:auto" onchange="updateMemberRole(${ASDFL.jsString(m.id)}, this.value, this)">
           <option value="Mezun" ${m.role === 'Mezun' ? 'selected' : ''}>Mezun</option>
           <option value="Öğrenci" ${m.role === 'Öğrenci' ? 'selected' : ''}>Öğrenci</option>
           <option value="Öğretmen" ${m.role === 'Öğretmen' ? 'selected' : ''}>Öğretmen</option>
@@ -607,11 +766,11 @@ function renderMembersTable(list) {
       </td>
       <td>
         <label class="switch" style="display:inline-block;cursor:pointer">
-          <input type="checkbox" ${m.mentor ? 'checked' : ''} onchange="toggleMemberMentor('${m.id}', this.checked)" style="accent-color:var(--gold-500)">
+          <input type="checkbox" aria-label="${ASDFL.escapeAttr(m.name || 'Üye')} için mentörlük durumunu değiştir" ${m.mentor ? 'checked' : ''} onchange="toggleMemberMentor(${ASDFL.jsString(m.id)}, this.checked)" style="accent-color:var(--gold-500)">
         </label>
       </td>
       <td style="text-align:right">
-        <button class="btn btn-ghost btn-sm" onclick="deleteMember('${m.id}')" style="color:var(--text-red);padding:.25rem"><i data-lucide="trash-2" style="width:1.2rem;height:1.2rem"></i></button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteMember(${ASDFL.jsString(m.id)})" aria-label="${ASDFL.escapeAttr(m.name || 'Üye')} üyesini sil" title="Üyeyi sil" style="color:var(--text-red);padding:.25rem"><i data-lucide="trash-2" style="width:1.2rem;height:1.2rem"></i></button>
       </td>
     </tr>
   `).join('');
@@ -619,7 +778,12 @@ function renderMembersTable(list) {
   setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
-window.updateMemberRole = async function(memberId, newRole) {
+window.updateMemberRole = async function(memberId, newRole, selectEl) {
+  if (memberId === ASDFL.currentUser?.id && newRole !== 'Admin') {
+    if (selectEl) selectEl.value = 'Admin';
+    ASDFL.toast('Kendi yönetici rolünüzü bu ekrandan düşüremezsiniz.', 'warning');
+    return;
+  }
   if (ASDFL.supabase) {
     const { error } = await ASDFL.supabase.rpc('set_user_role', {
       target_user_id: memberId,
@@ -720,13 +884,13 @@ function renderEventsTable() {
       <td>${ASDFL.formatDate(e.event_date || e.date)}</td>
       <td>${ASDFL.escapeHTML(e.location || 'Online')}</td>
       <td>
-        <button class="btn btn-ghost btn-sm" onclick="exportEventAttendees('${e.id}')" title="Katılımcı listesini CSV indir" style="padding:.15rem .4rem">
+        <button class="btn btn-ghost btn-sm" onclick="exportEventAttendees(${ASDFL.jsString(e.id)})" aria-label="${ASDFL.escapeAttr(e.title || 'Etkinlik')} katılımcı listesini CSV indir" title="Katılımcı listesini CSV indir" style="padding:.15rem .4rem">
           <i data-lucide="users" style="width:1rem;height:1rem"></i> ${count}${cap}
         </button>
       </td>
       <td style="text-align:right;display:flex;gap:.5rem;justify-content:flex-end">
-        <button class="btn btn-ghost btn-sm" onclick="openEditEventModal('${e.id}')" style="padding:.25rem"><i data-lucide="edit" style="width:1.1rem;height:1.1rem"></i></button>
-        <button class="btn btn-ghost btn-sm" onclick="deleteEvent('${e.id}')" style="color:var(--text-red);padding:.25rem"><i data-lucide="trash-2" style="width:1.1rem;height:1.1rem"></i></button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditEventModal(${ASDFL.jsString(e.id)})" aria-label="${ASDFL.escapeAttr(e.title || 'Etkinlik')} etkinliğini düzenle" title="Etkinliği düzenle" style="padding:.25rem"><i data-lucide="edit" style="width:1.1rem;height:1.1rem"></i></button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteEvent(${ASDFL.jsString(e.id)})" aria-label="${ASDFL.escapeAttr(e.title || 'Etkinlik')} etkinliğini sil" title="Etkinliği sil" style="color:var(--text-red);padding:.25rem"><i data-lucide="trash-2" style="width:1.1rem;height:1.1rem"></i></button>
       </td>
     </tr>`;
   }).join('');
@@ -1604,22 +1768,25 @@ function renderAnnouncementsPanel() {
   }
 
   container.innerHTML = allAnnouncements.map(a => {
+    const safeId = ASDFL.escapeAttr(a.id);
+    const idJs = ASDFL.jsString(a.id);
+    const safeIcon = adminSafeIcon(a.icon);
     return `
       <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.75rem;">
-          <h3 style="font-size:1.1rem;font-family:'Outfit',sans-serif;font-weight:600;margin:0;color:var(--gold-400)">Duyuru Kartı #${a.id}</h3>
-          <span style="font-size:0.75rem; color:var(--text-muted)">Ana Sayfa Konumu: Kart ${a.id}</span>
+          <h3 style="font-size:1.1rem;font-family:'Outfit',sans-serif;font-weight:600;margin:0;color:var(--gold-400)">Duyuru Kartı #${adminEscape(a.id)}</h3>
+          <span style="font-size:0.75rem; color:var(--text-muted)">Ana Sayfa Konumu: Kart ${adminEscape(a.id)}</span>
         </div>
 
         <!-- Canlı Glassmorphic Kart Önizlemesi -->
         <div style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius: var(--radius-md); display: flex; justify-content: center; align-items: center; min-height: 100px;">
           <div class="floating-card" style="position: static; transform: none; animation: none; backdrop-filter: blur(10px); background: rgba(19, 34, 54, 0.9); border: 1px solid rgba(244, 168, 54, 0.2); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1.2rem; border-radius: var(--radius-lg); color: var(--text-primary); font-size: 0.85rem; font-weight: 500;">
-            <div class="fc-icon" style="font-size: 1.4rem; display: flex; align-items: center; justify-content: center; color: var(--gold-400);" id="previewIconBox-${a.id}">
-              <i data-lucide="${ASDFL.escapeAttr(a.icon)}" style="width:1.2rem;height:1.2rem"></i>
+            <div class="fc-icon" style="font-size: 1.4rem; display: flex; align-items: center; justify-content: center; color: var(--gold-400);" id="previewIconBox-${safeId}">
+              <i data-lucide="${ASDFL.escapeAttr(safeIcon)}" style="width:1.2rem;height:1.2rem"></i>
             </div>
             <div>
-              <strong id="previewTitle-${a.id}" style="color: var(--text-primary); font-size: 0.85rem; font-weight: 600; display: block;">${ASDFL.escapeHTML(a.title)}</strong>
-              <small id="previewSub-${a.id}" style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 1px;">${ASDFL.escapeHTML(a.subtitle)}</small>
+              <strong id="previewTitle-${safeId}" style="color: var(--text-primary); font-size: 0.85rem; font-weight: 600; display: block;">${ASDFL.escapeHTML(a.title)}</strong>
+              <small id="previewSub-${safeId}" style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 1px;">${ASDFL.escapeHTML(a.subtitle)}</small>
             </div>
           </div>
         </div>
@@ -1627,23 +1794,23 @@ function renderAnnouncementsPanel() {
         <!-- Form Düzenleme -->
         <div class="form-group" style="margin:0">
           <label class="form-label">Başlık</label>
-          <input type="text" class="form-input" id="announceTitle-${a.id}" value="${ASDFL.escapeAttr(a.title)}" oninput="updateAnnouncementPreview(${a.id})">
+          <input type="text" class="form-input" id="announceTitle-${safeId}" value="${ASDFL.escapeAttr(a.title)}" oninput="updateAnnouncementPreview(${idJs})">
         </div>
 
         <div class="form-group" style="margin:0">
           <label class="form-label">Detay / Alt Başlık</label>
-          <input type="text" class="form-input" id="announceSub-${a.id}" value="${ASDFL.escapeAttr(a.subtitle)}" oninput="updateAnnouncementPreview(${a.id})">
+          <input type="text" class="form-input" id="announceSub-${safeId}" value="${ASDFL.escapeAttr(a.subtitle)}" oninput="updateAnnouncementPreview(${idJs})">
         </div>
 
         <div class="form-group" style="margin:0">
           <label class="form-label">Lucide İkon Adı</label>
           <div style="display:flex; gap:0.5rem">
-            <input type="text" class="form-input" id="announceIcon-${a.id}" value="${a.icon}" oninput="updateAnnouncementPreview(${a.id})" placeholder="Örn: graduation-cap, award, calendar, bell">
+            <input type="text" class="form-input" id="announceIcon-${safeId}" value="${ASDFL.escapeAttr(safeIcon)}" oninput="updateAnnouncementPreview(${idJs})" placeholder="Örn: graduation-cap, award, calendar, bell">
           </div>
           <small style="color:var(--text-muted); font-size:0.75rem; display:block; margin-top:0.25rem">Lucide sitesindeki ikon isimlerini (küçük harflerle ve aralarda tire ile) girin.</small>
         </div>
 
-        <button class="btn btn-primary btn-sm" style="margin-top:0.5rem; width:100%" id="btnSaveAnnounce-${a.id}" onclick="saveAnnouncementFromAdmin(${a.id})">
+        <button class="btn btn-primary btn-sm" style="margin-top:0.5rem; width:100%" id="btnSaveAnnounce-${safeId}" onclick="saveAnnouncementFromAdmin(${idJs})">
           <i data-lucide="save" style="width:1em;height:1em"></i> Kartı Kaydet
         </button>
       </div>
@@ -1653,11 +1820,16 @@ function renderAnnouncementsPanel() {
   setTimeout(() => ASDFL.refreshIcons(), 10);
 }
 
+function adminSafeIcon(value) {
+  const icon = String(value || '').trim();
+  return /^[a-z0-9-]{1,64}$/.test(icon) ? icon : 'bell';
+}
+
 // Canlı Önizleme Güncelleme
 window.updateAnnouncementPreview = function(id) {
   const title = document.getElementById(`announceTitle-${id}`).value;
   const subtitle = document.getElementById(`announceSub-${id}`).value;
-  const icon = document.getElementById(`announceIcon-${id}`).value;
+  const icon = adminSafeIcon(document.getElementById(`announceIcon-${id}`).value);
 
   const previewTitle = document.getElementById(`previewTitle-${id}`);
   const previewSub = document.getElementById(`previewSub-${id}`);
@@ -1666,7 +1838,7 @@ window.updateAnnouncementPreview = function(id) {
   if (previewTitle) previewTitle.textContent = title;
   if (previewSub) previewSub.textContent = subtitle;
   if (previewIconBox && icon) {
-    previewIconBox.innerHTML = `<i data-lucide="${icon}" style="width:1.2rem;height:1.2rem"></i>`;
+    previewIconBox.innerHTML = `<i data-lucide="${ASDFL.escapeAttr(icon)}" style="width:1.2rem;height:1.2rem"></i>`;
     ASDFL.refreshIcons();
   }
 };
@@ -1674,7 +1846,7 @@ window.updateAnnouncementPreview = function(id) {
 window.saveAnnouncementFromAdmin = async function(id) {
   const title = document.getElementById(`announceTitle-${id}`).value.trim();
   const subtitle = document.getElementById(`announceSub-${id}`).value.trim();
-  const icon = document.getElementById(`announceIcon-${id}`).value.trim();
+  const icon = adminSafeIcon(document.getElementById(`announceIcon-${id}`).value);
 
   if (!title || !subtitle || !icon) {
     ASDFL.toast('Lütfen tüm alanları doldurun.', 'warning');

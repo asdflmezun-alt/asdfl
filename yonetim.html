@@ -11,7 +11,7 @@
   <meta name="theme-color" content="#05111E">
   <link rel="apple-touch-icon" href="assets/images/logo.png">
 <link rel="stylesheet" href="css/animations.css">
-<link rel="stylesheet" href="css/yonetim.css">
+<link rel="stylesheet" href="css/yonetim.css?v=1.2">
 <script src="assets/vendor/lucide.js"></script>
 <script src="js/bootstrap.js?v=1.1"></script>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 18h8M3 22h18M14 22a7 7 0 1 0-14 0M9 14h2M9 12a3 3 0 0 1-3-3V6a3 3 0 0 1 6 0v3a3 3 0 0 1-3 3ZM12 6l3.5-3.5M17 2l2.5 2.5'/></svg>">
@@ -95,13 +95,19 @@
   </div>
 </nav>
 
-<section class="section" style="padding-top:8rem">
-  <div class="container" style="max-width:1200px">
-    <div style="text-align: center; margin-bottom: 2rem;">
-      <span class="badge badge-gold" style="font-size: 0.85rem; padding: 0.5rem 1rem; border-radius: 50px;"><i data-lucide="shield-check" style="display:inline-block; vertical-align:middle; margin-top:-2px; width: 1.1em; height: 1.1em;"></i> SİSTEM YÖNETİCİSİ</span>
-      <h1 style="margin-top: 1rem;">ASDFL Yönetim Portalı</h1>
-      <p style="color:var(--text-secondary); max-width:600px; margin: 0.5rem auto 0; font-size: .92rem;">Sitenin üyelerini, etkinliklerini, burs &amp; mentorluk başvurularını tek bir noktadan yönetin.</p>
-    </div>
+<section class="admin-page">
+  <div class="container admin-page-container">
+    <header class="admin-page-header">
+      <div class="admin-header-copy">
+        <span class="admin-eyebrow"><i data-lucide="shield-check" aria-hidden="true"></i> Sistem yöneticisi</span>
+        <h1>Yönetim merkezi</h1>
+        <p>Başvuruları, topluluk güvenliğini ve yayın akışını tek operasyon ekranından yönetin.</p>
+      </div>
+      <div class="admin-header-status" aria-live="polite">
+        <div><span>Son güncelleme</span><strong id="adminLastUpdated">Veriler yükleniyor</strong></div>
+        <div><span>Açık iş</span><strong id="adminOpenWorkSummary">—</strong></div>
+      </div>
+    </header>
 
     <!-- Security Blocking Box (Hidden when authorized) -->
     <div id="adminAuthBlock" style="display:none; text-align:center; padding: 4rem 2rem; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); backdrop-filter: blur(12px);">
@@ -114,55 +120,49 @@
     <!-- Active Management Panels -->
     <div class="admin-wrapper" id="adminActiveWrapper" style="display:none;">
       <!-- Sidebar Navigation -->
-      <aside class="card" style="padding: 1rem; align-self: start; background: var(--glass-bg); border: 1px solid var(--glass-border);">
-        <nav class="admin-nav">
-          <button class="admin-tab-btn active" id="btn-tab-dashboard" onclick="switchAdminTab('dashboard', this)"><i data-lucide="layout-dashboard" style="width:1.2rem;height:1.2rem"></i> Genel Bakış</button>
-          <button class="admin-tab-btn" id="btn-tab-members" onclick="switchAdminTab('members', this)"><i data-lucide="users" style="width:1.2rem;height:1.2rem"></i> Üye Yönetimi</button>
-          <button class="admin-tab-btn" id="btn-tab-events" onclick="switchAdminTab('events', this)"><i data-lucide="calendar" style="width:1.2rem;height:1.2rem"></i> Etkinlikler &amp; Duyurular</button>
-          <button class="admin-tab-btn" id="btn-tab-burs" onclick="switchAdminTab('burs', this)"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i> Burs Programları</button>
-          <button class="admin-tab-btn" id="btn-tab-applications" onclick="switchAdminTab('applications', this)"><i data-lucide="clipboard-check" style="width:1.2rem;height:1.2rem"></i> Başvurular <span class="badge badge-gold" id="pendingAppsBadge" style="margin-left:auto; display:none; padding:.2rem .4rem; font-size:.7rem">0</span></button>
-          <button class="admin-tab-btn" id="btn-tab-moderation" onclick="switchAdminTab('moderation', this)"><i data-lucide="flag" style="width:1.2rem;height:1.2rem"></i> Moderasyon <span class="badge badge-gold" id="pendingReportsBadge" style="margin-left:auto; display:none; padding:.2rem .4rem; font-size:.7rem">0</span></button>
-          <button class="admin-tab-btn" id="btn-tab-announcements" onclick="switchAdminTab('announcements', this)"><i data-lucide="bell" style="width:1.2rem;height:1.2rem"></i> Logo Duyuruları</button>
-          <button class="admin-tab-btn" id="btn-tab-data-requests" onclick="switchAdminTab('data-requests', this)"><i data-lucide="shield-check" style="width:1.2rem;height:1.2rem"></i> Veri Talepleri <span class="badge badge-gold" id="pendingDataRequestsBadge" style="margin-left:auto;display:none;padding:.2rem .4rem;font-size:.7rem">0</span></button>
+      <aside class="card admin-nav-shell">
+        <nav class="admin-nav" role="tablist" aria-label="Yönetim bölümleri">
+          <button class="admin-tab-btn active" role="tab" aria-selected="true" aria-controls="tab-dashboard" tabindex="0" id="btn-tab-dashboard" onclick="switchAdminTab('dashboard', this)"><i data-lucide="layout-dashboard" aria-hidden="true"></i> Genel Bakış</button>
+          <button class="admin-tab-btn" role="tab" aria-selected="false" aria-controls="tab-members" tabindex="-1" id="btn-tab-members" onclick="switchAdminTab('members', this)"><i data-lucide="users" aria-hidden="true"></i> Üye Yönetimi</button>
+          <button class="admin-tab-btn" role="tab" aria-selected="false" aria-controls="tab-events" tabindex="-1" id="btn-tab-events" onclick="switchAdminTab('events', this)"><i data-lucide="calendar" aria-hidden="true"></i> Etkinlikler &amp; Duyurular</button>
+          <button class="admin-tab-btn" role="tab" aria-selected="false" aria-controls="tab-burs" tabindex="-1" id="btn-tab-burs" onclick="switchAdminTab('burs', this)"><i data-lucide="award" aria-hidden="true"></i> Burs Programları</button>
+          <button class="admin-tab-btn" role="tab" aria-selected="false" aria-controls="tab-applications" tabindex="-1" id="btn-tab-applications" onclick="switchAdminTab('applications', this)"><i data-lucide="clipboard-check" aria-hidden="true"></i> Başvurular <span class="badge badge-gold" id="pendingAppsBadge" style="margin-left:auto; display:none; padding:.2rem .4rem; font-size:.7rem">0</span></button>
+          <button class="admin-tab-btn" role="tab" aria-selected="false" aria-controls="tab-moderation" tabindex="-1" id="btn-tab-moderation" onclick="switchAdminTab('moderation', this)"><i data-lucide="flag" aria-hidden="true"></i> Moderasyon <span class="badge badge-gold" id="pendingReportsBadge" style="margin-left:auto; display:none; padding:.2rem .4rem; font-size:.7rem">0</span></button>
+          <button class="admin-tab-btn" role="tab" aria-selected="false" aria-controls="tab-announcements" tabindex="-1" id="btn-tab-announcements" onclick="switchAdminTab('announcements', this)"><i data-lucide="bell" aria-hidden="true"></i> Logo Duyuruları</button>
+          <button class="admin-tab-btn" role="tab" aria-selected="false" aria-controls="tab-data-requests" tabindex="-1" id="btn-tab-data-requests" onclick="switchAdminTab('data-requests', this)"><i data-lucide="shield-check" aria-hidden="true"></i> Veri Talepleri <span class="badge badge-gold" id="pendingDataRequestsBadge" style="margin-left:auto;display:none;padding:.2rem .4rem;font-size:.7rem">0</span></button>
         </nav>
       </aside>
 
       <!-- Tab Content Area -->
       <main class="admin-content">
         <!-- 1. DASHBOARD TAB -->
-        <div id="tab-dashboard" class="admin-panel-tab">
-          <div class="admin-stats-grid">
-            <div class="card admin-stat-card reveal">
-              <div class="admin-stat-icon"><i data-lucide="users"></i></div>
-              <div class="admin-stat-info">
-                <h3 id="statTotalUsers">0</h3>
-                <p>Kayıtlı Üye</p>
-              </div>
+        <div id="tab-dashboard" class="admin-panel-tab" role="tabpanel" aria-labelledby="btn-tab-dashboard">
+          <section class="admin-dashboard-section" aria-labelledby="operationsHeading">
+            <div class="admin-section-heading"><div><span>Operasyonlar</span><h2 id="operationsHeading">Bugünün açık işleri</h2></div><p>Öncelikli iş kuyruklarına tek dokunuşla geçin.</p></div>
+            <div class="admin-operation-grid">
+              <button class="admin-operation-card tone-gold" type="button" onclick="switchAdminTab('applications', document.getElementById('btn-tab-applications'))"><span class="admin-operation-icon"><i data-lucide="clipboard-clock" aria-hidden="true"></i></span><span><strong id="statPendingApps">0</strong><small>Bekleyen başvuru</small></span><i data-lucide="arrow-up-right" aria-hidden="true"></i></button>
+              <button class="admin-operation-card tone-red" type="button" onclick="switchAdminTab('moderation', document.getElementById('btn-tab-moderation'))"><span class="admin-operation-icon"><i data-lucide="flag" aria-hidden="true"></i></span><span><strong id="statPendingReports">0</strong><small>Bekleyen moderasyon</small></span><i data-lucide="arrow-up-right" aria-hidden="true"></i></button>
+              <button class="admin-operation-card tone-blue" type="button" onclick="switchAdminTab('data-requests', document.getElementById('btn-tab-data-requests'))"><span class="admin-operation-icon"><i data-lucide="shield-alert" aria-hidden="true"></i></span><span><strong id="statOpenDataRequests">0</strong><small>Açık veri talebi</small></span><i data-lucide="arrow-up-right" aria-hidden="true"></i></button>
+              <button class="admin-operation-card tone-teal" type="button" onclick="switchAdminTab('events', document.getElementById('btn-tab-events'))"><span class="admin-operation-icon"><i data-lucide="calendar-range" aria-hidden="true"></i></span><span><strong id="statUpcomingEvents">0</strong><small>30 gündeki etkinlik</small></span><i data-lucide="arrow-up-right" aria-hidden="true"></i></button>
             </div>
-            <div class="card admin-stat-card reveal">
-              <div class="admin-stat-icon"><i data-lucide="calendar"></i></div>
-              <div class="admin-stat-info">
-                <h3 id="statTotalEvents">0</h3>
-                <p>Aktif Etkinlik</p>
-              </div>
-            </div>
-            <div class="card admin-stat-card reveal">
-              <div class="admin-stat-icon" style="color:var(--gold-500); background:rgba(244,168,54,0.1);"><i data-lucide="clock"></i></div>
-              <div class="admin-stat-info">
-                <h3 id="statPendingApps">0</h3>
-                <p>Bekleyen Başvuru</p>
-              </div>
-            </div>
-            <div class="card admin-stat-card reveal">
-              <div class="admin-stat-icon"><i data-lucide="award"></i></div>
-              <div class="admin-stat-info">
-                <h3 id="statTotalScholarships">0</h3>
-                <p>Burs Programı</p>
-              </div>
-            </div>
-          </div>
+          </section>
 
-          <div class="grid-2" style="margin-top: 2rem;">
+          <section class="admin-dashboard-section admin-priority-section" aria-labelledby="priorityHeading">
+            <div class="admin-section-heading compact"><div><span>Öncelik kuyruğu</span><h2 id="priorityHeading">Bugün ilgilenilmesi gerekenler</h2></div></div>
+            <div id="adminPriorityQueue" class="admin-priority-queue" aria-live="polite"></div>
+          </section>
+
+          <section class="admin-dashboard-section" aria-labelledby="communitySummaryHeading">
+            <div class="admin-section-heading compact"><div><span>Topluluk görünümü</span><h2 id="communitySummaryHeading">Güncel özet</h2></div></div>
+            <div class="admin-stats-grid admin-summary-grid">
+              <div class="card admin-stat-card"><div class="admin-stat-icon"><i data-lucide="users" aria-hidden="true"></i></div><div class="admin-stat-info"><h3 id="statTotalUsers">0</h3><p>Kayıtlı üye</p></div></div>
+              <div class="card admin-stat-card"><div class="admin-stat-icon"><i data-lucide="calendar" aria-hidden="true"></i></div><div class="admin-stat-info"><h3 id="statTotalEvents">0</h3><p>Yaklaşan etkinlik</p></div></div>
+              <div class="card admin-stat-card"><div class="admin-stat-icon"><i data-lucide="award" aria-hidden="true"></i></div><div class="admin-stat-info"><h3 id="statTotalScholarships">0</h3><p>Aktif program</p></div></div>
+              <div class="card admin-stat-card"><div class="admin-stat-icon"><i data-lucide="badge-check" aria-hidden="true"></i></div><div class="admin-stat-info"><h3 id="statActiveRecipients">0</h3><p>Aktif bursiyer</p></div></div>
+            </div>
+          </section>
+
+          <div class="grid-2 admin-recent-grid">
             <!-- Son Katılanlar -->
             <div class="card reveal" style="padding:1.5rem">
               <h3 style="font-size:1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem"><i data-lucide="user-plus" style="color:var(--gold-500)"></i> Son Kayıt Olan Üyeler</h3>
@@ -178,7 +178,7 @@
         </div>
 
         <!-- 2. MEMBERS TAB -->
-        <div id="tab-members" class="admin-panel-tab" style="display:none">
+        <div id="tab-members" class="admin-panel-tab" role="tabpanel" aria-labelledby="btn-tab-members" style="display:none">
           <div class="admin-actions-row">
             <div class="admin-search-wrapper">
               <i data-lucide="search" class="admin-search-icon"></i>
@@ -212,7 +212,7 @@
         </div>
 
         <!-- 3. EVENTS TAB -->
-        <div id="tab-events" class="admin-panel-tab" style="display:none">
+        <div id="tab-events" class="admin-panel-tab" role="tabpanel" aria-labelledby="btn-tab-events" style="display:none">
           <div class="admin-actions-row">
             <div style="font-family:'Outfit',sans-serif;font-weight:600" id="eventsCount">0 aktif etkinlik</div>
             <button class="btn btn-primary btn-sm" onclick="openAddEventModal()"><i data-lucide="plus" style="width:1em;height:1em"></i> Yeni Etkinlik/Duyuru Ekle</button>
@@ -236,7 +236,7 @@
         </div>
 
         <!-- 4. SCHOLARSHIPS TAB -->
-        <div id="tab-burs" class="admin-panel-tab" style="display:none">
+        <div id="tab-burs" class="admin-panel-tab" role="tabpanel" aria-labelledby="btn-tab-burs" style="display:none">
           <!-- Stats Row -->
           <div class="grid-4" style="margin-bottom: 2rem; gap: 1rem;">
             <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
@@ -372,9 +372,9 @@
         </div>
 
         <!-- 5. APPLICATIONS TAB -->
-        <div id="tab-applications" class="admin-panel-tab" style="display:none">
+        <div id="tab-applications" class="admin-panel-tab" role="tabpanel" aria-labelledby="btn-tab-applications" style="display:none">
           <div class="admin-actions-row">
-            <div style="display:flex; gap:.5rem;">
+            <div class="application-filter-rail">
               <button class="btn btn-ghost btn-sm active" id="appFilterAll" onclick="filterApplicationsList('ALL', this)">Tümü</button>
               <button class="btn btn-ghost btn-sm" id="appFilterBurs" onclick="filterApplicationsList('Burs', this)">Burs</button>
               <button class="btn btn-ghost btn-sm" id="appFilterTaleb" onclick="filterApplicationsList('MentorlukTalebi', this)">Mentörlük Talebi</button>
@@ -391,7 +391,7 @@
           <div id="adminApplicationsList"></div>
         </div>
 
-        <div id="tab-moderation" class="admin-panel-tab" style="display:none">
+        <div id="tab-moderation" class="admin-panel-tab" role="tabpanel" aria-labelledby="btn-tab-moderation" style="display:none">
           <div class="admin-actions-row">
             <div>
               <h2 style="font-size:1.4rem;font-family:'Outfit',sans-serif;font-weight:700;margin-bottom:.25rem">Topluluk Moderasyonu</h2>
@@ -408,7 +408,7 @@
         </div>
 
         <!-- 6. LOGO ANNOUNCEMENTS TAB -->
-        <div id="tab-announcements" class="admin-panel-tab" style="display:none">
+        <div id="tab-announcements" class="admin-panel-tab" role="tabpanel" aria-labelledby="btn-tab-announcements" style="display:none">
           <div class="admin-actions-row">
             <div>
               <h2 style="font-size:1.4rem;font-family:'Outfit',sans-serif;font-weight:700;margin-bottom:0.25rem">Logo Duyuruları Yönetimi</h2>
@@ -416,12 +416,12 @@
             </div>
           </div>
 
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2rem; margin-top: 1.5rem;" id="adminAnnouncementsContainer">
+          <div class="admin-announcements-grid" id="adminAnnouncementsContainer">
             <!-- Dynamic edit forms for the 3 cards will be rendered here -->
           </div>
         </div>
 
-        <div id="tab-data-requests" class="admin-panel-tab" style="display:none">
+        <div id="tab-data-requests" class="admin-panel-tab" role="tabpanel" aria-labelledby="btn-tab-data-requests" style="display:none">
           <div class="admin-actions-row">
             <div><h2 style="font-size:1.4rem;font-family:'Outfit',sans-serif;font-weight:700;margin-bottom:.25rem">Kişisel Veri Talepleri</h2><p style="color:var(--text-muted);font-size:.85rem">Bilgi, düzeltme, veri kopyası, rıza geri çekme ve hesap silme başvurularını yönetin.</p></div>
             <select class="form-select" id="dataRequestStatusFilter" style="max-width:180px" onchange="renderDataRequests()"><option value="ALL">Tüm Durumlar</option><option value="Pending">Bekleyen</option><option value="InProgress">İşlemde</option><option value="Resolved">Sonuçlandı</option><option value="Rejected">Reddedildi</option></select>
@@ -741,7 +741,7 @@ function toggleRegFields(role) {
 
 <div class="toast-container"></div>
 <script src="assets/vendor/supabase.js?v=2.108.2-1"></script>
-<script src="js/app.js?v=1.9"></script>
-<script src="js/yonetim.js?v=1.1"></script>
+<script src="js/app.js?v=1.13"></script>
+<script src="js/yonetim.js?v=1.2"></script>
 </body>
 </html>

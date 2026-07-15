@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#05111E">
   <link rel="apple-touch-icon" href="assets/images/logo.png">
 <link rel="stylesheet" href="css/animations.css">
-<link rel="stylesheet" href="css/mentor.css">
+<link rel="stylesheet" href="css/mentor.css?v=1.2">
 <script src="assets/vendor/lucide.js"></script>
 <script src="js/bootstrap.js?v=1.1"></script>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 18h8M3 22h18M14 22a7 7 0 1 0-14 0M9 14h2M9 12a3 3 0 0 1-3-3V6a3 3 0 0 1 6 0v3a3 3 0 0 1-3 3ZM12 6l3.5-3.5M17 2l2.5 2.5'/></svg>">
@@ -95,8 +95,8 @@
   </div>
 </nav>
 
-<section class="section" style="padding-top:8rem; min-height: 80vh;">
-  <div class="container" style="max-width:1200px">
+<section class="mentor-page">
+  <div class="container mentor-page-container">
     
     <!-- Auth Blocker (Visible when user is anonymous) -->
     <div id="mentorAuthBlock" style="text-align:center; padding: 4rem 2rem; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); backdrop-filter: blur(12px);">
@@ -110,88 +110,64 @@
 
     <!-- Active Portal Wrapper (Visible only when authenticated) -->
     <div id="mentorActiveWrapper" style="display:none;">
-      <script>
-        (function() {
-          let userStr = null; try { userStr = localStorage.getItem('asdfl_user') || sessionStorage.getItem('asdfl_user'); } catch(e) {}
-          if (userStr) {
-            document.getElementById('mentorAuthBlock').style.display = 'none';
-            document.getElementById('mentorActiveWrapper').style.display = 'block';
-          }
-        })();
-      </script>
-      
-      <!-- Top Title Bar -->
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-        <div>
-          <span class="badge badge-gold" id="portalRoleBadge" style="font-size:0.75rem;"><i data-lucide="sparkles" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> Danışan Paneli</span>
-          <h1 style="margin-top: 0.5rem; font-size: 2rem;" id="portalUserName">Hoş Geldiniz</h1>
-          <p style="color:var(--text-muted); font-size: .88rem; margin-top: 0.25rem;">Görüşmelerinizi planlayın ve mentörlük sürecinizi koordine edin.</p>
+      <!-- Compact welcome and role area -->
+      <header class="mentor-welcome">
+        <div class="mentor-welcome-copy">
+          <span class="badge badge-gold mentor-role-badge" id="portalRoleBadge"><i data-lucide="sparkles" aria-hidden="true"></i> Danışan Paneli</span>
+          <h1 id="portalUserName">Hoş geldiniz</h1>
+          <p>Bağlantılarınızı yönetin, görüşmelerinizi planlayın ve mentörlük sürecinizde bir sonraki adımı netleştirin.</p>
         </div>
-      </div>
+        <div class="mentor-quick-actions" aria-label="Hızlı işlemler">
+          <button type="button" class="mentor-quick-action" onclick="switchPortalTab('connections', { focusPanel: true })"><i data-lucide="users" aria-hidden="true"></i><span><strong>Bağlantılar</strong><small>Aktif eşleşmeleri gör</small></span></button>
+          <button type="button" class="mentor-quick-action accent" onclick="switchPortalTab('calendar', { focusPanel: true })"><i data-lucide="calendar-plus" aria-hidden="true"></i><span><strong>Görüşme planla</strong><small>Takvime yeni zaman ekle</small></span></button>
+        </div>
+      </header>
 
       <!-- Main Portal Layout -->
       <div class="mentor-portal-grid">
         
         <!-- Sidebar Navigation -->
-        <aside class="card" style="padding: 1rem; align-self: start; background: var(--glass-bg); border: 1px solid var(--glass-border);">
-          <nav style="display:flex; flex-direction:column; gap: 0.5rem;">
-            <button class="portal-nav-btn active" id="btn-tab-overview" onclick="switchPortalTab('overview')">
-              <i data-lucide="layout-dashboard" style="width:1.2rem;height:1.2rem"></i> Genel Bakış
+        <aside class="card mentor-nav-shell">
+          <nav class="mentor-tablist" role="tablist" aria-label="Mentörlük paneli bölümleri">
+            <button class="portal-nav-btn active" role="tab" aria-selected="true" aria-controls="tab-overview" tabindex="0" id="btn-tab-overview" onclick="switchPortalTab('overview')">
+              <i data-lucide="layout-dashboard" aria-hidden="true"></i> Genel Bakış
             </button>
-            <button class="portal-nav-btn" id="btn-tab-requests" onclick="switchPortalTab('requests')">
-              <i data-lucide="clipboard-list" style="width:1.2rem;height:1.2rem"></i> Talepler &amp; Başvurular
+            <button class="portal-nav-btn" role="tab" aria-selected="false" aria-controls="tab-requests" tabindex="-1" id="btn-tab-requests" onclick="switchPortalTab('requests')">
+              <i data-lucide="clipboard-list" aria-hidden="true"></i> Talepler &amp; Başvurular
             </button>
-            <button class="portal-nav-btn" id="btn-tab-connections" onclick="switchPortalTab('connections')">
-              <i data-lucide="users" style="width:1.2rem;height:1.2rem"></i> Bağlantılarım
+            <button class="portal-nav-btn" role="tab" aria-selected="false" aria-controls="tab-connections" tabindex="-1" id="btn-tab-connections" onclick="switchPortalTab('connections')">
+              <i data-lucide="users" aria-hidden="true"></i> Bağlantılarım
             </button>
-            <button class="portal-nav-btn" id="btn-tab-calendar" onclick="switchPortalTab('calendar')">
-              <i data-lucide="calendar" style="width:1.2rem;height:1.2rem"></i> Görüşme Takvimi
+            <button class="portal-nav-btn" role="tab" aria-selected="false" aria-controls="tab-calendar" tabindex="-1" id="btn-tab-calendar" onclick="switchPortalTab('calendar')">
+              <i data-lucide="calendar" aria-hidden="true"></i> Görüşme Takvimi
             </button>
           </nav>
         </aside>
 
         <!-- Main Content Area -->
-        <main style="min-width: 0;">
+        <main class="mentor-content">
           
           <!-- 1. OVERVIEW TAB -->
-          <div id="tab-overview" class="portal-tab-content active">
-            <div class="grid-3" style="margin-bottom: 2rem;">
-              <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
-                <div style="font-size: 2rem; color: var(--gold-500); background: rgba(244,168,54,0.06); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="users"></i></div>
-                <div>
-                  <h3 id="statConnectionsCount" style="margin: 0; font-size: 1.5rem;">0</h3>
-                  <p style="color:var(--text-muted); font-size: 0.8rem; margin: 0;">Aktif Bağlantı</p>
-                </div>
-              </div>
-              <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
-                <div style="font-size: 2rem; color: var(--teal-500); background: rgba(45,206,137,0.06); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="calendar-days"></i></div>
-                <div>
-                  <h3 id="statAppointmentsCount" style="margin: 0; font-size: 1.5rem;">0</h3>
-                  <p style="color:var(--text-muted); font-size: 0.8rem; margin: 0;">Gelecek Randevu</p>
-                </div>
-              </div>
-              <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
-                <div style="font-size: 2rem; color: var(--gold-500); background: rgba(244,168,54,0.06); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="clock"></i></div>
-                <div>
-                  <h3 id="statPendingRequestsCount" style="margin: 0; font-size: 1.5rem;">0</h3>
-                  <p style="color:var(--text-muted); font-size: 0.8rem; margin: 0;">Bekleyen Talep</p>
-                </div>
-              </div>
+          <div id="tab-overview" class="portal-tab-content active" role="tabpanel" aria-labelledby="btn-tab-overview" tabindex="-1">
+            <div class="mentor-stats-grid" aria-label="Mentörlük özeti">
+              <div class="mentor-stat-card"><span class="mentor-stat-icon gold"><i data-lucide="users" aria-hidden="true"></i></span><div><h3 id="statConnectionsCount">0</h3><p>Aktif bağlantı</p></div></div>
+              <div class="mentor-stat-card"><span class="mentor-stat-icon teal"><i data-lucide="calendar-days" aria-hidden="true"></i></span><div><h3 id="statAppointmentsCount">0</h3><p>Gelecek görüşme</p></div></div>
+              <div class="mentor-stat-card"><span class="mentor-stat-icon blue"><i data-lucide="clock" aria-hidden="true"></i></span><div><h3 id="statPendingRequestsCount">0</h3><p>Bekleyen talep</p></div></div>
             </div>
 
             <div class="overview-cards-grid">
               <!-- Upcoming meetings card -->
-              <div class="card" style="padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
-                <h3 style="font-size: 1.1rem; margin-bottom: 1rem; font-weight:600;"><i data-lucide="clock" style="display:inline-block; vertical-align:middle; margin-top:-2px; margin-right:4px;"></i> Yaklaşan Görüşmeler</h3>
+              <div class="mentor-surface mentor-next-meeting">
+                <div class="mentor-surface-heading"><span><i data-lucide="clock-3" aria-hidden="true"></i></span><div><small>Ajandanız</small><h3>Sonraki görüşme</h3></div></div>
                 <div id="overviewUpcomingList" class="appointment-list">
                   <p style="color: var(--text-muted); font-size:0.85rem;">Yakın zamanda planlanmış randevunuz bulunmamaktadır.</p>
                 </div>
               </div>
 
               <!-- Quick notifications card -->
-              <div class="card" style="padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
-                <h3 style="font-size: 1.1rem; margin-bottom: 1rem; font-weight:600;"><i data-lucide="sparkles" style="display:inline-block; vertical-align:middle; margin-top:-2px; margin-right:4px;"></i> Son İstekler / Hareketler</h3>
-                <div id="overviewNotificationsList" style="display:flex; flex-direction:column; gap:0.75rem;">
+              <div class="mentor-surface">
+                <div class="mentor-surface-heading"><span><i data-lucide="activity" aria-hidden="true"></i></span><div><small>Hareketler</small><h3>Son istekler</h3></div></div>
+                <div id="overviewNotificationsList" class="mentor-activity-list">
                   <p style="color: var(--text-muted); font-size:0.85rem;">Henüz yeni bir talep bulunmamaktadır.</p>
                 </div>
               </div>
@@ -199,8 +175,8 @@
           </div>
 
           <!-- 2. REQUESTS TAB -->
-          <div id="tab-requests" class="portal-tab-content">
-            <div class="card" style="padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+          <div id="tab-requests" class="portal-tab-content" role="tabpanel" aria-labelledby="btn-tab-requests" tabindex="-1">
+            <div class="mentor-surface">
               <h3 id="requestsTitle" style="font-size: 1.2rem; margin-bottom: 0.5rem; font-weight:600;">Başvurularım</h3>
               <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;" id="requestsSubtitle">Mentörlük almak için gönderdiğiniz başvuruları buradan inceleyebilirsiniz.</p>
               
@@ -211,8 +187,8 @@
           </div>
 
           <!-- 3. CONNECTIONS TAB -->
-          <div id="tab-connections" class="portal-tab-content">
-            <div class="card" style="padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border);">
+          <div id="tab-connections" class="portal-tab-content" role="tabpanel" aria-labelledby="btn-tab-connections" tabindex="-1">
+            <div class="mentor-surface">
               <h3 id="connectionsTitle" style="font-size: 1.2rem; margin-bottom: 0.5rem; font-weight:600;">Aktif Bağlantılarım</h3>
               <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;" id="connectionsSubtitle">Eşleştiğiniz ve mentörlük süreci aktif olan kullanıcılar.</p>
               
@@ -223,7 +199,7 @@
           </div>
 
           <!-- 4. CALENDAR TAB -->
-          <div id="tab-calendar" class="portal-tab-content">
+          <div id="tab-calendar" class="portal-tab-content" role="tabpanel" aria-labelledby="btn-tab-calendar" tabindex="-1">
             <div class="calendar-layout-grid">
               
               <!-- Left side: Calendar Grid & Daily Events list -->
@@ -231,9 +207,9 @@
                 <!-- Month Grid -->
                 <div class="calendar-wrapper">
                   <div class="calendar-header">
-                    <button class="calendar-nav-btn" id="btnPrevMonth"><i data-lucide="chevron-left" style="width:1.1rem;height:1.1rem"></i></button>
+                    <button class="calendar-nav-btn" type="button" id="btnPrevMonth" aria-label="Önceki ay"><i data-lucide="chevron-left" aria-hidden="true"></i></button>
                     <h3 id="calendarMonthTitle">Haziran 2026</h3>
-                    <button class="calendar-nav-btn" id="btnNextMonth"><i data-lucide="chevron-right" style="width:1.1rem;height:1.1rem"></i></button>
+                    <button class="calendar-nav-btn" type="button" id="btnNextMonth" aria-label="Sonraki ay"><i data-lucide="chevron-right" aria-hidden="true"></i></button>
                   </div>
                   <div class="calendar-weekdays">
                     <div>Pzt</div><div>Sal</div><div>Çar</div><div>Per</div><div>Cum</div><div>Cmt</div><div>Paz</div>
@@ -253,7 +229,7 @@
               </div>
 
               <!-- Right side: Booking Form -->
-              <div class="card" style="padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border); align-self: start;">
+              <div class="mentor-surface mentor-booking-card">
                 <h3 id="scheduleFormTitle" style="font-size: 1.15rem; margin-bottom: 0.5rem; font-weight:600;"><i data-lucide="plus" style="display:inline-block; vertical-align:middle; margin-top:-2px; margin-right:4px;"></i> Randevu Planla</h3>
                 <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 1.25rem;">Öğrencinizle çevrimiçi veya yüz yüze bir rehberlik randevusu oluşturun.</p>
                 
@@ -506,7 +482,7 @@ function toggleRegFields(role) {
 
 <div class="toast-container"></div>
 <script src="assets/vendor/supabase.js?v=2.108.2-1"></script>
-<script src="js/app.js?v=1.9"></script>
-<script src="js/mentorluk.js"></script>
+<script src="js/app.js?v=1.13"></script>
+<script src="js/mentorluk.js?v=1.3"></script>
 </body>
 </html>

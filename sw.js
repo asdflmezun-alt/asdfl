@@ -1,27 +1,30 @@
 // ASDFL Mezunlar Derneği — service worker
 // Bump CACHE_VERSION whenever a deploy should force-invalidate old caches.
-const CACHE_VERSION = 'v32';
+const CACHE_VERSION = 'v42';
 const CACHE_NAME = `asdfl-${CACHE_VERSION}`;
 const DEV_BYPASS_CACHE = ['localhost', '127.0.0.1', '::1'].includes(self.location.hostname);
 
 const PRECACHE_URLS = [
   'index.html',
+  'imece.html',
   'mesajlar.html',
-  'css/main.css?v=1.4',
+  'css/main.css?v=1.7',
   'css/animations.css',
   'css/fonts.css',
-  'css/home.css?v=1.5',
+  'css/home.css?v=1.6',
   'css/topluluk.css?v=2.3',
-  'css/kariyer.css?v=1.3',
-  'js/bootstrap.js?v=1.1',
-  'js/app.js?v=1.13',
-  'css/messenger-widget.css?v=1.1',
-  'js/messenger-widget.js?v=1.1',
-  'css/mesajlar.css?v=1.0',
-  'js/mesajlar.js?v=1.0',
-  'js/home.js',
+  'css/kariyer.css?v=1.4',
+  'css/imece.css?v=1.1',
+  'js/bootstrap.js?v=1.2',
+  'js/app.js?v=1.18',
+  'css/messenger-widget.css?v=1.2',
+  'js/messenger-widget.js?v=1.2',
+  'css/mesajlar.css?v=1.1',
+  'js/mesajlar.js?v=1.1',
+  'js/home.js?v=1.5',
   'js/topluluk.js?v=1.9',
-  'js/kariyer.js?v=1.3',
+  'js/kariyer.js?v=1.4',
+  'js/imece.js?v=1.0',
   'js/universities.js',
   'assets/vendor/lucide.js',
   'assets/vendor/supabase.js?v=2.108.2-1',

@@ -4,7 +4,7 @@
   if (window.ASDFLMessenger?.__initialized) return;
 
   const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  const POLL_INTERVAL_MS = 15000;
+  const POLL_INTERVAL_MS = 30000;
   const MESSAGE_LIMIT = 2000;
   const REPORT_LIMIT = 500;
   const IS_MESSAGES_PAGE = (window.location.pathname.split('/').pop() || '').toLocaleLowerCase('tr-TR') === 'mesajlar.html';
@@ -785,7 +785,9 @@
     if (!state.root) return;
     state.refs.count.textContent = `${state.refs.input.value.length} / ${MESSAGE_LIMIT}`;
     state.refs.input.style.height = 'auto';
-    state.refs.input.style.height = `${Math.min(state.refs.input.scrollHeight, 112)}px`;
+    const nextHeight = Math.min(state.refs.input.scrollHeight, 112);
+    state.refs.input.style.height = `${nextHeight}px`;
+    state.refs.input.style.overflowY = state.refs.input.scrollHeight > 112 ? 'auto' : 'hidden';
     updateComposerState();
   }
 
@@ -896,10 +898,10 @@
     try {
       state.channel = ASDFL.supabase
         .channel(`messenger-widget-${state.userId}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, payload => handleRealtimeConversation(payload.new))
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => handleRealtimeMessage(payload.new))
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_participants', filter: `user_id=eq.${state.userId}` }, () => loadConversations({ silent: true }))
         .subscribe(status => {
-          if (status === 'SUBSCRIBED') stopPolling();
+          if (status === 'SUBSCRIBED') pollUpdates();
           if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) startPolling();
         });
     } catch (error) {
@@ -907,12 +909,12 @@
     }
   }
 
-  async function handleRealtimeConversation(conversation) {
-    if (!conversation || !isUUID(conversation.id)) return;
+  async function handleRealtimeMessage(message) {
+    if (!message || !isUUID(message.conversation_id)) return;
     await loadConversations({ silent: true });
-    if (state.isOpen && state.view === 'chat' && state.selectedId === conversation.id) {
-      await loadMessages(conversation.id);
-      if (document.visibilityState === 'visible') await markRead(conversation.id);
+    if (state.isOpen && state.view === 'chat' && state.selectedId === message.conversation_id) {
+      await loadMessages(message.conversation_id);
+      if (document.visibilityState === 'visible') await markRead(message.conversation_id);
     }
   }
 

@@ -63,8 +63,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!el) return;
     
     if (!ASDFL.currentUser) {
+      el.classList.remove('is-looping');
+      el.style.removeProperty('--featured-alumni-duration');
       el.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); backdrop-filter: blur(12px);">
+        <div class="featured-alumni-empty" style="text-align: center; padding: 2.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); backdrop-filter: blur(12px);">
           <i data-lucide="lock" style="width:2rem;height:2rem;color:var(--gold-500);margin-bottom:.75rem;display:inline-block"></i>
           <h4 style="margin-bottom:.5rem">Öne Çıkan Mezunlarımızı Görün</h4>
           <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.25rem">Mezunlarımızın başarılarını ve detaylarını görebilmek için üye olmanız gerekmektedir.</p>
@@ -75,17 +77,32 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    const mentors = allAlumni.filter(a => a.mentor && (a.role === 'Mezun' || a.role === 'Admin' || a.role === 'Öğretmen')).slice(0, 4);
-    el.innerHTML = mentors.map(a => {
+    const mentors = allAlumni.filter(a => a.mentor && (a.role === 'Mezun' || a.role === 'Admin' || a.role === 'Öğretmen'));
+    if (mentors.length === 0) {
+      el.classList.remove('is-looping');
+      el.style.removeProperty('--featured-alumni-duration');
+      el.innerHTML = `
+        <div class="card alumni-card featured-alumni-empty">
+          <i data-lucide="sparkles" style="width:2rem;height:2rem;color:var(--gold-500);margin-bottom:.75rem"></i>
+          <p>Şu an kayıtlı mentör bulunmuyor.</p>
+        </div>
+      `;
+      setTimeout(() => ASDFL.refreshIcons(), 10);
+      return;
+    }
+
+    const renderCardMarkup = (isDuplicate = false) => mentors.map(a => {
       let jobCompanyText = '';
       if (a.job) {
         jobCompanyText = a.job + (a.company ? ` @ ${a.company}` : '');
       } else if (a.company) {
         jobCompanyText = a.company;
       }
+      const profileURL = ASDFL.safeURL(`profil.html?id=${encodeURIComponent(a.id)}`) || '#';
+      const profileLabel = `${a.name || 'Mentör'} profilini aç`;
       
       return `
-      <div class="card alumni-card reveal lift">
+      <a class="card alumni-card reveal lift" href="${ASDFL.escapeAttr(profileURL)}" aria-label="${ASDFL.escapeAttr(profileLabel)}" tabindex="${isDuplicate ? '-1' : '0'}">
         ${ASDFL.getAvatarHTML(a, 'avatar avatar-lg', 'margin:0 auto 1rem')}
         <h4>${ASDFL.escapeHTML(a.name)}</h4>
         <span class="year-badge">${ASDFL.escapeHTML(a.grad_year || 'Bilinmiyor')} Mezunu</span>
@@ -93,8 +110,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         ${a.university ? `<p style="font-size:.78rem;color:var(--text-secondary);margin-top:.25rem;margin-bottom:0.25rem;"><i data-lucide="graduation-cap" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.university)}</p>` : ''}
         <p style="font-size:.78rem;color:var(--text-muted);margin-top:.25rem;"><i data-lucide="map-pin" style="width:1em;height:1em;display:inline-block;vertical-align:middle;margin-top:-2px"></i> ${ASDFL.escapeHTML(a.city || 'Şehir Belirtilmemiş')}</p>
         <span class="badge badge-teal mentor-tag"><i data-lucide="sparkles" style="width:1em;height:1em"></i> Mentör</span>
-      </div>`;
+      </a>`;
     }).join('');
+    const shouldLoop = mentors.length > 4;
+    el.classList.toggle('is-looping', shouldLoop);
+    if (shouldLoop) {
+      el.style.setProperty('--featured-alumni-duration', `${Math.max(52, mentors.length * 9)}s`);
+    } else {
+      el.style.removeProperty('--featured-alumni-duration');
+    }
+    el.innerHTML = `
+      <div class="featured-alumni-group">${renderCardMarkup()}</div>
+      ${shouldLoop ? `<div class="featured-alumni-group" aria-hidden="true">${renderCardMarkup(true)}</div>` : ''}
+    `;
     ASDFL.initReveal();
     setTimeout(() => ASDFL.refreshIcons(), 10);
   }

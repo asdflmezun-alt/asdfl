@@ -252,6 +252,11 @@ const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   mentorship_status: "Mentorluk",
   new_event: "Yeni Etkinlik",
   event_reminder: "Etkinlik Hatırlatması",
+  direct_message: "Mesaj",
+  appointment_new: "Görüşme",
+  appointment_status: "Görüşme",
+  imece_request: "İmece Çağrısı",
+  imece_report: "İmece Şikâyeti",
   system_test: "Sistem Testi",
 };
 

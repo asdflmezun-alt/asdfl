@@ -913,11 +913,18 @@ const ASDFL = {
   async deleteJobPosting(postingId) {
     if (!this.currentUser) return false;
     if (this.supabase) {
-      const { error } = await this.supabase
+      const { data, error } = await this.supabase
         .from('job_postings')
         .delete()
-        .eq('id', postingId);
+        .eq('id', postingId)
+        .eq('employer_id', this.currentUser.id)
+        .select('id')
+        .maybeSingle();
       if (error) { console.error('Error deleting posting:', error); this.toast('İlan silinemedi: ' + error.message, 'error'); return false; }
+      if (!data) {
+        this.toast('Bu ilanı silme yetkiniz bulunmuyor veya ilan artık mevcut değil.', 'warning');
+        return false;
+      }
     } else {
       let localJobs = JSON.parse(localStorage.getItem('asdfl_jobs') || '[]');
       localJobs = localJobs.filter(job => job.id !== postingId);
@@ -1353,6 +1360,7 @@ const ASDFL = {
     'burs-mentorluk.html',
     'etkinlikler.html',
     'galeri.html',
+    'imece.html',
     'kariyer.html',
     'mesajlar.html',
     'mentorluk.html',
@@ -2736,6 +2744,7 @@ const ASDFL = {
     const name = document.getElementById('regName').value.trim();
     const email = document.getElementById('regEmail').value.trim().toLowerCase();
     const pass = document.getElementById('regPass').value;
+    const passConfirm = document.getElementById('regPassConfirm')?.value || '';
     
     const gradYear = document.getElementById('regGradYear')?.value;
     const job = document.getElementById('regJob')?.value;
@@ -2766,6 +2775,19 @@ const ASDFL = {
       this.toast('Lütfen zorunlu alanları doldurun.', 'warning');
       return;
     }
+    if (!passConfirm) {
+      this.setRegistrationPasswordError('Şifrenizi tekrar girin.');
+      document.getElementById('regPassConfirm')?.focus();
+      this.toast('Lütfen şifrenizi tekrar girin.', 'warning');
+      return;
+    }
+    if (pass !== passConfirm) {
+      this.setRegistrationPasswordError('Şifreler eşleşmiyor.');
+      document.getElementById('regPassConfirm')?.focus();
+      this.toast('Girdiğiniz şifreler eşleşmiyor.', 'warning');
+      return;
+    }
+    this.setRegistrationPasswordError('');
     if (!kvkkNotice) {
       this.toast('Kayıt için KVKK Aydınlatma Metni bildirimi zorunludur.', 'warning');
       return;
@@ -2863,6 +2885,8 @@ const ASDFL = {
     
     this.closeModal('registerModal');
     this.updateUIForAuth();
+    // Yeni üye: sayfa yenilenince hoş geldin manifestosu gösterilecek
+    try { this._storage.setItem('asdfl_manifesto_pending', '1'); } catch (e) {}
     this.toast('Aramıza hoş geldin, ' + name + '! 🎉', 'success');
     setTimeout(() => window.location.reload(), 1000);
   },
@@ -3188,7 +3212,7 @@ const ASDFL = {
       const stylesheet = document.createElement('link');
       stylesheet.id = 'messengerWidgetStyles';
       stylesheet.rel = 'stylesheet';
-      stylesheet.href = 'css/messenger-widget.css?v=1.1';
+      stylesheet.href = 'css/messenger-widget.css?v=1.2';
       document.head.appendChild(stylesheet);
     }
 
@@ -3200,7 +3224,7 @@ const ASDFL = {
 
     const script = document.createElement('script');
     script.id = 'messengerWidgetScript';
-    script.src = 'js/messenger-widget.js?v=1.1';
+    script.src = 'js/messenger-widget.js?v=1.2';
     script.defer = true;
     script.addEventListener('load', () => {
       if (window.ASDFLMessenger?.syncAuth) {
@@ -3208,6 +3232,414 @@ const ASDFL = {
       }
     }, { once: true });
     document.head.appendChild(script);
+  },
+
+  // === HOŞ GELDİN MANİFESTOSU ===
+  // Kayıt tamamlanınca 'asdfl_manifesto_pending' bayrağı yazılır; sayfa yenilenince
+  // yeni üye bu ekranla karşılanır ve bayrak 'seen' olarak işaretlenir.
+  initWelcomeManifesto() {
+    try {
+      if (this._storage.getItem('asdfl_manifesto_pending') !== '1') return;
+      if (this._storage.getItem('asdfl_manifesto_seen') === '1') {
+        this._storage.removeItem('asdfl_manifesto_pending');
+        return;
+      }
+    } catch (e) { return; }
+    setTimeout(() => this.showWelcomeManifesto(), 500);
+  },
+
+  showWelcomeManifesto() {
+    if (document.getElementById('welcomeManifesto')) return;
+    try {
+      this._storage.removeItem('asdfl_manifesto_pending');
+      this._storage.setItem('asdfl_manifesto_seen', '1');
+    } catch (e) {}
+
+    const overlay = document.createElement('div');
+    overlay.id = 'welcomeManifesto';
+    overlay.className = 'manifesto-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'manifestoTitle');
+
+    const p = (text, cls) => `<p class="m-reveal${cls ? ' ' + cls : ''}">${text}</p>`;
+    const divider = '<div class="manifesto-divider m-reveal" aria-hidden="true">✦</div>';
+
+    overlay.innerHTML = `
+      <div class="manifesto-progress" aria-hidden="true"></div>
+      <button type="button" class="manifesto-audio-btn" aria-label="Müziği kapat" onclick="ASDFL.toggleManifestoAudio()">
+        <i data-lucide="volume-2" style="width:20px;height:20px"></i>
+      </button>
+      <button type="button" class="manifesto-close" aria-label="Kapat" onclick="ASDFL.closeWelcomeManifesto()">
+        <i data-lucide="x" style="width:20px;height:20px"></i>
+      </button>
+      <div class="manifesto-scroll">
+        <div class="manifesto-content">
+          <div class="manifesto-crest m-reveal"><i data-lucide="graduation-cap"></i></div>
+          <h1 id="manifestoTitle" class="manifesto-title m-reveal">Hoş Geldin.</h1>
+          ${p('Tek başına bakıldığında bu, sıradan bir kayıt işlemi gibi görünebilir.')}
+          ${p("Ama aslında bugün, Afyon Süleyman Demirel Fen Lisesi'nin geleceğine küçük ama çok önemli bir katkıda bulundun.", 'manifesto-lead')}
+          ${divider}
+          ${p('Fen liseleri yalnızca binalardan ibaret değildir.')}
+          ${p('Onları değerli yapan; aynı koridorlarda yürüyen, aynı sıralarda oturan, aynı öğretmenlerden ders alan ve yıllar sonra dünyanın dört bir yanına dağılan insanlardır.')}
+          ${p('Bugün binlerce ASDFL mezunu; doktor, mühendis, akademisyen, öğretmen, hukukçu, girişimci ve daha birçok farklı alanda hayatına devam ediyor.')}
+          ${p('Ne yazık ki mezun olduktan sonra bu büyük ağın önemli bir kısmıyla bağımız zamanla kopuyor.')}
+          ${p('Oysa birbirimizi yeniden bulabilirsek...', 'manifesto-lead')}
+          ${p('Bir öğrenci staj yeri bulabilir.', 'manifesto-em')}
+          ${p('Bir mezun iş fırsatı yakalayabilir.', 'manifesto-em')}
+          ${p('Bir öğretmen yıllar önce yetiştirdiği öğrencilerle yeniden buluşabilir.', 'manifesto-em')}
+          ${p('Bir burs ihtiyacı sessizce karşılanabilir.', 'manifesto-em')}
+          ${p('Bir proje doğru insanlarla hayata geçirilebilir.', 'manifesto-em')}
+          ${p('Ve belki de yıllar sonra hiç tanımadığın bir ASDFL mezunu, hayatının en önemli dönüm noktalarından birinde sana destek olabilir.')}
+          ${p('İşte bu platform tam olarak bunun için var.', 'manifesto-lead')}
+          ${divider}
+          <h2 class="m-reveal">Ama bunun gerçekleşmesi için sana ihtiyacımız var.</h2>
+          ${p('Bu topluluğun gerçek gücü yazılımda değil, insanlarda.')}
+          ${p('Bugün sen buradasın.', 'manifesto-lead')}
+          ${p('Yarın sınıf arkadaşların...')}
+          ${p('Sonra senden bir dönem önce mezun olanlar...')}
+          ${p('Sonra senden on yıl önce mezun olanlar...')}
+          ${p('Her yeni üye, bu ağı biraz daha büyütüyor.')}
+          ${p('Her yeni bağlantı, gelecekte kurulacak yüzlerce yeni bağın temelini oluşturuyor.')}
+          ${divider}
+          <h2 class="m-reveal">Şimdi senden küçük bir ricamız var.</h2>
+          ${p('Hâlâ görüştüğün lise arkadaşlarını düşün.')}
+          ${p('Sınıf grubunu.', 'manifesto-em')}
+          ${p('Yurtta aynı odayı paylaştığın dostunu.', 'manifesto-em')}
+          ${p('Beraber sınava hazırlandığın kişiyi.', 'manifesto-em')}
+          ${p('Onlara bu platformdan bahset.')}
+          ${p('Üye olmalarını teşvik et.', 'manifesto-lead')}
+          ${p('Çünkü burada oluşturduğumuz şey yalnızca bir internet sitesi değil.')}
+          ${p('Bir okulun hafızası.', 'manifesto-em')}
+          ${p('Nesiller arasında kurulan bir köprü.', 'manifesto-em')}
+          ${p('Yıllar sonra bile ayakta kalacak bir dayanışma ağı.', 'manifesto-em')}
+          ${p('Belki de bugün attığın tek bir mesaj, yıllar sonra bir öğrencinin burs bulmasına, bir mezunun iş fırsatı yakalamasına ya da bir öğretmenin eski öğrencileriyle yeniden buluşmasına vesile olacak.')}
+          ${p('Bunun etkisini bugün ölçemeyiz.')}
+          ${p('Ama yıllar sonra geriye dönüp baktığımızda, bu topluluğu güçlü kılan şeyin tek tek atılmış bu küçük adımlar olduğunu göreceğiz.')}
+          ${divider}
+          <h2 class="m-reveal">Bu hikâye henüz yeni başlıyor.</h2>
+          ${p('Ve artık sen de onun bir parçasısın.', 'manifesto-lead')}
+          <div class="manifesto-quote m-reveal">
+            <p>Afyon Süleyman Demirel Fen Lisesi Mezunları olarak geçmişimizi koruyor, bugünümüzü güçlendiriyor ve geleceğimizi birlikte inşa ediyoruz.</p>
+          </div>
+          ${p('Hoş geldin.', 'manifesto-signoff m-reveal')}
+          <div class="manifesto-actions m-reveal">
+            <button type="button" class="manifesto-share-btn" onclick="ASDFL.shareManifesto()">
+              <i data-lucide="share-2"></i> Arkadaşlarınla Paylaş
+            </button>
+            <button type="button" class="manifesto-skip-btn" onclick="ASDFL.closeWelcomeManifesto()">Keşfetmeye başla</button>
+          </div>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+    if (window.lucide?.createIcons) lucide.createIcons();
+    this._initManifestoAudio(overlay);
+
+    // iOS Safari scroll kilidi (openModal ile aynı desen)
+    const scrollY = window.scrollY;
+    document.body.style.top = `-${scrollY}px`;
+    document.body.classList.add('modal-open');
+
+    requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('open')));
+
+    const scroller = overlay.querySelector('.manifesto-scroll');
+
+    // Bloklar görünür alana girdikçe yumuşakça belirsin
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) { entry.target.classList.add('in'); io.unobserve(entry.target); }
+      });
+    }, { root: scroller, threshold: 0.15 });
+    overlay.querySelectorAll('.m-reveal').forEach(el => io.observe(el));
+
+    // Okuma ilerleme çubuğu
+    const progress = overlay.querySelector('.manifesto-progress');
+    scroller.addEventListener('scroll', () => {
+      const max = scroller.scrollHeight - scroller.clientHeight;
+      progress.style.width = (max > 0 ? Math.min(100, (scroller.scrollTop / max) * 100) : 0) + '%';
+    }, { passive: true });
+
+    this._manifestoAutoScroll(scroller);
+
+    this._manifestoEsc = (e) => { if (e.key === 'Escape') this.closeWelcomeManifesto(); };
+    document.addEventListener('keydown', this._manifestoEsc);
+  },
+
+  // Yazıyı jenerik akışı gibi yavaşça aşağı kaydırır; kullanıcı dokununca durur,
+  // bir süre etkileşim olmazsa kaldığı yerden devam eder.
+  _manifestoAutoScroll(scroller) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const SPEED = 30; // piksel/saniye
+    let paused = false, idleTimer = null, last = null, pos = null;
+    const pause = () => {
+      paused = true; pos = null;
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => { paused = false; }, 4000);
+    };
+    ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(ev =>
+      scroller.addEventListener(ev, pause, { passive: true })
+    );
+    const step = (ts) => {
+      if (!scroller.isConnected) return;
+      if (last === null) last = ts;
+      const dt = Math.min((ts - last) / 1000, 0.1);
+      last = ts;
+      if (!paused) {
+        if (pos === null) pos = scroller.scrollTop;
+        pos += SPEED * dt;
+        scroller.scrollTop = pos;
+        if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) return;
+      }
+      requestAnimationFrame(step);
+    };
+    // Başlık nefes alsın, sonra akış başlasın
+    setTimeout(() => requestAnimationFrame(step), 3000);
+  },
+
+  // Manifesto fon müziği: kısık sesle (fade-in) başlar; tarayıcı otomatik çalmayı
+  // engellerse ilk kullanıcı etkileşiminde devreye girer.
+  _manifestoAudio: null,
+  _manifestoAudioStart: null,
+  _initManifestoAudio(overlay) {
+    const btn = overlay.querySelector('.manifesto-audio-btn');
+    let audio;
+    try { audio = new Audio('assets/audio/manifesto-theme.mp3'); } catch (e) { btn?.remove(); return; }
+    audio.loop = true;
+    audio.preload = 'auto';
+    audio.volume = 0;
+    this._manifestoAudio = audio;
+
+    let fadeTimer = null;
+    const fadeTo = (target, ms, done) => {
+      clearInterval(fadeTimer);
+      const stepMs = 60;
+      const from = audio.volume;
+      const steps = Math.max(1, Math.round(ms / stepMs));
+      let i = 0;
+      fadeTimer = setInterval(() => {
+        i++;
+        audio.volume = Math.min(1, Math.max(0, from + (target - from) * (i / steps)));
+        if (i >= steps) { clearInterval(fadeTimer); if (done) done(); }
+      }, stepMs);
+    };
+    audio._fadeTo = fadeTo;
+
+    const TARGET_VOLUME = 0.22; // kısık başlangıç seviyesi
+    let started = false;
+    const tryStart = async () => {
+      if (started || this._manifestoAudio !== audio) return;
+      try {
+        await audio.play();
+        started = true;
+        fadeTo(TARGET_VOLUME, 2500);
+      } catch (e) { /* otomatik çalma engellendi; etkileşim bekleniyor */ }
+    };
+    this._manifestoAudioStart = tryStart;
+    tryStart();
+
+    // Otomatik çalma engellenirse ilk dokunuş/tuş ile başlat
+    const onFirstInteract = () => { if (!audio.muted) tryStart(); };
+    audio._interactEvents = ['pointerdown', 'touchstart', 'keydown'];
+    audio._onFirstInteract = onFirstInteract;
+    audio._interactEvents.forEach(ev => document.addEventListener(ev, onFirstInteract, { passive: true }));
+  },
+
+  toggleManifestoAudio() {
+    const audio = this._manifestoAudio;
+    const btn = document.querySelector('#welcomeManifesto .manifesto-audio-btn');
+    if (!audio || !btn) return;
+    audio.muted = !audio.muted;
+    const muted = audio.muted;
+    if (!muted && this._manifestoAudioStart) this._manifestoAudioStart();
+    btn.classList.toggle('muted', muted);
+    btn.setAttribute('aria-label', muted ? 'Müziği aç' : 'Müziği kapat');
+    btn.innerHTML = `<i data-lucide="${muted ? 'volume-x' : 'volume-2'}" style="width:20px;height:20px"></i>`;
+    if (window.lucide?.createIcons) lucide.createIcons();
+  },
+
+  _stopManifestoAudio() {
+    const audio = this._manifestoAudio;
+    if (!audio) return;
+    this._manifestoAudio = null;
+    this._manifestoAudioStart = null;
+    if (audio._onFirstInteract) {
+      audio._interactEvents.forEach(ev => document.removeEventListener(ev, audio._onFirstInteract));
+    }
+    const halt = () => { audio.pause(); audio.src = ''; };
+    if (audio._fadeTo && !audio.paused) audio._fadeTo(0, 500, halt);
+    else halt();
+  },
+
+  closeWelcomeManifesto() {
+    const overlay = document.getElementById('welcomeManifesto');
+    if (!overlay) return;
+    this._stopManifestoAudio();
+    if (this._manifestoEsc) {
+      document.removeEventListener('keydown', this._manifestoEsc);
+      this._manifestoEsc = null;
+    }
+    overlay.classList.add('closing');
+    setTimeout(() => {
+      overlay.remove();
+      if (!document.querySelector('.modal-overlay.open')) {
+        const scrollY = Math.abs(parseInt(document.body.style.top || '0', 10));
+        document.body.classList.remove('modal-open');
+        document.body.style.top = '';
+        window.scrollTo(0, scrollY);
+      }
+    }, 600);
+  },
+
+  async shareManifesto() {
+    const url = /^(localhost|127\.|192\.168\.)/.test(location.hostname)
+      ? 'https://asdflmezun.org'
+      : location.origin;
+    const text = "ASDFL Mezunlar Ağı'na katıldım! 🎓 Sen de aramıza katıl; okulumuzun hafızasını, dayanışmasını ve geleceğini birlikte büyütelim.";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'ASDFL Mezunlar Ağı', text, url });
+        this.toast('Paylaştığın için teşekkürler! 💛', 'success');
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text + ' ' + url);
+      this.toast('Davet mesajı kopyalandı! Arkadaşlarına gönderebilirsin. 📋', 'success');
+    } catch (e) {
+      window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + url), '_blank', 'noopener');
+    }
+  },
+
+  // Eski bir index.html kopyası iOS/Android önbelleğinden açılırsa kayıt formunda
+  // hukuki onay alanları eksik kalmasın. Güncel şablonda alanlar zaten bulunduğu
+  // için bu koruma yalnızca eksik DOM'u tamamlar.
+  ensureRegistrationConsents() {
+    const registerModal = document.getElementById('registerModal');
+    if (!registerModal) return;
+
+    let submitButton = document.getElementById('registerSubmitBtn');
+    if (!submitButton) {
+      submitButton = registerModal.querySelector('button[onclick="ASDFL.handleRegister()"]');
+      if (submitButton) submitButton.id = 'registerSubmitBtn';
+    }
+
+    const requiredIds = ['regKvkkNotice', 'regTerms', 'regOptionalConsent'];
+    if (!submitButton || requiredIds.every(id => document.getElementById(id))) return;
+
+    registerModal.querySelector('.registration-consents')?.remove();
+    const consentGroup = document.createElement('div');
+    consentGroup.className = 'form-group registration-consents';
+    consentGroup.setAttribute('role', 'group');
+    consentGroup.setAttribute('aria-labelledby', 'registrationConsentsTitle');
+    consentGroup.innerHTML = `
+      <strong class="registration-consents-title" id="registrationConsentsTitle">Yasal Onaylar</strong>
+      <label>
+        <input type="checkbox" id="regKvkkNotice">
+        <span><a href="kvkk-aydinlatma.html" target="_blank" rel="noopener">KVKK Aydınlatma Metni</a>'ni okudum ve bilgilendirildim. <strong>(Zorunlu)</strong></span>
+      </label>
+      <label>
+        <input type="checkbox" id="regTerms">
+        <span><a href="kullanim-kosullari.html" target="_blank" rel="noopener">Kullanım Koşulları</a> ile <a href="topluluk-kurallari.html" target="_blank" rel="noopener">Topluluk Kuralları</a>'nı kabul ediyorum. <strong>(Zorunlu)</strong></span>
+      </label>
+      <label>
+        <input type="checkbox" id="regOptionalConsent">
+        <span><a href="acik-riza.html" target="_blank" rel="noopener">Açık Rıza Metni</a> kapsamında paylaşmayı seçtiğim iletişim bilgilerimin doğrulanmış üyelerce görüntülenmesine izin veriyorum. (İsteğe bağlı)</span>
+      </label>
+      <small>Gizlilik ve çerez kullanımı hakkında <a href="gizlilik-politikasi.html" target="_blank" rel="noopener">Gizlilik Politikası</a> ve <a href="cerez-politikasi.html" target="_blank" rel="noopener">Çerez Politikası</a>'nı inceleyebilirsiniz.</small>`;
+    submitButton.before(consentGroup);
+  },
+
+  setRegistrationPasswordError(message) {
+    const password = document.getElementById('regPass');
+    const confirmation = document.getElementById('regPassConfirm');
+    const hint = document.getElementById('regPassConfirmHint');
+    const invalid = Boolean(message);
+
+    [password, confirmation].forEach(input => {
+      if (!input) return;
+      if (invalid) input.setAttribute('aria-invalid', 'true');
+      else input.removeAttribute('aria-invalid');
+    });
+    if (hint) {
+      hint.textContent = message;
+      hint.classList.toggle('is-error', invalid);
+    }
+  },
+
+  ensurePasswordControls() {
+    const registerModal = document.getElementById('registerModal');
+    const password = document.getElementById('regPass');
+
+    if (registerModal && password && !document.getElementById('regPassConfirm')) {
+      const confirmationGroup = document.createElement('div');
+      confirmationGroup.className = 'form-group';
+      confirmationGroup.dataset.registrationPasswordConfirm = '';
+      confirmationGroup.innerHTML = `
+        <label class="form-label" for="regPassConfirm">Şifre Tekrarı</label>
+        <input type="password" class="form-input" placeholder="••••••••" id="regPassConfirm" autocomplete="new-password" required aria-describedby="regPassConfirmHint">
+        <small class="form-hint password-match-hint" id="regPassConfirmHint" aria-live="polite"></small>`;
+      password.closest('.form-group')?.after(confirmationGroup);
+    }
+
+    const passwordFields = [
+      { input: document.getElementById('loginPass'), autocomplete: 'current-password' },
+      { input: password, autocomplete: 'new-password' },
+      { input: document.getElementById('regPassConfirm'), autocomplete: 'new-password' }
+    ];
+
+    passwordFields.forEach(({ input, autocomplete }) => {
+      if (!input) return;
+      input.autocomplete = autocomplete;
+      input.spellcheck = false;
+
+      let wrapper = input.parentElement;
+      if (!wrapper?.classList.contains('password-input-wrap')) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'password-input-wrap';
+        input.before(wrapper);
+        wrapper.appendChild(input);
+      }
+      if (wrapper.querySelector('.password-visibility-toggle')) return;
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'password-visibility-toggle';
+      button.setAttribute('aria-controls', input.id);
+
+      const updateButton = () => {
+        const visible = input.type === 'text';
+        button.setAttribute('aria-label', visible ? 'Şifreyi gizle' : 'Şifreyi göster');
+        button.setAttribute('aria-pressed', String(visible));
+        button.title = visible ? 'Şifreyi gizle' : 'Şifreyi göster';
+        button.innerHTML = `<i data-lucide="${visible ? 'eye-off' : 'eye'}" aria-hidden="true"></i>`;
+        if (window.lucide?.createIcons) window.lucide.createIcons();
+      };
+
+      button.addEventListener('click', () => {
+        const selectionStart = input.selectionStart;
+        const selectionEnd = input.selectionEnd;
+        input.type = input.type === 'password' ? 'text' : 'password';
+        updateButton();
+        input.focus({ preventScroll: true });
+        if (selectionStart !== null && selectionEnd !== null) {
+          input.setSelectionRange(selectionStart, selectionEnd);
+        }
+      });
+      wrapper.appendChild(button);
+      updateButton();
+    });
+
+    const confirmation = document.getElementById('regPassConfirm');
+    const clearResolvedError = () => {
+      if (password?.value && confirmation?.value && password.value === confirmation.value) {
+        this.setRegistrationPasswordError('');
+      }
+    };
+    password?.addEventListener('input', clearResolvedError);
+    confirmation?.addEventListener('input', clearResolvedError);
   },
 
   init() {
@@ -3221,6 +3653,9 @@ const ASDFL = {
     if (regRole && typeof toggleRegFields === 'function') {
       toggleRegFields(regRole.value);
     }
+
+    this.ensureRegistrationConsents();
+    this.ensurePasswordControls();
 
     this.initNavbar();
     this.initReveal();
@@ -3236,6 +3671,7 @@ const ASDFL = {
     this.initCities();
     this.initAutocomplete();
     this.setupSearchableDropdowns();
+    this.initWelcomeManifesto();
   },
 
   async checkRequiredConsents() {

@@ -13,6 +13,7 @@ const profile = await readFile('profil.html', 'utf8');
 const scanFixes = await readFile('supabase/migrations/202607080003_security_scan_fixes.sql', 'utf8');
 const metadataLimit = await readFile('supabase/migrations/20260714144922_enforce_user_metadata_size_limit.sql', 'utf8');
 const messaging = await readFile('supabase/migrations/20260715205847_secure_messaging.sql', 'utf8');
+const careerModeration = await readFile('supabase/migrations/20260715221903_career_delete_and_message_report_admin.sql', 'utf8');
 
 test('profile privilege escalation is blocked in the database', () => {
   assert.match(migration, /protect_profile_privileges/);
@@ -51,6 +52,19 @@ test('message blocks, reports and notifications preserve privacy evidence', () =
   assert.match(messaging, /'direct_message'/);
   assert.doesNotMatch(messaging, /notify_direct_message\(\)[\s\S]*NEW\.body/);
   assert.match(messaging, /ALTER PUBLICATION supabase_realtime ADD TABLE public\.messages/);
+});
+
+test('career deletion and message report moderation stay server-authorized', () => {
+  assert.match(careerModeration, /FOREIGN KEY \(posting_id\)[\s\S]*ON DELETE CASCADE/);
+  assert.match(careerModeration, /FOR DELETE TO authenticated[\s\S]*auth\.uid\(\)\) = employer_id OR public\.is_admin\(\)/);
+  assert.match(careerModeration, /DROP POLICY IF EXISTS "İlan sahipleri kendi ilanlarını silebilir"/);
+  assert.match(careerModeration, /REVOKE INSERT, UPDATE, DELETE ON TABLE public\.job_postings FROM anon/);
+  assert.match(careerModeration, /GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public\.job_postings TO authenticated/);
+  assert.match(careerModeration, /CREATE OR REPLACE FUNCTION public\.list_message_reports_admin/);
+  assert.match(careerModeration, /NOT public\.is_admin\(\)/);
+  assert.match(careerModeration, /SET search_path = ''/);
+  assert.match(careerModeration, /REVOKE ALL ON FUNCTION public\.list_message_reports_admin\(INTEGER, TEXT\)[\s\S]*FROM PUBLIC, anon, authenticated/);
+  assert.match(careerModeration, /GRANT EXECUTE ON FUNCTION public\.review_message_report\(UUID, TEXT\)[\s\S]*TO authenticated/);
 });
 
 test('auth user metadata is rejected above the 8 KB database limit', () => {

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <script>document.documentElement.classList.add('no-transitions');</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>İmece | ASDFL Mezunlar Derneği</title>
+  <meta name="description" content="ASDFL İmece ile topluluğun hedefli ihtiyaçlarını doğru mezunlara ve üyelere ulaştırın.">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/main.css?v=1.7">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/imece.css?v=1.1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#05111E">
+  <link rel="apple-touch-icon" href="assets/images/logo.png">
+  <script src="assets/vendor/lucide.js"></script>
+  <script src="js/bootstrap.js?v=1.2"></script>
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <a href="index.html" class="nav-brand" aria-label="ASDFL ana sayfa">
+      <div class="logo-icon"><i data-lucide="microscope" aria-hidden="true"></i></div>
+      <div>ASDFL<span class="sub">Mezunlar Derneği</span></div>
+    </a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html"><i data-lucide="home" aria-hidden="true"></i> Ana Sayfa</a></li>
+      <li><a href="mezunlar.html"><i data-lucide="users" aria-hidden="true"></i> Mezunlar</a></li>
+      <li><a href="topluluk.html"><i data-lucide="message-circle" aria-hidden="true"></i> Topluluk</a></li>
+      <li><a href="imece.html" class="active" aria-current="page"><i data-lucide="hand-heart" aria-hidden="true"></i> İmece</a></li>
+      <li><a href="etkinlikler.html"><i data-lucide="megaphone" aria-hidden="true"></i> Etkinlikler</a></li>
+      <li><a href="burs-mentorluk.html"><i data-lucide="award" aria-hidden="true"></i> Burs &amp; Mentörlük</a></li>
+      <li><a href="kariyer.html"><i data-lucide="briefcase" aria-hidden="true"></i> Kariyer Ağı</a></li>
+    </ul>
+    <div class="nav-cta">
+      <button class="btn btn-primary btn-sm" type="button" onclick="ASDFL.openModal('loginModal')">Giriş Yap</button>
+      <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    </div>
+  </nav>
+
+  <main class="imece-page">
+    <section class="imece-hero" aria-labelledby="imeceTitle">
+      <div class="container imece-hero-grid">
+        <div>
+          <span class="imece-eyebrow"><i data-lucide="sparkles" aria-hidden="true"></i> Birlikte daha güçlüyüz</span>
+          <h1 id="imeceTitle">İhtiyacı doğru kişiye, desteği doğru yere ulaştır.</h1>
+          <p>İmece; eğitimden ulaşıma, kariyerden gündelik dayanışmaya kadar topluluğun ihtiyaçlarını panoda görünür kılar ve ilgili mezunlara bildirimle ulaştırır.</p>
+          <div class="imece-hero-actions">
+            <button class="btn btn-primary" id="guestLoginButton" type="button" onclick="ASDFL.openModal('loginModal')">
+              <i data-lucide="log-in" aria-hidden="true"></i> İmece'ye katıl
+            </button>
+            <button class="btn btn-primary" id="memberCreateButton" type="button" hidden>
+              <i data-lucide="plus" aria-hidden="true"></i> İhtiyaç paylaş
+            </button>
+            <a class="btn btn-secondary" href="#imeceHowItWorks">Nasıl çalışır?</a>
+          </div>
+        </div>
+        <div class="imece-hero-visual" aria-hidden="true">
+          <span class="imece-orbit orbit-one"><i data-lucide="graduation-cap"></i></span>
+          <span class="imece-orbit orbit-two"><i data-lucide="briefcase-business"></i></span>
+          <span class="imece-orbit orbit-three"><i data-lucide="map-pin"></i></span>
+          <span class="imece-heart"><i data-lucide="hand-heart"></i></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="container imece-guest" id="imeceGuest" aria-labelledby="imeceHowItWorks">
+      <div class="imece-section-heading">
+        <span>Güvenli dayanışma</span>
+        <h2 id="imeceHowItWorks">Üç adımda imece</h2>
+        <p>İhtiyacınızı üye panosunda paylaşın; bildirimleri ilgili kişilere yönlendirerek topluluk içinden kontrollü destek alın.</p>
+      </div>
+      <div class="imece-how-grid">
+        <article><span>01</span><i data-lucide="file-plus-2" aria-hidden="true"></i><h3>İhtiyacı anlat</h3><p>Pano tüm üyelere açıktır; kişisel ve hassas ayrıntıları azaltarak ihtiyacınızı açıklayın.</p></article>
+        <article><span>02</span><i data-lucide="scan-search" aria-hidden="true"></i><h3>Bildirimi hedefle</h3><p>Hangi rol, şehir, meslek, kurum, üniversite veya kişilerin bildirim alacağını seçin.</p></article>
+        <article><span>03</span><i data-lucide="messages-square" aria-hidden="true"></i><h3>Bağlantı kur</h3><p>Destek sunabilecek üyeler güvenli mesajlaşma üzerinden sizinle iletişime geçsin.</p></article>
+      </div>
+      <aside class="imece-safety-note">
+        <i data-lucide="shield-alert" aria-hidden="true"></i>
+        <div><strong>Önce güvenlik</strong><p>İmece acil servis değildir. Acil sağlık veya güvenlik durumlarında 112'yi arayın; sağlık paylaşımında tanı, rapor ve kimlik bilgisi gibi hassas ayrıntıları yazmayın.</p></div>
+      </aside>
+    </section>
+
+    <section class="container imece-member" id="imeceMember" hidden aria-labelledby="imeceFeedTitle">
+      <div class="imece-member-heading">
+        <div><span>Topluluk ihtiyaç panosu</span><h2 id="imeceFeedTitle">İmece akışı</h2></div>
+        <button class="btn btn-primary" id="feedCreateButton" type="button"><i data-lucide="plus" aria-hidden="true"></i> İhtiyaç paylaş</button>
+      </div>
+
+      <form class="imece-filters" id="imeceFilters" role="search" aria-label="İmece taleplerini filtrele">
+        <label class="imece-search">
+          <span class="sr-only">İhtiyaçlarda ara</span>
+          <i data-lucide="search" aria-hidden="true"></i>
+          <input id="imeceSearch" type="search" autocomplete="off" placeholder="Başlık, açıklama veya kişi ara…">
+        </label>
+        <label><span>Kategori</span><select id="imeceCategoryFilter"><option value="">Tüm kategoriler</option><option value="contact">İletişim / bağlantı</option><option value="health">Sağlık dayanışması</option><option value="career">Kariyer</option><option value="education">Eğitim</option><option value="legal">Hukuki yönlendirme</option><option value="technical">Teknik destek</option><option value="logistics">Lojistik / ulaşım</option><option value="other">Diğer</option></select></label>
+        <label><span>Durum</span><select id="imeceStatusFilter"><option value="">Tüm durumlar</option><option value="open">Açık</option><option value="resolved">Çözüldü</option><option value="closed">Kapalı</option></select></label>
+        <label><span>Aciliyet</span><select id="imeceUrgencyFilter"><option value="">Tüm seviyeler</option><option value="normal">Normal</option><option value="urgent">Acil</option></select></label>
+        <button class="imece-clear-filters" id="imeceClearFilters" type="button">Filtreleri temizle</button>
+      </form>
+
+      <div class="imece-feed-status" id="imeceFeedStatus" role="status" aria-live="polite"></div>
+      <div class="imece-feed" id="imeceFeed" aria-busy="true"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand"><div class="nav-brand"><div class="logo-icon"><i data-lucide="microscope" aria-hidden="true"></i></div><div>ASDFL<span class="sub">Mezunlar Derneği</span></div></div><p>Afyon Süleyman Demirel Fen Lisesi mezunlarını buluşturan platform.</p></div>
+        <div class="footer-col"><h5>Sayfalar</h5><ul class="footer-links"><li><a href="index.html">Ana Sayfa</a></li><li><a href="mezunlar.html">Mezunlar</a></li><li><a href="topluluk.html">Topluluk</a></li><li><a href="imece.html">İmece</a></li></ul></div>
+        <div class="footer-col"><h5>Destek</h5><ul class="footer-links"><li><a href="burs-mentorluk.html#basvuru">Burs Başvurusu</a></li><li><a href="burs-mentorluk.html#mentor">Mentör Ol</a></li></ul></div>
+        <div class="footer-col"><h5>İletişim</h5><ul class="footer-links"><li><a href="mailto:info@asdfl.org">info@asdfl.org</a></li></ul></div>
+      </div>
+      <div class="footer-bottom"><span>© 2026 ASDFL Mezunlar Derneği</span><span>ASDFL ruhuyla yapıldı</span></div>
+    </div>
+  </footer>
+
+  <dialog class="imece-dialog" id="imeceRequestDialog" aria-labelledby="imeceDialogTitle" aria-describedby="imecePrivacyWarning">
+    <form class="imece-dialog-card" id="imeceRequestForm">
+      <div class="imece-dialog-header">
+        <div><span>Yeni dayanışma çağrısı</span><h2 id="imeceDialogTitle">İhtiyaç paylaş</h2></div>
+        <button class="imece-icon-button" id="imeceDialogClose" type="button" aria-label="İhtiyaç paylaşma penceresini kapat"><i data-lucide="x" aria-hidden="true"></i></button>
+      </div>
+
+      <div class="imece-form-grid">
+        <label><span>Kategori</span><select id="imeceCategory" required><option value="">Seçin</option><option value="contact">İletişim / bağlantı</option><option value="health">Sağlık dayanışması</option><option value="career">Kariyer</option><option value="education">Eğitim</option><option value="legal">Hukuki yönlendirme</option><option value="technical">Teknik destek</option><option value="logistics">Lojistik / ulaşım</option><option value="other">Diğer</option></select></label>
+        <label><span>Aciliyet</span><select id="imeceUrgency" required><option value="normal">Normal</option><option value="urgent">Acil</option></select></label>
+        <label class="imece-form-wide"><span>Başlık</span><input id="imeceTitleInput" type="text" minlength="8" maxlength="140" required placeholder="İhtiyacı tek cümlede özetleyin"></label>
+        <label class="imece-form-wide"><span>Açıklama</span><textarea id="imeceDescription" minlength="20" maxlength="2500" required rows="5" placeholder="Neye ihtiyaç duyduğunuzu, uygun zamanı ve gerekli bağlamı yazın. Telefon, adres veya sağlık raporu eklemeyin."></textarea></label>
+        <label><span>Yayında kalma süresi</span><select id="imeceExpiryDays" required><option value="1">1 gün</option><option value="3">3 gün</option><option value="7" selected>7 gün</option><option value="14">14 gün</option><option value="30">30 gün</option></select></label>
+      </div>
+
+      <div class="imece-warning" id="imecePrivacyWarning"><i data-lucide="triangle-alert" aria-hidden="true"></i><p><strong>Hassas sağlık verisini paylaşmayın.</strong> Tanı, tahlil, rapor, T.C. kimlik numarası veya açık adres yazmayın. İmece acil servis değildir; acil durumlarda 112'yi arayın.</p></div>
+
+      <fieldset class="imece-targeting">
+        <legend>Kimler bildirim alsın?</legend>
+        <p class="imece-targeting-disclosure">Pano tüm üyelere açıktır; seçimler yalnızca yeni ihtiyaç bildiriminin alıcılarını belirler.</p>
+        <label class="imece-everyone"><input id="imeceAudienceAll" type="checkbox"><span><strong>Tüm uygun üyelere bildir</strong><small>Aşağıdaki hedefleri seçmeden topluluğun tamamına bildirim gönderir.</small></span></label>
+        <div id="imeceTargetFields">
+          <fieldset class="imece-role-picker"><legend>Roller</legend><label><input type="checkbox" name="imeceRole" value="Mezun"> Mezun</label><label><input type="checkbox" name="imeceRole" value="Öğrenci"> Öğrenci</label><label><input type="checkbox" name="imeceRole" value="Öğretmen"> Öğretmen</label><label><input type="checkbox" name="imeceRole" value="Kullanıcı"> Üye</label><label><input type="checkbox" name="imeceRole" value="Admin"> Yönetici</label></fieldset>
+          <div class="imece-form-grid imece-tag-fields">
+            <label><span>Şehirler</span><input id="imeceCities" type="text" maxlength="500" placeholder="Afyonkarahisar, Ankara"></label>
+            <label><span>Meslekler</span><input id="imeceJobs" type="text" maxlength="500" placeholder="Doktor, Yazılım mühendisi"></label>
+            <label><span>Şirket / kurumlar</span><input id="imeceCompanies" type="text" maxlength="500" placeholder="ASELSAN, Şehir Hastanesi"></label>
+            <label><span>Üniversiteler</span><input id="imeceUniversities" type="text" maxlength="500" placeholder="ODTÜ, Hacettepe Üniversitesi"></label>
+          </div>
+          <div class="imece-person-picker">
+            <label for="imecePersonSearch">Belirli kişiler</label>
+            <div class="imece-combobox"><i data-lucide="user-search" aria-hidden="true"></i><input id="imecePersonSearch" type="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="imecePersonResults" placeholder="En az 2 harfle üye ara"></div>
+            <div class="imece-person-results" id="imecePersonResults" role="listbox" hidden></div>
+            <div class="imece-chips" id="imecePersonChips" aria-live="polite"></div>
+          </div>
+        </div>
+        <p class="imece-field-error" id="imeceTargetError" role="alert"></p>
+      </fieldset>
+
+      <p class="imece-submit-status" id="imeceSubmitStatus" role="status" aria-live="polite"></p>
+      <div class="imece-dialog-actions"><button class="btn btn-secondary" id="imeceDialogCancel" type="button">Vazgeç</button><button class="btn btn-primary" id="imeceSubmitButton" type="submit"><i data-lucide="send" aria-hidden="true"></i> Paylaş</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="imece-dialog imece-report-dialog" id="imeceReportDialog" aria-labelledby="imeceReportTitle" aria-describedby="imeceReportHelp">
+    <form class="imece-dialog-card" id="imeceReportForm">
+      <div class="imece-dialog-header">
+        <div><span>Moderasyon bildirimi</span><h2 id="imeceReportTitle">İhtiyacı şikâyet et</h2></div>
+        <button class="imece-icon-button" id="imeceReportClose" type="button" aria-label="Şikâyet penceresini kapat"><i data-lucide="x" aria-hidden="true"></i></button>
+      </div>
+      <p id="imeceReportHelp">Şikâyet nedeninizi kişisel veya hassas bilgi eklemeden açıklayın.</p>
+      <label class="imece-report-label" for="imeceReportReason">Şikâyet nedeni</label>
+      <textarea id="imeceReportReason" minlength="10" maxlength="500" rows="4" required placeholder="En az 10 karakterle açıklayın"></textarea>
+      <p class="imece-submit-status" id="imeceReportStatus" role="status" aria-live="polite"></p>
+      <div class="imece-dialog-actions"><button class="btn btn-secondary" id="imeceReportCancel" type="button">Vazgeç</button><button class="btn btn-primary" id="imeceReportSubmit" type="submit"><i data-lucide="flag" aria-hidden="true"></i> Moderasyona gönder</button></div>
+    </form>
+  </dialog>
+
+  <div class="modal-overlay" id="loginModal" onclick="if(event.target===this)ASDFL.closeModal('loginModal')">
+    <div class="modal">
+      <button class="modal-close" type="button" aria-label="Giriş penceresini kapat" onclick="ASDFL.closeModal('loginModal')"><i data-lucide="x" aria-hidden="true"></i></button>
+      <div class="imece-login-heading"><i data-lucide="log-in" aria-hidden="true"></i><h3>Üye girişi</h3><p>İmece ihtiyaçlarını görmek ve paylaşmak için giriş yapın.</p></div>
+      <div class="form-group"><label class="form-label" for="loginEmail">E-posta</label><input type="email" class="form-input" id="loginEmail" autocomplete="email"></div>
+      <div class="form-group"><label class="form-label" for="loginPass">Şifre</label><input type="password" class="form-input" id="loginPass" autocomplete="current-password"></div>
+      <button class="btn btn-primary" type="button" onclick="ASDFL.handleLogin('loginEmail', 'loginPass')">Giriş Yap</button>
+    </div>
+  </div>
+
+  <div class="toast-container"></div>
+  <script src="assets/vendor/supabase.js?v=2.108.2-1"></script>
+  <script src="js/app.js?v=1.18"></script>
+  <script src="js/imece.js?v=1.0"></script>
+</body>
+</html>

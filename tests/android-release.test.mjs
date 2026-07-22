@@ -23,19 +23,21 @@ test('assetlinks şablonu yalnız TWA URL yetkisini ister', async () => {
   assert.equal(assetLinks[0].target.sha256_cert_fingerprints.length, 1);
 });
 
-test('Android workflow yalnız elle ve main dalında imzalı paket üretir', async () => {
+test('Android workflow secretsiz ve kurulabilir bir test APK üretir', async () => {
   const workflow = await read('.github/workflows/android-release.yml');
 
   assert.match(workflow, /workflow_dispatch:/);
   assert.doesNotMatch(workflow, /pull_request(?:_target)?:/);
-  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
-  assert.match(workflow, /environment: android-release/);
   assert.match(workflow, /permissions:\s*\n\s*contents: read/);
-  assert.match(workflow, /\$RUNNER_TEMP\/asdfl-release\.keystore/);
+  assert.doesNotMatch(workflow, /secrets\./);
+  assert.doesNotMatch(workflow, /environment: android-release/);
+  assert.match(workflow, /keytool -genkeypair/);
+  assert.match(workflow, /\$RUNNER_TEMP\/asdfl-test\.keystore/);
+  assert.match(workflow, /android\/app-release-signed\.apk/);
   assert.match(workflow, /if: always\(\)/);
-  assert.match(workflow, /retention-days: 14/);
+  assert.match(workflow, /retention-days: 7/);
   assert.match(workflow, /apksigner_path/);
-  assert.match(workflow, /expected_fingerprint/);
+  assert.doesNotMatch(workflow, /app-release-bundle\.aab/);
   assert.doesNotMatch(workflow, /--skipPwaValidation/);
 });
 

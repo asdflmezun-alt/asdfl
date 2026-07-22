@@ -9,15 +9,15 @@
 <title>ASDFL Mezunlar Derneği | Afyon Süleyman Demirel Fen Lisesi</title>
 <meta name="description" content="Afyon Süleyman Demirel Fen Lisesi mezunları ve öğrencilerini buluşturan platform. Burs, mentörlük, etkinlik ve anılar.">
     <link rel="stylesheet" href="css/fonts.css">
-  <link rel="stylesheet" href="css/main.css?v=1.4">
+  <link rel="stylesheet" href="css/main.css?v=1.7">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#05111E">
   <link rel="apple-touch-icon" href="assets/images/logo.png">
 <link rel="stylesheet" href="css/animations.css">
 <link rel="stylesheet" href="assets/vendor/leaflet.css">
-<link rel="stylesheet" href="css/home.css?v=1.5">
+<link rel="stylesheet" href="css/home.css?v=1.6">
 <script src="assets/vendor/lucide.js"></script>
-<script src="js/bootstrap.js?v=1.1"></script>
+<script src="js/bootstrap.js?v=1.2"></script>
 <style>
   .hidden { display: none !important; }
 </style>
@@ -35,6 +35,7 @@
     <li><a href="index.html" class="active"><i data-lucide="home" style="width:1.2rem;height:1.2rem"></i> Ana Sayfa</a></li>
     <li><a href="mezunlar.html"><i data-lucide="users" style="width:1.2rem;height:1.2rem"></i> Mezunlar</a></li>
     <li><a href="topluluk.html"><i data-lucide="message-circle" style="width:1.2rem;height:1.2rem"></i> Topluluk</a></li>
+    <li><a href="imece.html"><i data-lucide="hand-heart" style="width:1.2rem;height:1.2rem"></i> İmece</a></li>
     <li><a href="etkinlikler.html"><i data-lucide="megaphone" style="width:1.2rem;height:1.2rem"></i> Etkinlikler</a></li>
     <li><a href="galeri.html"><i data-lucide="image" style="width:1.2rem;height:1.2rem"></i> Galeri</a></li>
     <li><a href="burs-mentorluk.html"><i data-lucide="award" style="width:1.2rem;height:1.2rem"></i> Burs &amp; Mentörlük</a></li>
@@ -246,7 +247,9 @@
       <span class="section-label">Öne Çıkan Mezunlar</span>
       <h2 class="section-title">Başarılı <span>isimlerimiz</span></h2>
     </div>
-    <div class="grid-4" id="featuredAlumni"></div>
+    <div class="featured-alumni-carousel" aria-label="Öne çıkan mentörler">
+      <div class="grid-4 featured-alumni-track" id="featuredAlumni"></div>
+    </div>
     <div style="text-align:center;margin-top:2.5rem">
       <a href="mezunlar.html" class="btn btn-secondary">Tüm Mezunları Gör <i data-lucide="arrow-right" style="width:1em;height:1em"></i></a>
     </div>
@@ -531,20 +534,21 @@
         <input type="checkbox" id="regShareEmail" style="accent-color: var(--gold-500);"> E-posta adresimi diğer mezunlarla paylaş
       </label>
     </div>
-    <div class="form-group registration-consents" style="margin-top:1rem; display:flex; flex-direction:column; gap:.65rem; padding:1rem; border:1px solid var(--glass-border); border-radius:var(--radius-md); text-align:left;">
-      <label style="display:flex;align-items:flex-start;gap:.55rem;font-size:.82rem;color:var(--text-secondary);cursor:pointer;line-height:1.45">
-        <input type="checkbox" id="regKvkkNotice" style="margin-top:.2rem;accent-color:var(--gold-500)">
+    <div class="form-group registration-consents" role="group" aria-labelledby="registrationConsentsTitle">
+      <strong class="registration-consents-title" id="registrationConsentsTitle">Yasal Onaylar</strong>
+      <label>
+        <input type="checkbox" id="regKvkkNotice">
         <span><a href="kvkk-aydinlatma.html" target="_blank" rel="noopener">KVKK Aydınlatma Metni</a>'ni okudum ve bilgilendirildim. <strong>(Zorunlu)</strong></span>
       </label>
-      <label style="display:flex;align-items:flex-start;gap:.55rem;font-size:.82rem;color:var(--text-secondary);cursor:pointer;line-height:1.45">
-        <input type="checkbox" id="regTerms" style="margin-top:.2rem;accent-color:var(--gold-500)">
+      <label>
+        <input type="checkbox" id="regTerms">
         <span><a href="kullanim-kosullari.html" target="_blank" rel="noopener">Kullanım Koşulları</a> ile <a href="topluluk-kurallari.html" target="_blank" rel="noopener">Topluluk Kuralları</a>'nı kabul ediyorum. <strong>(Zorunlu)</strong></span>
       </label>
-      <label style="display:flex;align-items:flex-start;gap:.55rem;font-size:.82rem;color:var(--text-secondary);cursor:pointer;line-height:1.45">
-        <input type="checkbox" id="regOptionalConsent" style="margin-top:.2rem;accent-color:var(--gold-500)">
+      <label>
+        <input type="checkbox" id="regOptionalConsent">
         <span><a href="acik-riza.html" target="_blank" rel="noopener">Açık Rıza Metni</a> kapsamında paylaşmayı seçtiğim iletişim bilgilerimin doğrulanmış üyelerce görüntülenmesine izin veriyorum. (İsteğe bağlı)</span>
       </label>
-      <small style="color:var(--text-muted)">Gizlilik ve çerez kullanımı hakkında <a href="gizlilik-politikasi.html" target="_blank" rel="noopener">Gizlilik Politikası</a> ve <a href="cerez-politikasi.html" target="_blank" rel="noopener">Çerez Politikası</a>'nı inceleyebilirsiniz.</small>
+      <small>Gizlilik ve çerez kullanımı hakkında <a href="gizlilik-politikasi.html" target="_blank" rel="noopener">Gizlilik Politikası</a> ve <a href="cerez-politikasi.html" target="_blank" rel="noopener">Çerez Politikası</a>'nı inceleyebilirsiniz.</small>
     </div>
     <button class="btn btn-primary" id="registerSubmitBtn" style="width:100%;margin-top:.5rem" onclick="ASDFL.handleRegister()">Kayıt Ol</button>
     <div class="divider"></div>
@@ -570,7 +574,7 @@ function toggleRegFields(role) {
     document.getElementById('diag-leaflet-js').innerHTML = '- Leaflet JS Yüklenme Durumu: ' + (isLoaded ? '<span style="color:#2ecc71">Yüklendi (Ok)</span>' : '<span style="color:#e74c3c">Yüklenemedi (L tanımsız)</span>');
   }
 </script>
-<script src="js/app.js?v=1.13"></script>
+  <script src="js/app.js?v=1.18"></script>
 <script>
   // Tarayıcı local cache'i app.js'i yenilemezse diye waitForAuth'u inline olarak eziyoruz (Zaman aşımı koruması)
   if (window.ASDFL) {
@@ -596,6 +600,6 @@ function toggleRegFields(role) {
     };
   }
 </script>
-<script src="js/home.js?v=1.4"></script>
+<script src="js/home.js?v=1.5"></script>
 </body>
 </html>

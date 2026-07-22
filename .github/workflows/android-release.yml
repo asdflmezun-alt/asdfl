@@ -1,38 +1,24 @@
-name: Android paketi
+name: Android test APK
 
 on:
   workflow_dispatch:
-    inputs:
-      version_name:
-        description: Google Play'de gösterilecek sürüm (ör. 1.0.0)
-        required: true
-        default: 1.0.0
-        type: string
-      version_code:
-        description: Her yayında artması gereken pozitif sürüm kodu
-        required: true
-        default: '1'
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: android-release
-  cancel-in-progress: false
+  group: android-test-apk
+  cancel-in-progress: true
 
 jobs:
-  release:
-    name: İmzalı AAB ve APK üret
-    if: >-
-      github.repository == 'asdflmezun-alt/asdfl' &&
-      github.event_name == 'workflow_dispatch' &&
-      github.ref == 'refs/heads/main'
+  build:
+    name: Kurulabilir test APK'sı üret
     runs-on: ubuntu-latest
-    environment: android-release
     timeout-minutes: 30
     env:
       BUBBLEWRAP_IMAGE: ghcr.io/googlechromelabs/bubblewrap:latest
+      TEST_KEY_ALIAS: asdfl-test
+      TEST_KEYSTORE_PASSWORD: android-test
 
     steps:
       - name: Kaynak kodu al
@@ -50,40 +36,29 @@ jobs:
       - name: Siteyi doğrula
         run: npm run verify
 
-      - name: Android sırlarını denetle
+      - name: Tek kullanımlık test anahtarı oluştur
+        id: keystore
         shell: bash
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          missing=0
-          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
-            if [ -z "${!name}" ]; then
-              echo "::error::Eksik GitHub environment secret: ${name}"
-              missing=1
-            fi
-          done
-          exit "$missing"
+          keystore_path="$RUNNER_TEMP/asdfl-test.keystore"
+          keytool -genkeypair \
+            -noprompt \
+            -keystore "$keystore_path" \
+            -storepass "$TEST_KEYSTORE_PASSWORD" \
+            -keypass "$TEST_KEYSTORE_PASSWORD" \
+            -alias "$TEST_KEY_ALIAS" \
+            -dname "CN=ASDFL Test, O=ASDFL, C=TR" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 3650
+          echo "path=$keystore_path" >> "$GITHUB_OUTPUT"
 
       - name: TWA yapılandırmasını hazırla
         env:
-          ANDROID_VERSION_NAME: ${{ inputs.version_name }}
-          ANDROID_VERSION_CODE: ${{ inputs.version_code }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_VERSION_NAME: 0.1.${{ github.run_number }}
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+          ANDROID_KEY_ALIAS: ${{ env.TEST_KEY_ALIAS }}
         run: node scripts/prepare-android-twa.mjs
-
-      - name: Keystore'u geçici dizine aç
-        id: keystore
-        shell: bash
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          keystore_path="$RUNNER_TEMP/asdfl-release.keystore"
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
-          chmod 600 "$keystore_path"
-          echo "path=$keystore_path" >> "$GITHUB_OUTPUT"
 
       - name: Android projesini üret
         shell: bash
@@ -93,12 +68,11 @@ jobs:
             "$BUBBLEWRAP_IMAGE" \
             update --skipVersionUpgrade
 
-      - name: İmzalı Android paketlerini derle
+      - name: Test APK'sını derle
         shell: bash
         env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ env.TEST_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ env.TEST_KEYSTORE_PASSWORD }}
           KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
         run: |
           docker run --rm \
@@ -109,48 +83,28 @@ jobs:
             "$BUBBLEWRAP_IMAGE" \
             build \
             --signingKeyPath=/run-secrets/release.keystore \
-            --signingKeyAlias="$ANDROID_KEY_ALIAS"
+            --signingKeyAlias="$TEST_KEY_ALIAS"
 
-      - name: İmzaları ve çıktıları doğrula
+      - name: APK'yı doğrula
         shell: bash
-        env:
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
         run: |
           test -s android/app-release-signed.apk
-          test -s android/app-release-bundle.aab
-          jarsigner -verify -strict android/app-release-bundle.aab
-
           apksigner_path="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$apksigner_path"
-          "$apksigner_path" verify --verbose --print-certs android/app-release-signed.apk
+          "$apksigner_path" verify --verbose android/app-release-signed.apk
+          sha256sum android/app-release-signed.apk > android/SHA256SUMS.txt
 
-          expected_fingerprint="$(keytool -exportcert \
-            -keystore "$KEYSTORE_PATH" \
-            -alias "$ANDROID_KEY_ALIAS" \
-            -storepass:env ANDROID_KEYSTORE_PASSWORD | sha256sum | cut -d ' ' -f 1)"
-          actual_fingerprint="$("$apksigner_path" verify --print-certs android/app-release-signed.apk \
-            | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' \
-            | head -n 1)"
-          test "${actual_fingerprint,,}" = "${expected_fingerprint,,}"
-
-          sha256sum \
-            android/app-release-signed.apk \
-            android/app-release-bundle.aab > android/SHA256SUMS.txt
-
-      - name: APK ve AAB dosyalarını yükle
+      - name: Test APK'sını indirilebilir yap
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: asdfl-android-${{ inputs.version_name }}-${{ inputs.version_code }}
+          name: asdfl-test-apk-${{ github.run_number }}
           path: |
             android/app-release-signed.apk
-            android/app-release-bundle.aab
             android/SHA256SUMS.txt
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7
 
-      - name: Geçici imzalama dosyasını sil
+      - name: Geçici test anahtarını sil
         if: always()
         shell: bash
         env:

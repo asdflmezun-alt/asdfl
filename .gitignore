@@ -4,3 +4,21 @@ npm-debug.log*
 .env.*
 !.env.example
 dist/
+
+# Android release signing and generated Bubblewrap output
+*.jks
+*.keystore
+key.properties
+local.properties
+*.apk
+*.aab
+android/twa-manifest.json
+android/app/
+android/build/
+android/.gradle/
+android/gradle/
+android/gradlew
+android/gradlew.bat
+android/build.gradle
+android/settings.gradle
+android/gradle.properties

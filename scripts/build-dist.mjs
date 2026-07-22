@@ -15,6 +15,7 @@ const EXCLUDE = new Set([
   'node_modules',
   '.git',
   '.github',
+  'android',
   'scratch',
   'tests',
   'scripts',

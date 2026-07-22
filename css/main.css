@@ -195,6 +195,23 @@ textarea:focus-visible,
 
 /* Tablet ve küçük laptop: bağlantıları içerikle yarışmayan erişilebilir çekmeceye taşı. */
 @media (min-width: 769px) and (max-width: 1280px) {
+  .navbar,
+  .navbar.scrolled {
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: .65rem 1rem;
+    border-width: 0 0 1px;
+    border-radius: 0;
+    background: rgba(5,17,30,.97);
+    box-shadow: 0 10px 32px rgba(0,4,10,.22);
+  }
+
+  .navbar.scrolled::after {
+    left: 18%;
+    right: 18%;
+  }
+
   .nav-links {
     position: fixed;
     top: 0;
@@ -267,8 +284,29 @@ textarea:focus-visible,
   }
 
   .navbar .hamburger {
-    display: flex;
+    min-width: 82px;
+    display: grid;
+    grid-template-columns: auto 24px;
+    grid-template-rows: repeat(3, 3px);
+    align-content: center;
+    column-gap: .55rem;
+    padding: .5rem .7rem;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 12px;
+    background: rgba(255,255,255,.04);
     z-index: 1002;
+  }
+
+  .navbar .hamburger::before {
+    content: 'Menü';
+    grid-row: 1 / 4;
+    align-self: center;
+    color: var(--text-secondary);
+    font: 700 .76rem/1 'Outfit', sans-serif;
+  }
+
+  .navbar .hamburger span {
+    grid-column: 2;
   }
 
   .hamburger.active span:nth-child(1) {
@@ -443,6 +481,44 @@ textarea:focus-visible,
   border-color: var(--danger);
   box-shadow: 0 0 0 3px rgba(248,113,113,.1);
 }
+.password-input-wrap {
+  position: relative;
+}
+.password-input-wrap .form-input {
+  padding-right: 3.5rem;
+}
+.password-visibility-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease;
+}
+.password-visibility-toggle:hover,
+.password-visibility-toggle:focus-visible {
+  background: rgba(255,255,255,.06);
+  color: var(--gold-400);
+}
+.password-visibility-toggle svg {
+  width: 19px;
+  height: 19px;
+}
+.password-match-hint:empty {
+  display: none;
+}
+.password-match-hint.is-error {
+  color: var(--danger);
+}
 
 /* STAT */
 .stat-number { font-family:'Outfit',sans-serif; font-size:2.8rem; font-weight:800; background:linear-gradient(135deg,var(--gold-400),var(--gold-600)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; margin-bottom:.5rem; }
@@ -493,14 +569,42 @@ textarea:focus-visible,
 }
 .modal-overlay.open .modal { transform: scale(1) translateY(0); }
 .registration-consents {
+  display: flex !important;
+  flex-direction: column;
+  gap: .65rem;
+  margin-top: 1rem;
+  padding: 1rem;
   background: rgba(244,168,54,.045);
+  border: 1px solid rgba(244,168,54,.3);
   border-color: rgba(244,168,54,.3) !important;
+  border-radius: var(--radius-md);
+  text-align: left;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+.registration-consents-title {
+  color: var(--text-primary);
+  font-size: .9rem;
+}
+.registration-consents label {
+  display: flex;
+  align-items: flex-start;
+  gap: .65rem;
+  min-height: 44px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: .82rem;
+  line-height: 1.45;
+}
+.registration-consents small {
+  color: var(--text-muted);
 }
 .registration-consents input[type="checkbox"],
 .legal-consent-dialog input[type="checkbox"] {
   width: 20px;
   height: 20px;
   min-width: 20px;
+  margin-top: .15rem;
   accent-color: var(--gold-500);
 }
 .legal-consent-dialog {
@@ -1109,4 +1213,271 @@ body.nav-open::after {
   border-width: 3px !important;
   border-radius: var(--radius-lg) !important;
   box-shadow: 0 6px 20px rgba(244, 168, 54, 0.25) !important;
+}
+
+/* ========================================
+   HOŞ GELDİN MANİFESTOSU (ilk üyelik ekranı)
+   ======================================== */
+.manifesto-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999990;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -10%, rgba(244,168,54,.14) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 85% 110%, rgba(38,68,105,.5) 0%, transparent 65%),
+    var(--navy-950);
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+.manifesto-overlay.open { opacity: 1; }
+.manifesto-overlay.closing { opacity: 0; }
+
+.manifesto-overlay::before,
+.manifesto-overlay::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: manifestoGlow 9s ease-in-out infinite alternate;
+}
+.manifesto-overlay::before {
+  width: 46vmax; height: 46vmax;
+  top: -18vmax; left: -14vmax;
+  background: radial-gradient(circle, rgba(244,168,54,.10), transparent 70%);
+}
+.manifesto-overlay::after {
+  width: 40vmax; height: 40vmax;
+  bottom: -16vmax; right: -12vmax;
+  background: radial-gradient(circle, rgba(96,165,250,.07), transparent 70%);
+  animation-delay: -4.5s;
+}
+@keyframes manifestoGlow {
+  from { transform: translate3d(0,0,0) scale(1); opacity: .7; }
+  to   { transform: translate3d(4vmax,3vmax,0) scale(1.15); opacity: 1; }
+}
+
+.manifesto-progress {
+  position: absolute;
+  top: 0; left: 0;
+  height: 3px;
+  width: 0;
+  background: linear-gradient(90deg, var(--gold-600), var(--gold-400));
+  box-shadow: 0 0 12px rgba(244,168,54,.6);
+  z-index: 3;
+  transition: width 120ms linear;
+}
+
+.manifesto-close,
+.manifesto-audio-btn {
+  position: absolute;
+  top: max(1rem, env(safe-area-inset-top, 1rem));
+  right: 1rem;
+  z-index: 3;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border-radius: var(--radius-full);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 150ms ease;
+}
+.manifesto-close:hover,
+.manifesto-audio-btn:hover { background: var(--glass-bg-hover); color: var(--text-primary); }
+.manifesto-audio-btn {
+  right: calc(1rem + var(--tap-target) + .6rem);
+  color: var(--gold-400);
+  border-color: rgba(244,168,54,.35);
+}
+.manifesto-audio-btn.muted {
+  color: var(--text-muted);
+  border-color: var(--glass-border);
+}
+
+.manifesto-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(244,168,54,.35) transparent;
+  z-index: 2;
+}
+
+.manifesto-content {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: clamp(5rem, 16vh, 9rem) 1.5rem calc(4rem + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+}
+
+.manifesto-crest {
+  width: 76px; height: 76px;
+  margin: 0 auto 1.5rem;
+  border-radius: var(--radius-full);
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 30% 25%, rgba(244,168,54,.28), rgba(244,168,54,.08));
+  border: 1px solid rgba(244,168,54,.4);
+  box-shadow: var(--shadow-gold), inset 0 0 22px rgba(244,168,54,.12);
+  color: var(--gold-400);
+  animation: manifestoCrest 4s ease-in-out infinite;
+}
+.manifesto-crest i, .manifesto-crest svg { width: 34px; height: 34px; }
+@keyframes manifestoCrest {
+  0%, 100% { transform: translateY(0); box-shadow: 0 0 30px rgba(244,168,54,.2), inset 0 0 22px rgba(244,168,54,.12); }
+  50% { transform: translateY(-7px); box-shadow: 0 12px 44px rgba(244,168,54,.32), inset 0 0 22px rgba(244,168,54,.18); }
+}
+
+.manifesto-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(2.6rem, 9vw, 4rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(120deg, var(--text-primary) 20%, var(--gold-400) 55%, var(--gold-600) 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 2.4rem;
+}
+
+.manifesto-content p {
+  font-size: clamp(1.02rem, 2.6vw, 1.15rem);
+  line-height: 1.85;
+  color: var(--text-secondary);
+  margin-bottom: 1.35rem;
+}
+.manifesto-lead { color: var(--text-primary) !important; font-weight: 500; }
+.manifesto-em {
+  color: var(--gold-400) !important;
+  font-weight: 600;
+  font-size: clamp(1.05rem, 2.7vw, 1.2rem) !important;
+  margin-bottom: .9rem !important;
+}
+
+.manifesto-content h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(1.45rem, 4.5vw, 1.9rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 1.6rem;
+  line-height: 1.35;
+}
+
+.manifesto-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2.8rem 0;
+  color: var(--gold-500);
+  font-size: 1rem;
+}
+.manifesto-divider::before,
+.manifesto-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(244,168,54,.45));
+}
+.manifesto-divider::after {
+  background: linear-gradient(90deg, rgba(244,168,54,.45), transparent);
+}
+
+.manifesto-quote {
+  margin: 2.6rem 0;
+  padding: 1.8rem 1.6rem;
+  border-radius: var(--radius-lg);
+  background: rgba(244,168,54,.06);
+  border: 1px solid rgba(244,168,54,.3);
+  box-shadow: inset 0 0 40px rgba(244,168,54,.05);
+}
+.manifesto-quote p {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(1.1rem, 3vw, 1.3rem) !important;
+  font-weight: 700;
+  line-height: 1.6 !important;
+  color: var(--text-primary) !important;
+  margin: 0 !important;
+}
+.manifesto-signoff {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(1.6rem, 5vw, 2.1rem) !important;
+  font-weight: 800;
+  color: var(--gold-400) !important;
+  margin: 0 0 2.6rem !important;
+}
+
+.manifesto-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .9rem;
+}
+.manifesto-share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .6rem;
+  min-height: 52px;
+  padding: .9rem 2.2rem;
+  width: min(100%, 340px);
+  border: none;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--gold-400), var(--gold-600));
+  color: var(--navy-950);
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(244,168,54,.35);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  animation: manifestoPulse 2.6s ease-in-out infinite;
+}
+.manifesto-share-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(244,168,54,.5); }
+.manifesto-share-btn:active { transform: translateY(0); }
+.manifesto-share-btn i, .manifesto-share-btn svg { width: 20px; height: 20px; }
+@keyframes manifestoPulse {
+  0%, 100% { box-shadow: 0 8px 28px rgba(244,168,54,.35); }
+  50% { box-shadow: 0 8px 40px rgba(244,168,54,.55); }
+}
+
+.manifesto-skip-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: .88rem;
+  min-height: var(--tap-target);
+  padding: .5rem 1rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  transition: color 150ms ease;
+}
+.manifesto-skip-btn:hover { color: var(--text-secondary); }
+
+/* Kayarak görünme animasyonu */
+.m-reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 900ms cubic-bezier(0.22,1,0.36,1), transform 900ms cubic-bezier(0.22,1,0.36,1);
+}
+.m-reveal.in { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 640px) {
+  .manifesto-content { padding-top: clamp(4rem, 12vh, 6rem); }
+  .manifesto-divider { margin: 2.2rem 0; }
+  .manifesto-quote { padding: 1.4rem 1.1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .manifesto-overlay::before,
+  .manifesto-overlay::after,
+  .manifesto-crest,
+  .manifesto-share-btn { animation: none; }
+  .m-reveal { opacity: 1; transform: none; transition: none; }
 }

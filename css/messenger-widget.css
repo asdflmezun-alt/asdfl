@@ -79,9 +79,9 @@
 .asdfl-mw-panel {
   position: relative;
   width: min(380px, calc(100vw - 2rem));
-  height: min(620px, calc(100dvh - 6rem));
+  height: min(520px, calc(100dvh - 6rem));
   max-width: 380px;
-  max-height: 620px;
+  max-height: 520px;
   display: flex;
   overflow: hidden;
   border: 1px solid var(--mw-line);
@@ -217,7 +217,8 @@
 .asdfl-mw-block-button.is-blocked { color: var(--mw-gold); background: rgba(212,175,55,.08); }
 .asdfl-mw-notice { padding: .55rem .8rem; border-bottom: 1px solid rgba(212,175,55,.16); color: #dfc87e; font-size: .68rem; line-height: 1.45; text-align: center; background: rgba(212,175,55,.06); }
 
-.asdfl-mw-messages { min-height: 0; overflow-y: auto; flex: 1; padding: .8rem .7rem; scrollbar-width: thin; scrollbar-color: rgba(212,175,55,.25) transparent; }
+.asdfl-mw-messages { min-height: 0; overflow-y: auto; overscroll-behavior: contain; flex: 1; padding: .8rem .7rem; scrollbar-width: none; }
+.asdfl-mw-messages::-webkit-scrollbar { width: 0; height: 0; }
 .asdfl-mw-day { display: flex; align-items: center; gap: .55rem; margin: .6rem 0 .7rem; color: #7d8e9a; font-size: .57rem; font-weight: 750; text-transform: uppercase; }
 .asdfl-mw-day::before,
 .asdfl-mw-day::after { content: ""; height: 1px; flex: 1; background: var(--mw-line); }
@@ -236,7 +237,7 @@
 
 .asdfl-mw-composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; padding: .65rem .7rem calc(.65rem + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--mw-line); background: rgba(2, 11, 19, .65); }
 .asdfl-mw-input-wrap { position: relative; min-width: 0; }
-.asdfl-mw-composer textarea { width: 100%; min-height: 46px; max-height: 112px; resize: none; padding: .65rem .7rem 1.15rem; border: 1px solid var(--mw-line); border-radius: 14px; outline: 0; color: #edf4f8; line-height: 1.4; background: rgba(255,255,255,.05); }
+.asdfl-mw-composer textarea { width: 100%; min-height: 46px; max-height: 112px; overflow-y: hidden; resize: none; padding: .65rem .7rem 1.15rem; border: 1px solid var(--mw-line); border-radius: 14px; outline: 0; color: #edf4f8; line-height: 1.4; background: rgba(255,255,255,.05); }
 .asdfl-mw-composer textarea:focus { border-color: rgba(212,175,55,.42); box-shadow: 0 0 0 3px rgba(212,175,55,.08); }
 .asdfl-mw-composer textarea::placeholder { color: #82939f; }
 .asdfl-mw-count { position: absolute; right: .55rem; bottom: .3rem; color: #71838f; font-size: .53rem; pointer-events: none; }
@@ -279,7 +280,7 @@
 
 @media (max-width: 768px) {
   .asdfl-mw-root { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
-  .asdfl-mw-panel { height: min(620px, calc(100dvh - 104px)); }
+  .asdfl-mw-panel { height: min(520px, calc(100dvh - 104px)); }
 }
 
 @media (max-width: 600px) {

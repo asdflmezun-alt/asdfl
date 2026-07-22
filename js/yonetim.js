@@ -7,6 +7,8 @@ let allApplications = [];
 let allAnnouncements = [];
 let allDataRequests = [];
 let allPostReports = [];
+let allMessageReports = [];
+let allImeceReports = [];
 
 let currentTab = 'dashboard';
 let currentAppFilter = 'ALL';
@@ -143,7 +145,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadAdminData();
 
   // 3. Render Initial State
-  switchAdminTab(currentTab, document.getElementById(`btn-tab-${currentTab}`));
+  const initialTab = window.location.hash === '#moderation' ? 'moderation' : currentTab;
+  switchAdminTab(initialTab, document.getElementById(`btn-tab-${initialTab}`));
 });
 
 // Load all site components
@@ -281,6 +284,87 @@ async function loadAdminData() {
       allPostReports = [];
     }
 
+    try {
+      const { data, error } = await ASDFL.supabase.rpc('list_message_reports_admin', {
+        result_limit: 200,
+        report_status: null
+      });
+      if (error) {
+        console.error('message_reports fetch error:', error.message);
+        allMessageReports = [];
+      } else {
+        allMessageReports = (data || []).map(report => ({
+          id: report.report_id,
+          message_id: report.message_id,
+          reporter_id: report.reporter_id,
+          reason: report.reason,
+          evidence_body: report.evidence_body,
+          evidence_sender_id: report.reported_user_id,
+          status: report.status,
+          moderator_id: report.moderator_id,
+          reviewed_at: report.reviewed_at,
+          created_at: report.created_at,
+          reporter: report.reporter_id ? { id: report.reporter_id, name: report.reporter_name, role: report.reporter_role } : null,
+          sender: report.reported_user_id ? { id: report.reported_user_id, name: report.reported_name, role: report.reported_role } : null
+        }));
+      }
+    } catch (e) {
+      console.error('message_reports exception:', e);
+      allMessageReports = [];
+    }
+
+    try {
+      const { data, error } = await ASDFL.supabase
+        .from('imece_reports')
+        .select('id,request_id,reporter_id,reason,status,moderator_id,reviewed_at,created_at')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) {
+        console.error('imece_reports fetch error:', error.message);
+        allImeceReports = [];
+      } else {
+        const reports = data || [];
+        const requestIds = [...new Set(reports.map(report => report.request_id).filter(Boolean))];
+        let requestsById = new Map();
+        if (requestIds.length) {
+          const { data: imeceRequests, error: requestsError } = await ASDFL.supabase
+            .from('imece_request_feed')
+            .select('id,author_id,title,description,status')
+            .in('id', requestIds);
+          if (requestsError) console.error('reported imece requests fetch error:', requestsError.message);
+          requestsById = new Map((imeceRequests || []).map(request => [request.id, request]));
+        }
+
+        let profilesById = new Map(allMembers.map(member => [member.id, member]));
+        const profileIds = [...new Set([
+          ...reports.map(report => report.reporter_id),
+          ...[...requestsById.values()].map(request => request.author_id)
+        ].filter(Boolean))];
+        const missingProfileIds = profileIds.filter(id => !profilesById.has(id));
+        if (missingProfileIds.length) {
+          const { data: profiles, error: profilesError } = await ASDFL.supabase
+            .from('public_profiles')
+            .select('id,name,role')
+            .in('id', missingProfileIds);
+          if (profilesError) console.error('imece moderation profiles fetch error:', profilesError.message);
+          profilesById = new Map([...profilesById, ...(profiles || []).map(profile => [profile.id, profile])]);
+        }
+
+        allImeceReports = reports.map(report => {
+          const request = requestsById.get(report.request_id) || null;
+          return {
+            ...report,
+            request,
+            reporter: profilesById.get(report.reporter_id) || null,
+            author: request ? (profilesById.get(request.author_id) || null) : null
+          };
+        });
+      }
+    } catch (e) {
+      console.error('imece_reports exception:', e);
+      allImeceReports = [];
+    }
+
     // Eğer hiç üye yüklenmediyse offline fallback
     if (!allMembers || allMembers.length === 0) {
       loadOfflineFallbackData();
@@ -293,6 +377,8 @@ async function loadAdminData() {
 // Fallback when Supabase is offline
 function loadOfflineFallbackData() {
   allPostReports = [];
+  allMessageReports = [];
+  allImeceReports = [];
   // Members mock
   try {
     const stored = ASDFL._storage.getItem('asdfl_alumni');
@@ -476,7 +562,13 @@ function renderModerationReports() {
   if (!container) return;
 
   const statusFilter = document.getElementById('moderationStatusFilter')?.value || 'Pending';
-  const reports = allPostReports.filter(report => statusFilter === 'ALL' || report.status === statusFilter);
+  const reports = [
+    ...allPostReports.map(report => ({ ...report, reportType: 'post' })),
+    ...allMessageReports.map(report => ({ ...report, reportType: 'message' })),
+    ...allImeceReports.map(report => ({ ...report, reportType: 'imece' }))
+  ]
+    .filter(report => statusFilter === 'ALL' || report.status === statusFilter)
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
   const statusLabels = { Pending: 'Bekliyor', Reviewed: 'İncelendi', Dismissed: 'Kapatıldı' };
   const statusBadges = { Pending: 'badge-gold', Reviewed: 'badge-teal', Dismissed: 'badge-blue' };
 
@@ -484,35 +576,54 @@ function renderModerationReports() {
     container.innerHTML = ASDFL.emptyStateHTML({
       icon: 'flag',
       title: 'İncelenecek rapor yok',
-      body: 'Seçili filtrede topluluk moderasyonu için bekleyen bir kayıt bulunmuyor.'
+      body: 'Seçili filtrede gönderi, mesaj veya İmece moderasyonu için bekleyen bir kayıt bulunmuyor.'
     });
     setTimeout(() => ASDFL.refreshIcons(), 10);
     return;
   }
 
   container.innerHTML = reports.map(report => {
-    const postText = report.post?.content || 'Gönderi silinmiş veya görüntülenemiyor.';
+    const isMessageReport = report.reportType === 'message';
+    const isImeceReport = report.reportType === 'imece';
+    const reportedText = isMessageReport
+      ? (report.evidence_body || 'Mesaj içeriği kaydedilemedi.')
+      : isImeceReport
+        ? (report.request?.description || 'İmece ihtiyacı artık görüntülenemiyor.')
+        : (report.post?.content || 'Gönderi silinmiş veya görüntülenemiyor.');
     const reporterName = report.reporter?.name || 'Bilinmeyen kullanıcı';
+    const senderName = report.sender?.name || 'Bilinmeyen kullanıcı';
+    const authorName = report.author?.name || 'Bilinmeyen kullanıcı';
     const createdAt = report.created_at ? new Date(report.created_at).toLocaleString('tr-TR') : '-';
+    const reportLabel = isMessageReport ? 'Özel mesaj raporu' : isImeceReport ? 'İmece ihtiyacı raporu' : 'Topluluk gönderisi raporu';
+    const reportedTitle = isMessageReport
+      ? 'Raporlanan mesaj'
+      : isImeceReport
+        ? `İmece: ${report.request?.title || 'Başlıksız ihtiyaç'}`
+        : 'Raporlanan gönderi';
+    const statusAction = isMessageReport ? 'updateMessageReportStatus' : isImeceReport ? 'updateImeceReportStatus' : 'updatePostReportStatus';
     return `
       <div class="card" style="padding:1rem 1.25rem;margin-bottom:1rem;border:1px solid var(--glass-border);background:var(--glass-bg)">
         <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap">
           <div>
-            <span class="badge ${statusBadges[report.status] || 'badge-blue'}">${statusLabels[report.status] || report.status}</span>
-            <h4 style="margin:.55rem 0 .2rem;font-size:1rem;color:var(--text-primary)">Raporlanan gönderi</h4>
-            <p style="margin:0;color:var(--text-secondary);font-size:.88rem;line-height:1.5;white-space:pre-wrap">${adminEscape(postText).slice(0, 500)}</p>
+            <span class="badge ${statusBadges[report.status] || 'badge-blue'}">${adminEscape(statusLabels[report.status] || report.status)}</span>
+            <span class="badge badge-blue" style="margin-left:.35rem">${reportLabel}</span>
+            <h4 style="margin:.55rem 0 .2rem;font-size:1rem;color:var(--text-primary)">${adminEscape(reportedTitle)}</h4>
+            <p style="margin:0;color:var(--text-secondary);font-size:.88rem;line-height:1.5;white-space:pre-wrap">${adminEscape(String(reportedText).slice(0, 500))}</p>
           </div>
-          <a class="btn btn-ghost btn-sm" href="topluluk.html#post-${ASDFL.escapeAttr(report.post_id)}" style="white-space:nowrap">Gönderiye Git</a>
+          ${!isMessageReport && report.post_id ? `<a class="btn btn-ghost btn-sm" href="topluluk.html#post-${ASDFL.escapeAttr(report.post_id)}" style="white-space:nowrap">Gönderiye Git</a>` : ''}
+          ${isImeceReport && report.request?.id ? `<a class="btn btn-ghost btn-sm" href="imece.html?request=${ASDFL.escapeAttr(report.request.id)}" style="white-space:nowrap">İhtiyaca Git</a>` : ''}
         </div>
         <div style="margin-top:.85rem;padding-top:.85rem;border-top:1px solid var(--glass-border);display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;color:var(--text-muted);font-size:.82rem">
           <div><strong style="color:var(--text-secondary)">Raporlayan:</strong> ${adminEscape(reporterName)}</div>
+          ${isMessageReport ? `<div><strong style="color:var(--text-secondary)">Mesajı gönderen:</strong> ${adminEscape(senderName)}</div>` : ''}
+          ${isImeceReport ? `<div><strong style="color:var(--text-secondary)">İhtiyacı paylaşan:</strong> ${adminEscape(authorName)}</div>` : ''}
           <div><strong style="color:var(--text-secondary)">Tarih:</strong> ${adminEscape(createdAt)}</div>
           <div><strong style="color:var(--text-secondary)">Neden:</strong> ${adminEscape(report.reason || 'Neden belirtilmedi')}</div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:.5rem;flex-wrap:wrap;margin-top:1rem">
-          <button class="btn btn-secondary btn-sm" onclick="updatePostReportStatus('${ASDFL.escapeAttr(report.id)}', 'Dismissed')">Kapat</button>
-          <button class="btn btn-primary btn-sm" onclick="updatePostReportStatus('${ASDFL.escapeAttr(report.id)}', 'Reviewed')">İncelendi</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--text-red)" onclick="deleteReportedPost('${ASDFL.escapeAttr(report.post_id)}', '${ASDFL.escapeAttr(report.id)}')">Gönderiyi Sil</button>
+          <button class="btn btn-secondary btn-sm" onclick="${statusAction}(${ASDFL.jsString(report.id)}, 'Dismissed')">Kapat</button>
+          <button class="btn btn-primary btn-sm" onclick="${statusAction}(${ASDFL.jsString(report.id)}, 'Reviewed')">İncelendi</button>
+          ${!isMessageReport && !isImeceReport ? `<button class="btn btn-ghost btn-sm" style="color:var(--text-red)" onclick="deleteReportedPost(${ASDFL.jsString(report.post_id)}, ${ASDFL.jsString(report.id)})">Gönderiyi Sil</button>` : ''}
         </div>
       </div>
     `;
@@ -531,6 +642,44 @@ window.updatePostReportStatus = async function(reportId, status) {
   if (error) { ASDFL.toast('Rapor güncellenemedi: ' + error.message, 'error'); return; }
   allPostReports = allPostReports.map(report => report.id === reportId ? { ...report, status } : report);
   ASDFL.toast('Moderasyon durumu güncellendi.', 'success');
+  renderModerationReports();
+  updateStats();
+};
+
+window.updateMessageReportStatus = async function(reportId, status) {
+  if (!['Reviewed', 'Dismissed'].includes(status)) return;
+  if (!ASDFL.supabase) {
+    allMessageReports = allMessageReports.map(report => report.id === reportId ? { ...report, status } : report);
+    renderModerationReports();
+    updateStats();
+    return;
+  }
+  const { error } = await ASDFL.supabase.rpc('review_message_report', {
+    target_report_id: reportId,
+    new_status: status
+  });
+  if (error) {
+    ASDFL.toast('Mesaj raporu güncellenemedi: ' + error.message, 'error');
+    return;
+  }
+  allMessageReports = allMessageReports.map(report => report.id === reportId ? { ...report, status } : report);
+  ASDFL.toast('Mesaj raporu durumu güncellendi.', 'success');
+  renderModerationReports();
+  updateStats();
+};
+
+window.updateImeceReportStatus = async function(reportId, status) {
+  if (!['Reviewed', 'Dismissed'].includes(status) || !ASDFL.supabase) return;
+  const { error } = await ASDFL.supabase.rpc('review_imece_report', {
+    p_report_id: reportId,
+    p_status: status
+  });
+  if (error) {
+    ASDFL.toast('İmece raporu güncellenemedi.', 'error');
+    return;
+  }
+  allImeceReports = allImeceReports.map(report => report.id === reportId ? { ...report, status } : report);
+  ASDFL.toast('İmece raporu durumu güncellendi.', 'success');
   renderModerationReports();
   updateStats();
 };
@@ -563,7 +712,7 @@ function updateStats() {
   const activeScholarships = allScholarships.filter(program => program.active !== false && (!program.deadline || adminParseDate(program.deadline) >= adminStartOfToday())).length;
   const activeRecipients = allApplications.filter(application => application.type === 'Burs' && application.status === 'Approved').length;
   const openDataRequests = allDataRequests.filter(request => ['Pending', 'InProgress'].includes(request.status)).length;
-  const pendingReports = allPostReports.filter(report => report.status === 'Pending').length;
+  const pendingReports = [...allPostReports, ...allMessageReports, ...allImeceReports].filter(report => report.status === 'Pending').length;
 
   const elUsers = document.getElementById('statTotalUsers');
   const elEvents = document.getElementById('statTotalEvents');
@@ -638,6 +787,16 @@ function renderAdminPriorityQueue() {
     tab: 'moderation', urgent: true, sort: 1,
     title: report.reporter?.name ? `${report.reporter.name} tarafından raporlandı` : 'Yeni topluluk raporu',
     meta: report.reason || 'Moderasyon incelemesi bekliyor'
+  }));
+  allMessageReports.filter(report => report.status === 'Pending').forEach(report => priorities.push({
+    tab: 'moderation', urgent: true, sort: 1,
+    title: report.reporter?.name ? `${report.reporter.name} bir mesajı bildirdi` : 'Yeni özel mesaj raporu',
+    meta: report.reason || 'Mesaj moderasyonu incelemesi bekliyor'
+  }));
+  allImeceReports.filter(report => report.status === 'Pending').forEach(report => priorities.push({
+    tab: 'moderation', urgent: true, sort: 1,
+    title: report.request?.title ? `İmece: ${report.request.title}` : 'Yeni İmece raporu',
+    meta: report.reason || 'İmece moderasyonu incelemesi bekliyor'
   }));
   allDataRequests.filter(request => ['Pending', 'InProgress'].includes(request.status)).forEach(request => priorities.push({
     tab: 'data-requests', urgent: request.status === 'Pending', sort: request.status === 'Pending' ? 2 : 3,

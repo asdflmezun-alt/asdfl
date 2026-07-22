@@ -6,9 +6,22 @@ let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
 let selectedDate = new Date();
 
+const APPOINTMENT_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const mentorEscapeHTML = value => ASDFL.escapeHTML(value);
 const mentorEscapeAttr = value => ASDFL.escapeAttr(value);
 const mentorJsString = value => ASDFL.jsString(value);
+
+function readAppointmentDeepLink(search = window.location.search) {
+  try {
+    const value = new URLSearchParams(search).get('appointment');
+    if (value === null) return { present: false, id: null };
+    const id = value.trim();
+    return { present: true, id: APPOINTMENT_UUID_PATTERN.test(id) ? id.toLowerCase() : null };
+  } catch (error) {
+    return { present: true, id: null };
+  }
+}
 
 function localDateKey(date) {
   const year = date.getFullYear();
@@ -69,7 +82,7 @@ function renderAppointmentCard(appointment, compact = false) {
     <button type="button" class="mentor-action-btn danger" onclick="cancelAppointment(${mentorJsString(appointment.id)})"><i data-lucide="x" aria-hidden="true"></i> İptal et</button>
   </div>` : '';
 
-  return `<article class="appointment-card${compact ? ' is-compact' : ''}">
+  return `<article class="appointment-card${compact ? ' is-compact' : ''}" data-appointment-id="${mentorEscapeAttr(appointment.id)}" tabindex="-1">
     <div class="appointment-meta">
       <div class="appointment-person">
         ${ASDFL.getAvatarHTML(partner.profile, compact ? 'avatar avatar-sm' : 'avatar')}
@@ -156,6 +169,54 @@ async function initPortal() {
   bindPortalTabKeyboard();
   window.switchPortalTab('overview');
   await refreshPortalData();
+  openAppointmentDeepLink();
+}
+
+function openAppointmentDeepLink() {
+  const deepLink = readAppointmentDeepLink();
+  if (!deepLink.present) return;
+  if (!deepLink.id) {
+    ASDFL.toast('Randevu bağlantısı geçersiz.', 'warning');
+    return;
+  }
+
+  const appointment = appointments.find(item => String(item.id || '').toLowerCase() === deepLink.id);
+  const appointmentDate = appointment ? parseLocalDate(appointment.appointment_date) : null;
+  if (!appointment || !appointmentDate) {
+    ASDFL.toast('Bu randevu bulunamadı veya görüntüleme yetkiniz yok.', 'warning');
+    return;
+  }
+
+  window.switchPortalTab('calendar');
+  selectCalendarDate(localDateKey(appointmentDate));
+  requestAnimationFrame(() => focusDeepLinkedAppointment(deepLink.id));
+}
+
+function focusDeepLinkedAppointment(appointmentId) {
+  const host = document.getElementById('selectedDayAppointments');
+  const card = [...(host?.querySelectorAll('[data-appointment-id]') || [])]
+    .find(item => item.dataset.appointmentId?.toLowerCase() === appointmentId);
+  if (!card) {
+    ASDFL.toast('Bu randevu bulunamadı veya görüntüleme yetkiniz yok.', 'warning');
+    return;
+  }
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const previousBorderColor = card.style.borderColor;
+  const previousBoxShadow = card.style.boxShadow;
+  card.dataset.deepLinkTarget = 'true';
+  card.setAttribute('aria-current', 'true');
+  card.style.borderColor = 'var(--gold-400)';
+  card.style.boxShadow = '0 0 0 3px rgba(244,168,54,.2)';
+  card.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center', inline: 'nearest' });
+  card.focus({ preventScroll: true });
+
+  window.setTimeout(() => {
+    card.style.borderColor = previousBorderColor;
+    card.style.boxShadow = previousBoxShadow;
+    delete card.dataset.deepLinkTarget;
+    card.removeAttribute('aria-current');
+  }, reduceMotion ? 4000 : 5000);
 }
 
 function applyRoleCopy() {

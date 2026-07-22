@@ -521,6 +521,10 @@
   background: rgba(2, 10, 20, 0.26);
 }
 
+.career-post-actions.has-owner-action {
+  grid-template-columns: minmax(0, 1.35fr) repeat(3, minmax(88px, 1fr));
+}
+
 .req-card .career-post-actions {
   grid-template-columns: minmax(0, 1.5fr) minmax(100px, 1fr);
 }
@@ -562,6 +566,18 @@
   border-color: var(--gold-400);
 }
 
+.career-action-danger {
+  color: #ffb4b4;
+  border-color: rgba(248, 113, 113, 0.22);
+  background: rgba(248, 113, 113, 0.07);
+}
+
+.career-action-danger:hover {
+  color: #ffe0e0;
+  border-color: rgba(248, 113, 113, 0.48);
+  background: rgba(248, 113, 113, 0.16);
+}
+
 .career-action-disabled {
   opacity: 0.58;
   cursor: not-allowed;
@@ -571,6 +587,186 @@
   width: 1rem;
   height: 1rem;
   flex: 0 0 auto;
+}
+
+.career-owner-delete {
+  min-height: 44px;
+  border: 1px solid rgba(248, 113, 113, 0.32);
+  background: rgba(248, 113, 113, 0.12);
+  color: #ffb4b4;
+}
+
+.career-owner-delete:hover {
+  border-color: rgba(248, 113, 113, 0.58);
+  background: rgba(248, 113, 113, 0.2);
+  color: #ffe0e0;
+}
+
+.career-delete-dialog {
+  width: min(92vw, 500px);
+  max-height: min(90vh, 680px);
+  padding: 0;
+  overflow: visible;
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  border-radius: var(--radius-xl);
+  background: rgba(5, 17, 30, 0.98);
+  color: var(--text-primary);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.career-delete-dialog::backdrop {
+  background: rgba(0, 5, 12, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+.career-delete-dialog-card {
+  position: relative;
+  padding: 2rem;
+  overflow-y: auto;
+  text-align: center;
+}
+
+.career-delete-dialog-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.career-delete-dialog-close:hover {
+  border-color: var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.career-delete-dialog-close:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+
+.career-delete-dialog-close svg,
+.career-delete-dialog-icon svg,
+.career-delete-dialog-warning svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.career-delete-dialog-icon {
+  display: inline-grid;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 1rem;
+  place-items: center;
+  border: 1px solid rgba(248, 113, 113, 0.34);
+  border-radius: 18px;
+  background: rgba(248, 113, 113, 0.12);
+  color: #ff9c9c;
+}
+
+.career-delete-dialog-icon svg {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.career-delete-dialog-eyebrow {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #ffadad;
+  font: 700 0.72rem 'Outfit', sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.career-delete-dialog h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.35rem, 4vw, 1.8rem);
+  overflow-wrap: anywhere;
+}
+
+.career-delete-dialog p {
+  margin: 0.75rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.career-delete-dialog-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-top: 1.2rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: var(--radius-md);
+  background: rgba(248, 113, 113, 0.07);
+  color: #ffd0d0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.career-delete-dialog-warning svg {
+  flex: 0 0 auto;
+  margin-top: 0.08rem;
+}
+
+.career-delete-dialog-status {
+  min-height: 1.45rem;
+  color: var(--text-muted) !important;
+  font-size: 0.78rem !important;
+}
+
+.career-delete-dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.career-delete-dialog-actions .btn {
+  min-height: 46px;
+}
+
+.career-delete-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  background: linear-gradient(135deg, #dc5151, #b9333e);
+  color: #fff;
+}
+
+.career-delete-confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ec6363, #cc3f4b);
+  color: #fff;
+}
+
+.career-delete-confirm:disabled {
+  opacity: 0.76;
+  cursor: wait;
+}
+
+.career-delete-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: career-delete-spin 0.75s linear infinite;
+}
+
+@keyframes career-delete-spin {
+  to { transform: rotate(360deg); }
 }
 
 .career-loading,
@@ -988,6 +1184,10 @@
     grid-template-columns: minmax(0, 1fr) minmax(84px, 0.65fr) minmax(84px, 0.65fr);
   }
 
+  .career-post-actions.has-owner-action {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .career-action {
     padding-inline: 0.45rem;
     font-size: 0.74rem;
@@ -996,6 +1196,10 @@
   .app-actions-row {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .career-delete-dialog-card {
+    padding: 1.65rem 1.15rem 1.2rem;
   }
 }
 
@@ -1036,6 +1240,10 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .career-post-actions.has-owner-action {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .req-card .career-post-actions {
     grid-template-columns: minmax(0, 1.5fr) minmax(80px, 0.7fr);
   }
@@ -1059,5 +1267,9 @@
 
   .career-post:hover {
     transform: none;
+  }
+
+  .career-delete-spinner {
+    animation: none;
   }
 }

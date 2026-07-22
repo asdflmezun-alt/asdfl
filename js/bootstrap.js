@@ -47,6 +47,12 @@
 
   if ('serviceWorker' in navigator) {
     const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    let reloadingForServiceWorkerUpdate = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (isLocalDev || reloadingForServiceWorkerUpdate) return;
+      reloadingForServiceWorkerUpdate = true;
+      window.location.reload();
+    });
     window.addEventListener('load', () => {
       if (isLocalDev) {
         // Yerel geliştirmede SW devre dışı: eski kayıt ve önbellekler bayat dosya
@@ -61,7 +67,9 @@
         }
         return;
       }
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+        .then(registration => registration.update())
+        .catch(() => {});
     });
   }
 

@@ -227,9 +227,37 @@
 
 .alumni-card-full .ac-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: .5rem;
   margin-top: auto;
   padding-top: .5rem;
+}
+
+.alumni-card-full .ac-actions > .btn {
+  flex: 1 1 110px;
+  min-height: 44px;
+}
+
+.alumni-message-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  border-color: rgba(45, 212, 191, .3) !important;
+  background: rgba(45, 212, 191, .09) !important;
+  color: #8ce8dc !important;
+}
+
+.alumni-message-action:hover {
+  border-color: rgba(45, 212, 191, .55) !important;
+  background: rgba(45, 212, 191, .16) !important;
+  color: #c7fff8 !important;
+}
+
+.alumni-message-action svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
 }
 
 .ac-mentor-badge {

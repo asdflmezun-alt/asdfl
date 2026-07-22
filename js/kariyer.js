@@ -6,6 +6,8 @@
 window.allJobs = [];
 window.allRequests = [];
 const CAREER_SAVED_JOBS_KEY = 'asdfl_saved_career_jobs';
+let pendingDeletePostingId = null;
+let isDeletingPosting = false;
 
 function careerSafeHttpUrl(value) {
   const safe = ASDFL.safeURL(value);
@@ -404,6 +406,9 @@ window.filterJobs = function() {
     const initials = job.initials || 'M';
     const dateStr = ASDFL.formatDate(job.created_at);
     const isSaved = savedIds.has(careerString(job.id));
+    const isOwnPosting = Boolean(
+      user?.id && careerString(job.employer_id) === careerString(user.id)
+    );
     
     let actionBtn = '';
     if (!user) {
@@ -436,8 +441,17 @@ window.filterJobs = function() {
           </div>
           <p class="job-desc">${ASDFL.escapeHTML(job.description)}</p>
         </div>
-        <footer class="career-post-actions">
+        <footer class="career-post-actions${isOwnPosting ? ' has-owner-action' : ''}">
           ${actionBtn}
+          ${isOwnPosting ? `
+            <button
+              class="career-action career-action-danger"
+              type="button"
+              data-delete-posting="${ASDFL.escapeAttr(job.id)}"
+              aria-label="${ASDFL.escapeAttr(`${job.title || 'İlan'} ilanını sil`)}">
+              <i data-lucide="trash-2" aria-hidden="true"></i><span>İlanı sil</span>
+            </button>
+          ` : ''}
           <button class="career-action" type="button" aria-pressed="${isSaved}" onclick="toggleSavedJob(${ASDFL.jsString(job.id)})">
             <i data-lucide="${isSaved ? 'bookmark-check' : 'bookmark'}" aria-hidden="true"></i><span>${isSaved ? 'Kaydedildi' : 'Kaydet'}</span>
           </button>
@@ -625,7 +639,8 @@ async function renderMyPostings() {
   container.innerHTML = '<div class="text-center p-3"><div class="spinner"></div></div>';
   
   const jobs = await ASDFL.fetchJobPostings();
-  const userJobs = jobs.filter(j => j.employer_id === ASDFL.currentUser.id);
+  window.allJobs = Array.isArray(jobs) ? jobs : [];
+  const userJobs = window.allJobs.filter(j => j.employer_id === ASDFL.currentUser.id);
   
   if (userJobs.length === 0) {
     container.innerHTML = `
@@ -665,7 +680,13 @@ async function renderMyPostings() {
         <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.75rem;line-height:1.5">${ASDFL.escapeHTML(job.description)}</p>
         <div style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="switchDashboardMenu('manage-apps')">Gelen Başvuruları Yönet <i data-lucide="user-check"></i></button>
-          <button class="btn btn-danger btn-sm" style="background:rgba(248, 113, 113, 0.2);color:var(--danger);border:1px solid rgba(248, 113, 113, 0.3)" onclick="confirmDeletePosting(${ASDFL.jsString(job.id)})"><i data-lucide="trash-2"></i> İlanı Sil</button>
+          <button
+            class="btn btn-danger btn-sm career-owner-delete"
+            type="button"
+            data-delete-posting="${ASDFL.escapeAttr(job.id)}"
+            aria-label="${ASDFL.escapeAttr(`${job.title || 'İlan'} ilanını sil`)}">
+            <i data-lucide="trash-2" aria-hidden="true"></i> İlanı sil
+          </button>
         </div>
       </div>
     `;
@@ -1042,18 +1063,145 @@ window.respondToApplication = async function(appId, status) {
   }
 };
 
+function findOwnedPosting(postingId, postings = window.allJobs) {
+  const userId = careerString(ASDFL.currentUser?.id);
+  const normalizedPostingId = careerString(postingId);
+  if (!userId || !normalizedPostingId || !Array.isArray(postings)) return null;
+
+  return postings.find(job => (
+    careerString(job.id) === normalizedPostingId &&
+    careerString(job.employer_id) === userId
+  )) || null;
+}
+
+function setDeletePostingDialogBusy(isBusy) {
+  isDeletingPosting = isBusy;
+  const dialog = document.getElementById('deletePostingDialog');
+  const confirmButton = document.getElementById('confirmDeletePostingButton');
+  const cancelButton = document.getElementById('cancelDeletePostingButton');
+  const closeButton = document.getElementById('deletePostingClose');
+  const status = document.getElementById('deletePostingStatus');
+
+  if (dialog) dialog.setAttribute('aria-busy', String(isBusy));
+  if (confirmButton) {
+    confirmButton.disabled = isBusy;
+    confirmButton.classList.toggle('is-loading', isBusy);
+    confirmButton.innerHTML = isBusy
+      ? '<span class="career-delete-spinner" aria-hidden="true"></span><span>Siliniyor…</span>'
+      : '<i data-lucide="trash-2" aria-hidden="true"></i><span>İlanı sil</span>';
+  }
+  if (cancelButton) cancelButton.disabled = isBusy;
+  if (closeButton) closeButton.disabled = isBusy;
+  if (status) status.textContent = isBusy ? 'İlan siliniyor, lütfen bekleyin.' : '';
+  if (!isBusy && confirmButton) ASDFL.refreshIcons(confirmButton);
+}
+
+function closeDeletePostingDialog() {
+  const dialog = document.getElementById('deletePostingDialog');
+  if (!dialog?.open || isDeletingPosting) return;
+  dialog.close();
+}
+
 /**
- * Confirms and deletes a job/internship posting
+ * Opens an accessible confirmation dialog for an owned job/internship posting.
  */
 window.confirmDeletePosting = async function(postingId) {
-  if (confirm('Bu ilanı tamamen silmek istediğinizden emin misiniz? İlana ait tüm başvurular da silinecektir.')) {
-    const success = await ASDFL.deleteJobPosting(postingId);
-    if (success) {
-      await renderJobs(); // Refresh jobs listing
-      await renderMyPostings(); // Re-render dashboard list
-    }
+  const normalizedPostingId = careerString(postingId);
+  let ownedPosting = findOwnedPosting(normalizedPostingId);
+
+  if (!ownedPosting) {
+    const latestJobs = await ASDFL.fetchJobPostings();
+    window.allJobs = Array.isArray(latestJobs) ? latestJobs : [];
+    ownedPosting = findOwnedPosting(normalizedPostingId);
   }
+
+  if (!ownedPosting) {
+    ASDFL.toast('Bu ilanı silme yetkiniz bulunmuyor veya ilan artık mevcut değil.', 'warning');
+    return;
+  }
+
+  const dialog = document.getElementById('deletePostingDialog');
+  const title = document.getElementById('deletePostingDialogTitle');
+  if (!dialog || typeof dialog.showModal !== 'function') {
+    ASDFL.toast('Silme onayı şu anda açılamıyor. Lütfen sayfayı yenileyip tekrar deneyin.', 'error');
+    return;
+  }
+
+  pendingDeletePostingId = normalizedPostingId;
+  if (title) title.textContent = `“${careerString(ownedPosting.title || 'İlan')}” silinsin mi?`;
+  setDeletePostingDialogBusy(false);
+  dialog.showModal();
+  document.getElementById('cancelDeletePostingButton')?.focus();
 };
+
+async function deleteConfirmedPosting() {
+  if (!pendingDeletePostingId || isDeletingPosting) return;
+  setDeletePostingDialogBusy(true);
+
+  try {
+    const latestJobs = await ASDFL.fetchJobPostings();
+    window.allJobs = Array.isArray(latestJobs) ? latestJobs : [];
+    const ownedPosting = findOwnedPosting(pendingDeletePostingId, window.allJobs);
+
+    if (!ownedPosting) {
+      ASDFL.toast('Bu ilanı silme yetkiniz bulunmuyor veya ilan artık mevcut değil.', 'warning');
+      setDeletePostingDialogBusy(false);
+      const status = document.getElementById('deletePostingStatus');
+      if (status) status.textContent = 'İlan bulunamadı veya silme yetkiniz doğrulanamadı.';
+      return;
+    }
+
+    const deletedPostingId = pendingDeletePostingId;
+    const success = await ASDFL.deleteJobPosting(deletedPostingId);
+    if (!success) {
+      setDeletePostingDialogBusy(false);
+      const status = document.getElementById('deletePostingStatus');
+      if (status) status.textContent = 'İlan silinemedi. Lütfen tekrar deneyin.';
+      return;
+    }
+
+    pendingDeletePostingId = null;
+    isDeletingPosting = false;
+    document.getElementById('deletePostingDialog')?.close();
+    await renderJobs();
+    if (document.getElementById('myPostingsList')) await renderMyPostings();
+  } catch (error) {
+    console.error('İlan silinirken beklenmeyen hata:', error);
+    ASDFL.toast('İlan silinemedi. Lütfen bağlantınızı kontrol edip tekrar deneyin.', 'error');
+    setDeletePostingDialogBusy(false);
+    const status = document.getElementById('deletePostingStatus');
+    if (status) status.textContent = 'İlan silinemedi. Lütfen bağlantınızı kontrol edip tekrar deneyin.';
+  }
+}
+
+function setupDeletePostingControls() {
+  const dialog = document.getElementById('deletePostingDialog');
+  if (!dialog || dialog.dataset.ready === 'true') return;
+  dialog.dataset.ready = 'true';
+
+  document.addEventListener('click', event => {
+    const deleteButton = event.target.closest?.('[data-delete-posting]');
+    if (!deleteButton) return;
+    event.preventDefault();
+    event.stopPropagation();
+    confirmDeletePosting(deleteButton.dataset.deletePosting);
+  });
+
+  document.getElementById('confirmDeletePostingButton')?.addEventListener('click', deleteConfirmedPosting);
+  document.getElementById('cancelDeletePostingButton')?.addEventListener('click', closeDeletePostingDialog);
+  document.getElementById('deletePostingClose')?.addEventListener('click', closeDeletePostingDialog);
+
+  dialog.addEventListener('cancel', event => {
+    if (isDeletingPosting) event.preventDefault();
+  });
+  dialog.addEventListener('click', event => {
+    if (event.target === dialog) closeDeletePostingDialog();
+  });
+  dialog.addEventListener('close', () => {
+    pendingDeletePostingId = null;
+    setDeletePostingDialogBusy(false);
+  });
+}
 
 // ==========================================
 // 6. INITIALIZATION & HASH SYNCS ON LOAD
@@ -1082,6 +1230,7 @@ async function initCareerPage() {
 
 // Global page load hook
 document.addEventListener('DOMContentLoaded', () => {
+  setupDeletePostingControls();
   initCareerPage();
 });
 

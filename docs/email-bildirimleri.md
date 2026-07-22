@@ -31,15 +31,15 @@ Proje kökünde, Supabase CLI ile giriş yapmış ve projeye bağlanmış olarak
 ```bash
 supabase secrets set \
   RESEND_API_KEY=re_xxx... \
-  FROM_EMAIL="ASDFL Mezunlar Derneği <bildirim@asdfl.org>" \
-  SITE_URL=https://asdfl.netlify.app
+  FROM_EMAIL="ASDFL Mezunlar Derneği <info@asdfl.org>" \
+  SITE_URL=https://www.asdflmezun.org
 ```
 
 Notlar:
 - `FROM_EMAIL`, Resend'de doğruladığın domain ile aynı domain'i kullanmalı
-  (örn. `bildirim@asdfl.org`), aksi halde gönderim reddedilir.
+  (örn. `info@asdfl.org`), aksi halde gönderim reddedilir.
 - `SITE_URL` sonunda `/` **olmadan** girilmeli; fonksiyon bildirim linklerini
-  `SITE_URL + "/" + link` olarak birleştirir (örn. `https://asdfl.netlify.app/topluluk.html#post-42`).
+  `SITE_URL + "/" + link` olarak birleştirir (örn. `https://www.asdflmezun.org/topluluk.html#post-42`).
 - `SUPABASE_URL` ve `SUPABASE_SERVICE_ROLE_KEY` Supabase tarafından fonksiyona otomatik
   sağlanır; bunları ayrıca `secrets set` ile eklemene gerek yok.
 

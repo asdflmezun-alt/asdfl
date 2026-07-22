@@ -22,6 +22,11 @@ const messages = await readFile('js/mesajlar.js', 'utf8');
 const messagesCss = await readFile('css/mesajlar.css', 'utf8');
 const messengerWidget = await readFile('js/messenger-widget.js', 'utf8');
 const messengerWidgetCss = await readFile('css/messenger-widget.css', 'utf8');
+const careerHtml = await readFile('kariyer.html', 'utf8');
+const career = await readFile('js/kariyer.js', 'utf8');
+const alumni = await readFile('js/mezunlar.js', 'utf8');
+const alumniCss = await readFile('css/mezunlar.css', 'utf8');
+const legalDocuments = await readFile('js/legal-documents.js', 'utf8');
 
 test('guest homepage keeps member-only previews gated', () => {
   assert.match(home, /ASDFL\.currentUser \? ASDFL\.fetchAlumni\(\) : Promise\.resolve\(\[\]\)/);
@@ -59,6 +64,25 @@ test('admin moderation is visible and actionable', () => {
   assert.match(admin, /renderModerationReports/);
   assert.match(admin, /updatePostReportStatus/);
   assert.match(admin, /deleteReportedPost/);
+  assert.match(admin, /rpc\('list_message_reports_admin'/);
+  assert.match(admin, /updateMessageReportStatus/);
+  assert.match(admin, /rpc\('review_message_report'/);
+  assert.match(admin, /allMessageReports/);
+});
+
+test('career owners can delete their own postings safely', () => {
+  assert.match(careerHtml, /id="deletePostingDialog"/);
+  assert.match(career, /data-delete-posting=/);
+  assert.match(career, /findOwnedPosting/);
+  assert.match(career, /setDeletePostingDialogBusy/);
+  assert.match(app, /from\('job_postings'\)[\s\S]*\.delete\(\)[\s\S]*\.eq\('employer_id', this\.currentUser\.id\)[\s\S]*\.maybeSingle\(\)/);
+});
+
+test('alumni cards can open direct messenger without profile navigation', () => {
+  assert.match(alumni, /data-messenger-user="\$\{ASDFL\.escapeAttr\(a\.id\)\}"/);
+  assert.match(alumni, /String\(a\.id\) !== String\(ASDFL\.currentUser\.id\)/);
+  assert.match(alumni, /event\.target\.closest\('button,a'\)/);
+  assert.match(alumniCss, /\.alumni-card-full \.ac-actions > \.btn \{[\s\S]*min-height: 44px/);
 });
 
 test('admin dashboard is operational and mobile responsive', () => {
@@ -115,6 +139,8 @@ test('desktop navbar becomes a compact floating surface after scroll', () => {
   assert.match(mainCss, /\.navbar\.scrolled \.nav-brand \.sub/);
   assert.match(mainCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.navbar::after/);
   assert.match(mainCss, /@media \(min-width: 769px\) and \(max-width: 1280px\)[\s\S]*\.nav-links\.open/);
+  assert.match(mainCss, /@media \(min-width: 769px\) and \(max-width: 1280px\)[\s\S]*\.navbar\.scrolled \{[\s\S]*top: 0;[\s\S]*border-radius: 0;/);
+  assert.match(mainCss, /\.navbar \.hamburger::before \{[\s\S]*content: 'Menü'/);
   assert.match(mainCss, /\.hamburger \{[^}]*min-width:44px;[^}]*min-height:44px/);
   assert.match(animationsCss, /animation: pageEnter[^;]*backwards/);
   assert.doesNotMatch(animationsCss, /animation: pageEnter[^;]*both/);
@@ -177,13 +203,19 @@ test('private messaging is responsive, safely rendered and integrated', () => {
   assert.match(messages, /report_message/);
   assert.match(messages, /body\.textContent = String\(message\.body/);
   assert.match(messages, /UUID_PATTERN/);
-  assert.match(messages, /POLL_INTERVAL_MS = 10000/);
+  assert.match(messages, /POLL_INTERVAL_MS = 30000/);
   assert.match(messages, /postgres_changes/);
+  assert.match(messages, /table: 'messages'/);
+  assert.match(messages, /filter: `user_id=eq\.\$\{state\.user\.id\}`/);
+  assert.match(messages, /status === 'SUBSCRIBED'\) pollUpdates\(\)/);
+  assert.match(messages, /style\.overflowY = el\.messageInput\.scrollHeight > 140 \? 'auto' : 'hidden'/);
   assert.doesNotMatch(messages, /localStorage|ASDFL\._storage/);
   assert.match(messagesCss, /@media \(max-width: 760px\)/);
   assert.match(messagesCss, /\.messages-page \.mobile-bottom-nav \{ display: none !important; \}/);
   assert.match(messagesCss, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(messagesCss, /min-width: 44px; min-height: 44px/);
+  assert.match(messagesCss, /grid-template-columns: minmax\(270px, 310px\) minmax\(390px, 1fr\) minmax\(230px, 270px\)/);
+  assert.match(messagesHtml, /class="message-context-panel"/);
   assert.match(app, /href: 'mesajlar\.html', label: 'Mesajlar'/);
   assert.match(profile, /id="social-message"/);
   assert.match(mentor, /mesajlar\.html\?user=/);
@@ -191,8 +223,8 @@ test('private messaging is responsive, safely rendered and integrated', () => {
 
 test('authenticated members can reach a safe global messenger widget', () => {
   assert.match(app, /initMessengerWidgetAssets\(\)/);
-  assert.match(app, /messenger-widget\.css\?v=1\.1/);
-  assert.match(app, /messenger-widget\.js\?v=1\.1/);
+  assert.match(app, /messenger-widget\.css\?v=1\.2/);
+  assert.match(app, /messenger-widget\.js\?v=1\.2/);
   assert.match(app, /messages-page[\s\S]*mesajlar\.html/);
   assert.match(app, /ASDFLMessenger\?\.syncAuth/);
   assert.match(messengerWidget, /openForUser/);
@@ -209,9 +241,11 @@ test('authenticated members can reach a safe global messenger widget', () => {
   assert.match(messengerWidget, /set_user_block/);
   assert.match(messengerWidget, /report_message/);
   assert.match(messengerWidget, /postgres_changes/);
-  assert.match(messengerWidget, /table: 'conversations'/);
-  assert.doesNotMatch(messengerWidget, /table: 'messages'/);
-  assert.match(messengerWidget, /POLL_INTERVAL_MS = 15000/);
+  assert.match(messengerWidget, /event: 'INSERT'[\s\S]*table: 'messages'/);
+  assert.doesNotMatch(messengerWidget, /table: 'conversations'/);
+  assert.match(messengerWidget, /POLL_INTERVAL_MS = 30000/);
+  assert.match(messengerWidget, /status === 'SUBSCRIBED'\) pollUpdates\(\)/);
+  assert.match(messengerWidget, /style\.overflowY = state\.refs\.input\.scrollHeight > 112 \? 'auto' : 'hidden'/);
   assert.match(messengerWidget, /data-action="new-message"/);
   assert.match(messengerWidget, /id="asdflMessengerSearch"/);
   assert.match(messengerWidget, /\.from\('public_profiles'\)[\s\S]*\.ilike\('name', `%\$\{safePattern\}%`\)[\s\S]*\.neq\('id', state\.userId\)[\s\S]*\.limit\(8\)/);
@@ -228,6 +262,8 @@ test('authenticated members can reach a safe global messenger widget', () => {
   assert.match(messengerWidgetCss, /position:\s*fixed/);
   assert.match(messengerWidgetCss, /@media \(max-width: 600px\)/);
   assert.match(messengerWidgetCss, /min-width:\s*44px;\s*min-height:\s*44px/);
+  assert.match(messengerWidgetCss, /height:\s*min\(520px, calc\(100dvh - 6rem\)\)/);
+  assert.match(messengerWidgetCss, /\.asdfl-mw-messages::\-webkit-scrollbar \{ width: 0; height: 0; \}/);
   assert.match(messengerWidgetCss, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
@@ -243,14 +279,51 @@ test('login and community loading fail safely on stalled mobile requests', () =>
 });
 
 test('critical auth assets bypass stale iOS PWA caches', () => {
-  assert.match(sw, /CACHE_VERSION = 'v32'/);
+  assert.match(sw, /CACHE_VERSION = 'v42'/);
   assert.match(sw, /fetch\(request, \{ cache: 'no-store' \}\)/);
   assert.match(sw, /NETWORK_FIRST_ASSET_SUFFIXES/);
   assert.match(sw, /fetch\(request, \{ cache: 'no-cache' \}\)/);
-  assert.match(sw, /js\/app\.js\?v=1\.13/);
-  assert.match(sw, /css\/messenger-widget\.css\?v=1\.1/);
-  assert.match(sw, /js\/messenger-widget\.js\?v=1\.1/);
-  assert.match(sw, /css\/mesajlar\.css\?v=1\.0/);
-  assert.match(sw, /js\/mesajlar\.js\?v=1\.0/);
+  assert.match(sw, /css\/main\.css\?v=1\.7/);
+  assert.match(sw, /js\/bootstrap\.js\?v=1\.2/);
+  assert.match(sw, /js\/app\.js\?v=1\.18/);
+  assert.match(sw, /css\/kariyer\.css\?v=1\.4/);
+  assert.match(sw, /js\/kariyer\.js\?v=1\.4/);
+  assert.match(sw, /css\/messenger-widget\.css\?v=1\.2/);
+  assert.match(sw, /js\/messenger-widget\.js\?v=1\.2/);
+  assert.match(sw, /css\/mesajlar\.css\?v=1\.1/);
+  assert.match(sw, /js\/mesajlar\.js\?v=1\.1/);
   assert.match(sw, /assets\/vendor\/supabase\.js\?v=2\.108\.2-1/);
+});
+
+test('registration consent fields recover from stale mobile HTML', async () => {
+  const index = await readFile('index.html', 'utf8');
+  const bootstrap = await readFile('js/bootstrap.js', 'utf8');
+  assert.match(index, /id="registrationConsentsTitle"/);
+  assert.match(index, /id="regKvkkNotice"/);
+  assert.match(index, /id="regTerms"/);
+  assert.match(index, /id="regOptionalConsent"/);
+  assert.match(app, /ensureRegistrationConsents\(\)/);
+  assert.match(app, /submitButton\.before\(consentGroup\)/);
+  assert.match(mainCss, /\.registration-consents \{[\s\S]*display:\s*flex !important;[\s\S]*visibility:\s*visible !important;/);
+  assert.match(mainCss, /\.registration-consents label \{[\s\S]*min-height:\s*44px;/);
+  assert.match(bootstrap, /updateViaCache:\s*'none'/);
+  assert.match(bootstrap, /controllerchange/);
+});
+
+test('registration requires matching passwords and lets users reveal them', () => {
+  assert.match(app, /id="regPassConfirm"/);
+  assert.match(app, /pass !== passConfirm/);
+  assert.match(app, /Girdiğiniz şifreler eşleşmiyor/);
+  assert.match(app, /ensurePasswordControls\(\)/);
+  assert.match(app, /input\.type === 'password' \? 'text' : 'password'/);
+  assert.match(app, /Şifreyi göster/);
+  assert.match(mainCss, /\.password-visibility-toggle \{[\s\S]*width: var\(--tap-target\);[\s\S]*height: var\(--tap-target\);/);
+});
+
+test('legal documents expose the official website and contact email', () => {
+  assert.match(legalDocuments, /https:\/\/www\.asdflmezun\.org/);
+  assert.match(legalDocuments, /info@asdfl\.org/);
+  assert.match(legalDocuments, /mailto:\$\{CONTACT_EMAIL\}/);
+  assert.match(legalDocuments, /Son güncelleme: 18 Temmuz 2026/);
+  assert.doesNotMatch(legalDocuments, /asdfldemo|netlify\.app/);
 });

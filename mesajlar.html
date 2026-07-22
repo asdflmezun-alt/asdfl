@@ -8,25 +8,33 @@
   <meta name="description" content="ASDFL topluluğundaki güvenli bire bir mesajlarınız.">
   <meta name="theme-color" content="#05111e">
   <link rel="stylesheet" href="css/fonts.css">
-  <link rel="stylesheet" href="css/main.css?v=1.4">
+  <link rel="stylesheet" href="css/main.css?v=1.7">
   <link rel="stylesheet" href="css/animations.css">
-  <link rel="stylesheet" href="css/mesajlar.css?v=1.0">
+  <link rel="stylesheet" href="css/mesajlar.css?v=1.1">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="assets/images/logo.png">
   <script src="assets/vendor/lucide.js"></script>
-  <script src="js/bootstrap.js?v=1.1"></script>
+  <script src="js/bootstrap.js?v=1.2"></script>
 </head>
 <body class="messages-page">
-  <header class="messages-nav">
-    <a class="messages-brand" href="index.html" aria-label="ASDFL ana sayfası">
-      <span class="messages-brand-mark"><i data-lucide="microscope"></i></span>
-      <span>ASDFL<small>Mezunlar Derneği</small></span>
+  <nav class="navbar messages-nav" id="navbar" aria-label="Ana gezinme">
+    <a href="index.html" class="nav-brand messages-brand" aria-label="ASDFL ana sayfası">
+      <span class="logo-icon"><i data-lucide="microscope"></i></span>
+      <span>ASDFL<span class="sub">Mezunlar Derneği</span></span>
     </a>
-    <nav aria-label="Sayfa bağlantıları">
-      <a class="messages-nav-link" href="topluluk.html"><i data-lucide="users"></i><span>Topluluk</span></a>
-      <a class="messages-nav-link" href="profil.html"><i data-lucide="user-round"></i><span>Profilim</span></a>
-    </nav>
-  </header>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html"><i data-lucide="home"></i> Ana Sayfa</a></li>
+      <li><a href="mezunlar.html"><i data-lucide="users"></i> Mezunlar</a></li>
+      <li><a href="topluluk.html"><i data-lucide="message-circle"></i> Topluluk</a></li>
+      <li><a href="imece.html"><i data-lucide="hand-heart"></i> İmece</a></li>
+      <li><a href="etkinlikler.html"><i data-lucide="calendar-days"></i> Etkinlikler</a></li>
+      <li><a href="mesajlar.html" class="active" aria-current="page"><i data-lucide="messages-square"></i> Mesajlar</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a class="messages-profile-shortcut" href="profil.html" aria-label="Profilime git"><i data-lucide="user-round"></i></a>
+      <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    </div>
+  </nav>
 
   <main class="messages-main">
     <section id="messagesGate" class="messages-gate" aria-live="polite">
@@ -39,10 +47,15 @@
       <aside class="conversation-panel" aria-label="Konuşmalar">
         <div class="conversation-panel-head">
           <div>
-            <p class="messages-kicker">Güvenli iletişim</p>
+            <p class="messages-kicker">Gelen kutusu</p>
             <h1>Mesajlar</h1>
           </div>
-          <span id="conversationCount" class="conversation-count" aria-label="Konuşma sayısı">0</span>
+          <div class="conversation-head-actions">
+            <span id="conversationCount" class="conversation-count" aria-label="Konuşma sayısı">0</span>
+            <a class="conversation-new" href="mezunlar.html" aria-label="Yeni konuşma için üye bul" title="Yeni konuşma">
+              <i data-lucide="square-pen"></i>
+            </a>
+          </div>
         </div>
 
         <label class="conversation-search">
@@ -60,9 +73,14 @@
           <div class="thread-empty-visual" aria-hidden="true">
             <i data-lucide="messages-square"></i>
           </div>
-          <p class="messages-kicker">Bağlantıda kal</p>
+          <p class="messages-kicker">ASDFL Messenger</p>
           <h2>Bir konuşma seç</h2>
-          <p>Mesajların uçtan uca şifreli değildir. Hassas kişisel bilgilerini paylaşma.</p>
+          <p>Mezunlar, öğrenciler ve öğretmenlerle doğrudan iletişim kur.</p>
+          <div class="thread-empty-points" aria-hidden="true">
+            <span><i data-lucide="users-round"></i> Topluluk</span>
+            <span><i data-lucide="shield-check"></i> Kontrollü erişim</span>
+            <span><i data-lucide="bell-ring"></i> Anlık bildirim</span>
+          </div>
         </div>
 
         <div id="threadActive" class="thread-active hidden">
@@ -97,6 +115,28 @@
           </form>
         </div>
       </section>
+
+      <aside class="message-context-panel" aria-label="Sohbet ayrıntıları">
+        <div class="context-panel-head">
+          <span class="context-panel-icon"><i data-lucide="shield-check"></i></span>
+          <p class="messages-kicker">Sohbet ayrıntıları</p>
+          <h2>Güvenli iletişim</h2>
+          <p>ASDFL topluluğunda saygılı, açık ve amaca yönelik konuşmaları destekliyoruz.</p>
+        </div>
+        <div class="context-section">
+          <h3>Hatırlatmalar</h3>
+          <ul class="context-list">
+            <li><i data-lucide="lock-keyhole"></i><span>Kişisel ve finansal bilgilerini paylaşma.</span></li>
+            <li><i data-lucide="flag"></i><span>Uygunsuz mesajları doğrudan şikâyet edebilirsin.</span></li>
+            <li><i data-lucide="user-x"></i><span>İstenmeyen iletişimi dilediğinde engelleyebilirsin.</span></li>
+          </ul>
+        </div>
+        <div class="context-links">
+          <a href="topluluk-kurallari.html"><i data-lucide="book-open-check"></i><span>Topluluk kuralları</span><i data-lucide="chevron-right"></i></a>
+          <a href="mezunlar.html"><i data-lucide="user-search"></i><span>Yeni bağlantı bul</span><i data-lucide="chevron-right"></i></a>
+        </div>
+        <p class="context-disclaimer"><i data-lucide="info"></i> Mesajlar uçtan uca şifreli değildir.</p>
+      </aside>
     </section>
     <div id="messagesToast" class="messages-toast" role="status" aria-live="polite"></div>
   </main>
@@ -134,7 +174,7 @@
   </dialog>
 
   <script src="assets/vendor/supabase.js?v=2.108.2-1"></script>
-  <script src="js/app.js?v=1.13"></script>
-  <script src="js/mesajlar.js?v=1.0"></script>
+  <script src="js/app.js?v=1.18"></script>
+  <script src="js/mesajlar.js?v=1.1"></script>
 </body>
 </html>

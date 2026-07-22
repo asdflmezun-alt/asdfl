@@ -358,6 +358,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       const safeId = ASDFL.jsString(a.id);
       const profileUrl = `profil.html?id=${encodeURIComponent(a.id)}`;
+      const canMessage = Boolean(
+        ASDFL.currentUser?.id &&
+        a.id &&
+        String(a.id) !== String(ASDFL.currentUser.id)
+      );
+      const messageLabel = `${a.name || 'Bu mezuna'} mesaj at`;
 
       return `
       <div class="card alumni-card-full lift reveal" onclick="if(!event.target.closest('button,a'))window.location.href='${profileUrl}'" role="link" tabindex="0" onkeydown="if(event.key==='Enter'&&!event.target.closest('button,a'))window.location.href='${profileUrl}'">
@@ -385,6 +391,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         <div class="ac-actions">
           <button class="btn btn-ghost btn-sm" onclick="window.location.href='${profileUrl}'">Profili Gör</button>
+          ${canMessage ? `
+            <button
+              class="btn btn-secondary btn-sm alumni-message-action"
+              type="button"
+              data-messenger-user="${ASDFL.escapeAttr(a.id)}"
+              aria-label="${ASDFL.escapeAttr(messageLabel)}">
+              <i data-lucide="message-circle" aria-hidden="true"></i><span>Mesaj At</span>
+            </button>
+          ` : ''}
           ${a.mentor ? `<button class="btn btn-secondary btn-sm" onclick="openMentorshipRequestModal(${safeId}, ${ASDFL.jsString(a.name)})">Bağlantı Kur</button>` : ''}
         </div>
       </div>`;

@@ -2,7 +2,7 @@
   'use strict';
 
   const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  const POLL_INTERVAL_MS = 10000;
+  const POLL_INTERVAL_MS = 30000;
   const MAX_MESSAGE_LENGTH = 2000;
   const MAX_REPORT_LENGTH = 500;
 
@@ -596,7 +596,9 @@
     const length = el.messageInput.value.length;
     el.messageCharCount.textContent = `${length} / ${MAX_MESSAGE_LENGTH}`;
     el.messageInput.style.height = 'auto';
-    el.messageInput.style.height = `${Math.min(el.messageInput.scrollHeight, 140)}px`;
+    const nextHeight = Math.min(el.messageInput.scrollHeight, 140);
+    el.messageInput.style.height = `${nextHeight}px`;
+    el.messageInput.style.overflowY = el.messageInput.scrollHeight > 140 ? 'auto' : 'hidden';
     updateComposerState();
   }
 
@@ -705,11 +707,11 @@
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
           handleMessageRealtime(payload.new);
         })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_participants' }, () => {
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_participants', filter: `user_id=eq.${state.user.id}` }, () => {
           loadConversations({ silent: true });
         })
         .subscribe(status => {
-          if (status === 'SUBSCRIBED') stopPolling();
+          if (status === 'SUBSCRIBED') pollUpdates();
           if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) startPolling();
         });
     } catch (error) {

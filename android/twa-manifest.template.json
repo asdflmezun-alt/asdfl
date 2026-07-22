@@ -1,0 +1,36 @@
+{
+  "packageId": "org.asdflmezun.app",
+  "host": "www.asdflmezun.org",
+  "name": "ASDFL Mezunlar Derneği",
+  "launcherName": "ASDFL",
+  "display": "standalone",
+  "themeColor": "#05111E",
+  "themeColorDark": "#05111E",
+  "navigationColor": "#05111E",
+  "navigationColorDark": "#05111E",
+  "navigationDividerColor": "#0D1B2A",
+  "navigationDividerColorDark": "#0D1B2A",
+  "backgroundColor": "#0D1B2A",
+  "enableNotifications": false,
+  "startUrl": "/index.html",
+  "iconUrl": "https://www.asdflmezun.org/assets/images/logo.png",
+  "splashScreenFadeOutDuration": 300,
+  "orientation": "portrait-primary",
+  "signingKey": {
+    "path": "/run-secrets/release.keystore",
+    "alias": "asdfl-upload"
+  },
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://www.asdflmezun.org/manifest.json",
+  "fallbackType": "customtabs",
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "minSdkVersion": 23,
+  "alphaDependencies": {
+    "enabled": false
+  }
+}

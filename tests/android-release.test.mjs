@@ -33,6 +33,12 @@ test('Android workflow secretsiz ve kurulabilir bir test APK üretir', async () 
   assert.doesNotMatch(workflow, /environment: android-release/);
   assert.match(workflow, /keytool -genkeypair/);
   assert.match(workflow, /\$RUNNER_TEMP\/asdfl-test\.keystore/);
+  assert.match(workflow, /sdkmanager_path/);
+  assert.match(workflow, /--licenses/);
+  assert.equal(
+    workflow.match(/--volume asdfl-bubblewrap-sdk:\/root\/\.bubblewrap\/android_sdk/g)?.length,
+    3,
+  );
   assert.match(workflow, /android\/app-release-signed\.apk/);
   assert.match(workflow, /if: always\(\)/);
   assert.match(workflow, /retention-days: 7/);

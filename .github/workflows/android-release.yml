@@ -60,11 +60,27 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ env.TEST_KEY_ALIAS }}
         run: node scripts/prepare-android-twa.mjs
 
+      - name: Android SDK lisanslarını kabul et
+        shell: bash
+        run: |
+          docker run --rm \
+            --volume asdfl-bubblewrap-sdk:/root/.bubblewrap/android_sdk \
+            --entrypoint /bin/bash \
+            "$BUBBLEWRAP_IMAGE" \
+            -lc '
+              sdkmanager_path="$(find /root/.bubblewrap/android_sdk -type f -name sdkmanager | head -n 1)"
+              test -n "$sdkmanager_path"
+              yes | "$sdkmanager_path" \
+                --sdk_root=/root/.bubblewrap/android_sdk \
+                --licenses > /dev/null
+            '
+
       - name: Android projesini üret
         shell: bash
         run: |
           docker run --rm \
             --volume "$GITHUB_WORKSPACE/android:/app" \
+            --volume asdfl-bubblewrap-sdk:/root/.bubblewrap/android_sdk \
             "$BUBBLEWRAP_IMAGE" \
             update --skipVersionUpgrade
 
@@ -78,6 +94,7 @@ jobs:
           docker run --rm \
             --volume "$GITHUB_WORKSPACE/android:/app" \
             --volume "$KEYSTORE_PATH:/run-secrets/release.keystore:ro" \
+            --volume asdfl-bubblewrap-sdk:/root/.bubblewrap/android_sdk \
             --env BUBBLEWRAP_KEYSTORE_PASSWORD \
             --env BUBBLEWRAP_KEY_PASSWORD \
             "$BUBBLEWRAP_IMAGE" \
@@ -113,3 +130,4 @@ jobs:
           if [ -n "$KEYSTORE_PATH" ]; then
             rm -f -- "$KEYSTORE_PATH"
           fi
+          docker volume rm asdfl-bubblewrap-sdk > /dev/null 2>&1 || true
